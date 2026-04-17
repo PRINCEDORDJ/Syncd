@@ -1,6 +1,9 @@
 import { Link } from "@tanstack/react-router";
+import { useAuth } from "@/lib/auth";
 
 export function SiteNav() {
+  const { user, signOut } = useAuth();
+
   return (
     <nav className="flex items-center justify-between px-6 md:px-8 py-6 w-full max-w-7xl mx-auto">
       <Link to="/" className="flex items-center gap-2.5 group">
@@ -20,12 +23,30 @@ export function SiteNav() {
         >
           Pricing
         </Link>
-        <Link
-          to="/app"
-          className="text-ink hover:text-[color:var(--glow-end)] transition-colors"
-        >
-          Open workspace
-        </Link>
+        {user ? (
+          <>
+            <Link
+              to="/app"
+              className="text-ink hover:text-[color:var(--glow-end)] transition-colors"
+            >
+              Workspace
+            </Link>
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="text-muted-foreground hover:text-ink transition-colors"
+            >
+              Sign out
+            </button>
+          </>
+        ) : (
+          <Link
+            to="/login"
+            className="text-ink hover:text-[color:var(--glow-end)] transition-colors"
+          >
+            Sign in
+          </Link>
+        )}
       </div>
     </nav>
   );

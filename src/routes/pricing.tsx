@@ -71,7 +71,7 @@ const tiers = [
 
 function PricingPage() {
   return (
-    <div className="min-h-dvh bg-surface text-ink">
+    <div className="min-h-dvh bg-background text-ink">
       <SiteNav />
 
       <main className="max-w-6xl mx-auto px-6 pt-16 md:pt-24 pb-16">
@@ -144,7 +144,7 @@ function PricingPage() {
                 to="/app"
                 className={`mt-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
                   t.highlighted
-                    ? "bg-surface text-ink hover:-translate-y-0.5"
+                    ? "bg-secondary text-ink hover:-translate-y-0.5"
                     : "bg-ink text-surface hover:-translate-y-0.5"
                 }`}
               >

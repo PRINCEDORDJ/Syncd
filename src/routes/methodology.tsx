@@ -47,7 +47,7 @@ const sections = [
 
 function MethodologyPage() {
   return (
-    <div className="min-h-dvh bg-surface text-ink">
+    <div className="min-h-dvh bg-background text-ink">
       <SiteNav />
 
       <main className="max-w-3xl mx-auto px-6 pt-16 md:pt-24 pb-16">
