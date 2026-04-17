@@ -14,7 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      drafts: {
+        Row: {
+          char_count: number
+          content: string
+          created_at: string
+          id: string
+          published: boolean
+          raw_input: string
+          title: string
+          tone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          char_count?: number
+          content?: string
+          created_at?: string
+          id?: string
+          published?: boolean
+          raw_input?: string
+          title?: string
+          tone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          char_count?: number
+          content?: string
+          created_at?: string
+          id?: string
+          published?: boolean
+          raw_input?: string
+          title?: string
+          tone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+          voice_notes: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+          voice_notes?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+          voice_notes?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
