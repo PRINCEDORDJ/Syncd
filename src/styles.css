@@ -81,30 +81,30 @@
 :root {
   --radius: 1rem;
 
-  /* Sunlit Glass Desk palette */
-  --surface: oklch(0.985 0.005 80); /* #FCFBF9 warm vellum */
+  /* Sunlit Glass Desk — pure white surface */
+  --surface: oklch(1 0 0); /* pure white */
   --ink: oklch(0.27 0.005 60); /* deep warm charcoal */
   --glow-start: oklch(0.78 0.13 65); /* amber */
   --glow-end: oklch(0.66 0.18 35); /* sunset coral */
 
-  --background: var(--surface);
+  --background: oklch(1 0 0);
   --foreground: var(--ink);
   --card: oklch(1 0 0);
   --card-foreground: var(--ink);
   --popover: oklch(1 0 0);
   --popover-foreground: var(--ink);
   --primary: var(--ink);
-  --primary-foreground: var(--surface);
-  --secondary: oklch(0.96 0.008 80);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.975 0.004 80);
   --secondary-foreground: var(--ink);
-  --muted: oklch(0.96 0.008 80);
+  --muted: oklch(0.975 0.004 80);
   --muted-foreground: oklch(0.55 0.012 60); /* #7A7774 */
   --accent: var(--glow-end);
   --accent-foreground: oklch(1 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.92 0.008 80);
-  --input: oklch(0.94 0.008 80);
+  --border: oklch(0.93 0.005 80);
+  --input: oklch(0.95 0.005 80);
   --ring: var(--glow-end);
 
   --chart-1: var(--glow-start);
