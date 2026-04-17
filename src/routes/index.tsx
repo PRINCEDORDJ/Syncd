@@ -26,7 +26,7 @@ export const Route = createFileRoute("/")({
 
 function LandingPage() {
   return (
-    <div className="min-h-dvh bg-surface text-ink overflow-x-hidden">
+    <div className="min-h-dvh bg-background text-ink overflow-x-hidden">
       <SiteNav />
 
       {/* Hero */}
@@ -153,7 +153,7 @@ function FeatureCard({
       {highlighted && (
         <div className="absolute -top-12 -right-12 w-44 h-44 bg-[color:var(--glow-start)]/15 blur-3xl rounded-full pointer-events-none" />
       )}
-      <div className="size-12 rounded-2xl bg-surface border border-border/60 flex items-center justify-center text-[color:var(--glow-end)] font-serif italic text-2xl">
+      <div className="size-12 rounded-2xl bg-secondary border border-border/60 flex items-center justify-center text-[color:var(--glow-end)] font-serif italic text-2xl">
         {n}
       </div>
       <h3 className="text-xl font-medium text-ink tracking-tight">{title}</h3>

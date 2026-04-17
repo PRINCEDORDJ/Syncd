@@ -18,7 +18,7 @@ export function WorkspacePreview() {
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
               Tone
             </span>
-            <div className="px-3 py-1.5 bg-surface rounded-lg text-sm text-ink border border-border/60 shadow-sm">
+            <div className="px-3 py-1.5 bg-secondary rounded-lg text-sm text-ink border border-border/60 shadow-sm">
               Authoritative & Warm
             </div>
           </div>
@@ -27,7 +27,7 @@ export function WorkspacePreview() {
         {/* App Body */}
         <div className="grid grid-cols-12 gap-px bg-border/60 rounded-b-2xl overflow-hidden">
           {/* Left Panel: Input */}
-          <div className="col-span-12 md:col-span-4 bg-surface p-7 flex flex-col gap-6">
+          <div className="col-span-12 md:col-span-4 bg-secondary p-7 flex flex-col gap-6">
             <div>
               <label className="block text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-widest">
                 Raw Material
@@ -71,7 +71,7 @@ export function WorkspacePreview() {
                 </p>
               </div>
 
-              <div className="p-6 rounded-2xl bg-surface border border-[color:var(--glow-start)]/25 shadow-[inset_0_2px_10px_color-mix(in_oklab,var(--glow-start)_8%,transparent)]">
+              <div className="p-6 rounded-2xl bg-secondary border border-[color:var(--glow-start)]/25 shadow-[inset_0_2px_10px_color-mix(in_oklab,var(--glow-start)_8%,transparent)]">
                 <p className="text-lg font-medium text-ink">
                   The result? Attrition dropped by{" "}
                   <span className="tabular-nums">14%</span>, and internal promotions doubled in{" "}
