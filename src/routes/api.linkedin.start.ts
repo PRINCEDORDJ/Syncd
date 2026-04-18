@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getRequestHeader } from "@tanstack/react-start/server";
 
@@ -9,42 +9,54 @@ function getOrigin(request: Request): string {
   return `${url.protocol}//${url.host}`;
 }
 
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 export const Route = createFileRoute("/api/linkedin/start")({
   server: {
     handlers: {
-      GET: async ({ request }) => {
+      POST: async ({ request }) => {
         const clientId = process.env.LINKEDIN_CLIENT_ID;
         if (!clientId) {
-          return new Response("LinkedIn is not configured.", { status: 500 });
+          return jsonResponse({ error: "LinkedIn is not configured." }, 500);
         }
 
-        // Authenticate the caller
         const authHeader =
           getRequestHeader("authorization") ?? getRequestHeader("Authorization");
         if (!authHeader?.startsWith("Bearer ")) {
-          return new Response("Not authenticated.", { status: 401 });
+          return jsonResponse({ error: "Not authenticated." }, 401);
         }
         const accessToken = authHeader.slice(7);
         const { data: userData, error: userErr } =
           await supabaseAdmin.auth.getUser(accessToken);
         if (userErr || !userData.user) {
-          return new Response("Not authenticated.", { status: 401 });
+          return jsonResponse({ error: "Not authenticated." }, 401);
         }
         const userId = userData.user.id;
 
+        let body: { redirect_to?: unknown } = {};
+        try {
+          body = (await request.json()) as { redirect_to?: unknown };
+        } catch {
+          // empty body is fine
+        }
+        const redirectTo =
+          typeof body.redirect_to === "string" ? body.redirect_to : "/settings";
+
         // CSRF state
         const state = crypto.randomUUID();
-        const url = new URL(request.url);
-        const redirectTo = url.searchParams.get("redirect_to") ?? "/settings";
 
-        // Cleanup old states + insert new
         await supabaseAdmin.rpc("cleanup_linkedin_oauth_states");
         const { error: insertErr } = await supabaseAdmin
           .from("linkedin_oauth_states")
           .insert({ state, user_id: userId, redirect_to: redirectTo });
         if (insertErr) {
           console.error("[linkedin/start] state insert failed", insertErr);
-          return new Response("Failed to start OAuth flow.", { status: 500 });
+          return jsonResponse({ error: "Failed to start OAuth flow." }, 500);
         }
 
         const redirectUri = `${getOrigin(request)}${REDIRECT_URI_PATH}`;
@@ -53,10 +65,9 @@ export const Route = createFileRoute("/api/linkedin/start")({
         authorizeUrl.searchParams.set("client_id", clientId);
         authorizeUrl.searchParams.set("redirect_uri", redirectUri);
         authorizeUrl.searchParams.set("state", state);
-        // openid+profile for member identity, w_member_social for posting
         authorizeUrl.searchParams.set("scope", "openid profile w_member_social email");
 
-        throw redirect({ href: authorizeUrl.toString() });
+        return jsonResponse({ url: authorizeUrl.toString() });
       },
     },
   },

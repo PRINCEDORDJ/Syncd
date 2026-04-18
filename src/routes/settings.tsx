@@ -173,33 +173,21 @@ function SettingsPage() {
       setLinkedInBanner({ type: "error", text: "Session expired — please sign in again." });
       return;
     }
-    const resp = await fetch("/api/linkedin/start?redirect_to=/settings", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-      redirect: "manual",
+    const resp = await fetch("/api/linkedin/start", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ redirect_to: "/settings" }),
     });
-    // The server issues a redirect. fetch with redirect:"manual" gives type "opaqueredirect".
-    if (resp.type === "opaqueredirect" || resp.status === 0 || resp.redirected) {
-      // We can't read the Location header from an opaque redirect; instead, do a full
-      // navigation through a same-origin endpoint that performs the redirect. Use a
-      // form-style GET with Authorization passed as query? No — instead we trigger a
-      // top-level navigation via a hidden anchor. Simplest: open a new fetch and
-      // follow Location ourselves using response url after a follow request.
-    }
-    // Fallback approach: do a normal fetch (follow), and let the browser end up at LinkedIn.
-    const followResp = await fetch("/api/linkedin/start?redirect_to=/settings", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (followResp.redirected) {
-      window.location.href = followResp.url;
+    const data = (await resp.json().catch(() => ({}))) as { url?: string; error?: string };
+    if (!resp.ok || !data.url) {
+      setLinkedInBanner({ type: "error", text: data.error ?? "Failed to start OAuth." });
+      setConnectingLinkedIn(false);
       return;
     }
-    if (!followResp.ok) {
-      const text = await followResp.text().catch(() => "");
-      setLinkedInBanner({ type: "error", text: text || "Failed to start OAuth." });
-      setConnectingLinkedIn(false);
-    }
+    window.location.href = data.url;
   }
 
   async function disconnectLinkedIn() {
