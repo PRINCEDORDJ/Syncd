@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as LoginRouteImport } from './routes/login'
@@ -20,6 +21,11 @@ import { Route as ApiLinkedinPublishRouteImport } from './routes/api.linkedin.pu
 import { Route as ApiLinkedinDisconnectRouteImport } from './routes/api.linkedin.disconnect'
 import { Route as ApiLinkedinCallbackRouteImport } from './routes/api.linkedin.callback'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
+  '/settings': typeof SettingsRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/linkedin/callback': typeof ApiLinkedinCallbackRoute
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
+  '/settings': typeof SettingsRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/linkedin/callback': typeof ApiLinkedinCallbackRoute
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
+  '/settings': typeof SettingsRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/linkedin/callback': typeof ApiLinkedinCallbackRoute
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/methodology'
     | '/pricing'
+    | '/settings'
     | '/api/generate'
     | '/api/linkedin/callback'
     | '/api/linkedin/disconnect'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/methodology'
     | '/pricing'
+    | '/settings'
     | '/api/generate'
     | '/api/linkedin/callback'
     | '/api/linkedin/disconnect'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/methodology'
     | '/pricing'
+    | '/settings'
     | '/api/generate'
     | '/api/linkedin/callback'
     | '/api/linkedin/disconnect'
@@ -153,6 +165,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MethodologyRoute: typeof MethodologyRoute
   PricingRoute: typeof PricingRoute
+  SettingsRoute: typeof SettingsRoute
   ApiGenerateRoute: typeof ApiGenerateRoute
   ApiLinkedinCallbackRoute: typeof ApiLinkedinCallbackRoute
   ApiLinkedinDisconnectRoute: typeof ApiLinkedinDisconnectRoute
@@ -162,6 +175,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pricing': {
       id: '/pricing'
       path: '/pricing'
@@ -241,6 +261,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MethodologyRoute: MethodologyRoute,
   PricingRoute: PricingRoute,
+  SettingsRoute: SettingsRoute,
   ApiGenerateRoute: ApiGenerateRoute,
   ApiLinkedinCallbackRoute: ApiLinkedinCallbackRoute,
   ApiLinkedinDisconnectRoute: ApiLinkedinDisconnectRoute,
