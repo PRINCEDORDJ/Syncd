@@ -30,14 +30,18 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "SocialSync" },
+      { name: "description", content: "Social Sync Connect integrates LinkedIn to streamline content sharing and profile management." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "SocialSync" },
+      { property: "og:description", content: "Social Sync Connect integrates LinkedIn to streamline content sharing and profile management." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "SocialSync" },
+      { name: "twitter:description", content: "Social Sync Connect integrates LinkedIn to streamline content sharing and profile management." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/32914e93-a8e9-4b04-90b7-6eb0de114462/id-preview-49abd114--cfec36dd-d218-4e4e-9ba5-2ddb31f007a5.lovable.app-1776472776957.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/32914e93-a8e9-4b04-90b7-6eb0de114462/id-preview-49abd114--cfec36dd-d218-4e4e-9ba5-2ddb31f007a5.lovable.app-1776472776957.png" },
     ],
     links: [
       {
