@@ -11,10 +11,7 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       { title: "Sign in — SocialSync" },
-      {
-        name: "description",
-        content: "Sign in to your SocialSync workspace.",
-      },
+      { name: "description", content: "Sign in to your SocialSync workspace." },
     ],
   }),
   component: LoginPage,
@@ -36,11 +33,8 @@ function LoginPage() {
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // If already logged in, leave the login page.
   useEffect(() => {
-    if (!loading && user) {
-      navigate({ to: redirectTo });
-    }
+    if (!loading && user) navigate({ to: redirectTo });
   }, [user, loading, navigate, redirectTo]);
 
   async function handleSubmit(e: FormEvent) {
@@ -61,20 +55,13 @@ function LoginPage() {
           },
         });
         if (err) throw err;
-        setInfo(
-          "Account created. If email confirmation is on, check your inbox — otherwise you're in.",
-        );
+        setInfo("Account created. Check your inbox if email confirmation is on.");
       } else {
-        const { error: err } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (err) throw err;
       }
     } catch (e) {
-      const message =
-        e instanceof Error ? e.message : "Something went wrong. Please try again.";
-      setError(message);
+      setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
       setSubmitting(false);
     }
@@ -82,33 +69,31 @@ function LoginPage() {
 
   return (
     <div className="min-h-dvh bg-background text-ink flex flex-col">
-      <header className="px-6 md:px-8 py-6 max-w-7xl w-full mx-auto">
-        <Link to="/" className="inline-flex items-center gap-2.5 group">
-          <div className="size-2.5 rounded-full bg-gradient-to-br from-glow-start to-glow-end shadow-[0_0_10px_color-mix(in_oklab,var(--glow-start)_50%,transparent)]" />
-          <span className="font-medium tracking-tight text-xl text-ink">SocialSync</span>
-        </Link>
+      <header className="border-b border-border">
+        <div className="px-6 md:px-8 h-14 max-w-7xl w-full mx-auto flex items-center">
+          <Link to="/" className="inline-flex items-center gap-2 group">
+            <div className="size-5 rounded-sm bg-ink flex items-center justify-center">
+              <span className="text-surface text-[10px] font-bold tracking-tighter">S</span>
+            </div>
+            <span className="font-semibold tracking-tight text-[15px] text-ink">
+              SocialSync
+            </span>
+          </Link>
+        </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center px-6 pb-16">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
-              {mode === "signin" ? "Welcome back" : "Create your account"}
+      <main className="flex-1 flex items-center justify-center px-6 py-16">
+        <div className="w-full max-w-sm">
+          <div className="mb-8">
+            <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-3">
+              {mode === "signin" ? "Welcome back" : "Create account"}
             </p>
-            <h1 className="text-3xl md:text-4xl tracking-tight font-light leading-tight">
-              {mode === "signin" ? (
-                <>
-                  Sign in to your <span className="font-serif italic">workspace</span>
-                </>
-              ) : (
-                <>
-                  Start drafting on <span className="font-serif italic">glass</span>
-                </>
-              )}
+            <h1 className="text-3xl tracking-[-0.02em] font-semibold leading-tight">
+              {mode === "signin" ? "Sign in to SocialSync" : "Start drafting"}
             </h1>
           </div>
 
-          <div className="rounded-3xl border border-border/70 bg-card p-7 md:p-8 shadow-soft">
+          <div className="border border-border rounded-xl bg-card p-6 shadow-soft">
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               {mode === "signup" && (
                 <Field
@@ -117,7 +102,7 @@ function LoginPage() {
                   type="text"
                   value={displayName}
                   onChange={setDisplayName}
-                  placeholder="Elias Thorne"
+                  placeholder="Jane Cooper"
                 />
               )}
               <Field
@@ -143,12 +128,12 @@ function LoginPage() {
               />
 
               {error && (
-                <div className="text-sm text-[color:var(--glow-end)] bg-[color:var(--glow-end)]/8 border border-[color:var(--glow-end)]/25 rounded-xl px-4 py-3">
+                <div className="text-[13px] text-destructive bg-destructive/5 border border-destructive/20 rounded-md px-3 py-2.5">
                   {error}
                 </div>
               )}
               {info && (
-                <div className="text-sm text-ink bg-secondary border border-border/60 rounded-xl px-4 py-3">
+                <div className="text-[13px] text-ink bg-subtle border border-border rounded-md px-3 py-2.5">
                   {info}
                 </div>
               )}
@@ -156,7 +141,7 @@ function LoginPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="mt-2 w-full py-3.5 rounded-xl bg-ink text-white font-medium shadow-cta hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:hover:translate-y-0 flex items-center justify-center gap-2"
+                className="mt-1 h-10 rounded-md bg-ink text-surface text-[14px] font-medium hover:bg-ink/90 disabled:opacity-60 transition-colors"
               >
                 {submitting
                   ? mode === "signin"
@@ -168,10 +153,10 @@ function LoginPage() {
               </button>
             </form>
 
-            <div className="mt-6 text-center text-sm text-muted-foreground">
+            <div className="mt-5 text-center text-[13px] text-muted-foreground">
               {mode === "signin" ? (
                 <>
-                  New to SocialSync?{" "}
+                  New here?{" "}
                   <button
                     type="button"
                     onClick={() => {
@@ -179,7 +164,7 @@ function LoginPage() {
                       setError(null);
                       setInfo(null);
                     }}
-                    className="text-ink font-medium hover:text-[color:var(--glow-end)]"
+                    className="text-ink font-medium hover:underline"
                   >
                     Create an account
                   </button>
@@ -194,7 +179,7 @@ function LoginPage() {
                       setError(null);
                       setInfo(null);
                     }}
-                    className="text-ink font-medium hover:text-[color:var(--glow-end)]"
+                    className="text-ink font-medium hover:underline"
                   >
                     Sign in
                   </button>
@@ -202,10 +187,6 @@ function LoginPage() {
               )}
             </div>
           </div>
-
-          <p className="mt-6 text-center text-xs text-muted-foreground font-light">
-            By continuing you agree to draft thoughtfully and post even more thoughtfully.
-          </p>
         </div>
       </main>
     </div>
@@ -235,7 +216,7 @@ function Field({
 }) {
   return (
     <label htmlFor={id} className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+      <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.12em]">
         {label}
       </span>
       <input
@@ -247,7 +228,7 @@ function Field({
         required={required}
         minLength={minLength}
         autoComplete={autoComplete}
-        className="px-4 py-3 rounded-xl border border-border bg-card text-ink placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[color:var(--glow-end)]/40 focus:border-[color:var(--glow-end)]/50 transition-all"
+        className="h-10 px-3 rounded-md border border-border bg-card text-[14px] text-ink placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink transition-all"
       />
     </label>
   );

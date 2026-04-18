@@ -1,82 +1,86 @@
 export function WorkspacePreview() {
   return (
     <div className="relative">
-      {/* Soft desk shadow */}
-      <div className="absolute inset-x-6 -bottom-2 h-12 bg-ink/5 rounded-[40px] blur-2xl -z-10" />
+      <div className="absolute inset-x-12 -bottom-1 h-12 bg-ink/[0.04] rounded-3xl blur-2xl -z-10" />
 
-      <div className="bg-card rounded-3xl p-2.5 shadow-glass border border-border/60 ring-1 ring-ink/[0.02]">
-        {/* App Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border/60">
-          <div className="flex items-center gap-3 text-sm">
-            <div className="w-6 h-6 rounded bg-secondary flex items-center justify-center text-muted-foreground font-serif italic">
-              S
+      <div className="bg-card rounded-xl border border-border shadow-pop overflow-hidden">
+        {/* App chrome */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-subtle/60">
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1.5">
+              <div className="size-2.5 rounded-full bg-border" />
+              <div className="size-2.5 rounded-full bg-border" />
+              <div className="size-2.5 rounded-full bg-border" />
             </div>
-            <span className="text-muted-foreground">/</span>
-            <span className="font-medium text-ink">Drafting: Leadership Culture</span>
+            <div className="ml-3 text-[11px] font-mono text-muted-foreground">
+              socialsync.app/app
+            </div>
           </div>
-          <div className="hidden sm:flex items-center gap-3">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
-              Tone
-            </span>
-            <div className="px-3 py-1.5 bg-secondary rounded-lg text-sm text-ink border border-border/60 shadow-sm">
-              Authoritative & Warm
-            </div>
+          <div className="text-[11px] font-mono text-muted-foreground">
+            authoritative · warm
           </div>
         </div>
 
-        {/* App Body */}
-        <div className="grid grid-cols-12 gap-px bg-border/60 rounded-b-2xl overflow-hidden">
-          {/* Left Panel: Input */}
-          <div className="col-span-12 md:col-span-4 bg-secondary p-7 flex flex-col gap-6">
-            <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-widest">
-                Raw Material
-              </label>
-              <div className="p-5 bg-card rounded-xl text-sm text-muted-foreground border border-border/60 leading-relaxed h-40 shadow-sm">
-                I was thinking about how most performance reviews are just backward-looking. It
-                feels like an audit. We need to focus on future trajectory…
-              </div>
+        <div className="grid grid-cols-12">
+          {/* Left: input */}
+          <div className="col-span-12 md:col-span-4 border-r border-border p-5 flex flex-col gap-4 bg-subtle/30">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
+                Raw input
+              </span>
+              <span className="text-[10px] font-mono text-muted-foreground">142 ch</span>
             </div>
-            <div className="mt-auto flex flex-col gap-3">
-              <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
-                <div className="h-full w-2/3 bg-gradient-to-r from-glow-start to-glow-end rounded-full" />
-              </div>
-              <p className="text-xs font-medium text-muted-foreground text-center">
-                Structuring narrative arc…
-              </p>
+            <div className="p-4 bg-card rounded-md border border-border text-[13px] text-muted-foreground leading-relaxed h-44">
+              I was thinking about how most performance reviews are just
+              backward-looking. It feels like an audit. We need to focus on future
+              trajectory…
             </div>
+            <button className="h-9 rounded-md bg-ink text-surface text-[13px] font-medium pointer-events-none">
+              Generate draft
+            </button>
           </div>
 
-          {/* Right Panel: Output Canvas */}
-          <div className="col-span-12 md:col-span-8 bg-card p-8 md:p-14 relative flex justify-center">
-            <div className="w-full max-w-[50ch] space-y-7">
-              <div className="group relative">
-                <div className="absolute -left-12 top-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-semibold text-[color:var(--glow-end)] uppercase tracking-widest hidden md:block">
-                  Hook
-                </div>
-                <p className="text-2xl font-medium leading-snug text-ink">
-                  Performance reviews are broken. We spend 90% of our time looking backward,
-                  instead of charting the path forward.
+          {/* Right: canvas */}
+          <div className="col-span-12 md:col-span-8 p-7 md:p-10">
+            <div className="flex items-center justify-between mb-5">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
+                Canvas
+              </span>
+              <span className="text-[10px] font-mono text-muted-foreground">
+                286 words · 1,742 / 3,000
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xl font-medium leading-snug text-ink">
+                Performance reviews are broken. We spend 90% of our time looking
+                backward, instead of charting the path forward.
+              </p>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">
+                For years, I dreaded the annual review cycle. It felt like an
+                interrogation rather than a development tool.
+              </p>
+              <p className="text-[15px] text-muted-foreground leading-relaxed">
+                Then we made a single shift: we replaced the traditional “Review”
+                with a “Trajectory Alignment.”
+              </p>
+              <div className="border-l-2 border-ink pl-4 py-1">
+                <p className="text-[15px] font-medium text-ink">
+                  The result: attrition dropped 14%, and internal promotions
+                  doubled in 18 months.
                 </p>
               </div>
+            </div>
 
-              <div className="space-y-5 text-muted-foreground text-lg leading-relaxed font-light">
-                <p>
-                  For years, I dreaded the annual review cycle. It felt like an interrogation
-                  rather than a development tool.
-                </p>
-                <p>
-                  Then we made a single shift: We replaced the traditional “Review” with a
-                  “Trajectory Alignment.”
-                </p>
-              </div>
-
-              <div className="p-6 rounded-2xl bg-secondary border border-[color:var(--glow-start)]/25 shadow-[inset_0_2px_10px_color-mix(in_oklab,var(--glow-start)_8%,transparent)]">
-                <p className="text-lg font-medium text-ink">
-                  The result? Attrition dropped by{" "}
-                  <span className="tabular-nums">14%</span>, and internal promotions doubled in{" "}
-                  <span className="tabular-nums">18</span> months.
-                </p>
+            <div className="mt-7 pt-5 border-t border-border flex items-center justify-between">
+              <span className="text-[11px] font-mono text-muted-foreground uppercase">
+                Tone · authoritative
+              </span>
+              <div className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-ink text-surface text-[13px] font-medium">
+                Publish to LinkedIn
+                <span aria-hidden className="text-surface/60">
+                  →
+                </span>
               </div>
             </div>
           </div>

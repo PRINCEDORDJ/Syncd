@@ -8,8 +8,7 @@ export const Route = createFileRoute("/pricing")({
       { title: "Pricing — SocialSync" },
       {
         name: "description",
-        content:
-          "Simple pricing for SocialSync. One free draft per week, unlimited on Studio.",
+        content: "Simple pricing. One free trial week, unlimited drafts on Studio.",
       },
       { property: "og:title", content: "Pricing — SocialSync" },
       {
@@ -26,11 +25,11 @@ const tiers = [
     name: "Trial",
     price: "Free",
     cadence: "for 7 days",
-    description: "Test the full workspace with no credit card.",
+    description: "Test the full workspace. No credit card required.",
     features: [
       "5 generated drafts",
       "1 connected LinkedIn account",
-      "Voice mapping (limited)",
+      "Voice notes (limited)",
       "Email support",
     ],
     cta: "Start free",
@@ -40,12 +39,12 @@ const tiers = [
     name: "Studio",
     price: "$24",
     cadence: "per month",
-    description: "Everything you need to ship a serious LinkedIn cadence.",
+    description: "Everything you need to ship a serious cadence.",
     features: [
       "Unlimited drafts",
       "1 connected LinkedIn account",
-      "Full voice mapping & memory",
-      "Inline rewrites & tone dial",
+      "Full voice mapping",
+      "Tone dial & inline rewrites",
       "Publish history",
       "Priority support",
     ],
@@ -53,10 +52,10 @@ const tiers = [
     highlighted: true,
   },
   {
-    name: "Studio for Teams",
+    name: "Teams",
     price: "$60",
     cadence: "per seat / month",
-    description: "Shared voice profiles for executives and their writers.",
+    description: "Shared voice profiles for execs and ghost-writers.",
     features: [
       "Everything in Studio",
       "Up to 10 LinkedIn accounts",
@@ -76,48 +75,48 @@ function PricingPage() {
 
       <main className="max-w-6xl mx-auto px-6 pt-16 md:pt-24 pb-16">
         <div className="text-center max-w-2xl mx-auto">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-5">
+          <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-4">
             Pricing
           </p>
-          <h1 className="text-4xl md:text-6xl tracking-tight font-light leading-[1.1] text-balance">
-            One <span className="font-serif italic">honest</span> price for serious writers.
+          <h1 className="text-4xl md:text-5xl tracking-[-0.02em] font-semibold leading-[1.05] text-balance">
+            One honest price for serious writers.
           </h1>
-          <p className="mt-5 text-lg text-muted-foreground font-light">
+          <p className="mt-4 text-[16px] text-muted-foreground">
             No usage meters. No prompt budgets. No surprises.
           </p>
         </div>
 
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-4">
           {tiers.map((t) => (
             <div
               key={t.name}
-              className={`relative flex flex-col gap-6 p-8 rounded-3xl border ${
+              className={`relative flex flex-col gap-6 p-7 rounded-xl border transition-all ${
                 t.highlighted
-                  ? "bg-ink text-surface border-ink shadow-cta"
-                  : "bg-card text-ink border-border/60 shadow-soft"
+                  ? "bg-ink text-surface border-ink shadow-pop"
+                  : "bg-card text-ink border-border hover:border-ink/30"
               }`}
             >
               {t.highlighted && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-glow-start to-glow-end text-surface text-[11px] font-semibold uppercase tracking-widest">
+                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-surface text-ink text-[10px] font-mono uppercase tracking-[0.12em] border border-border">
                   Most chosen
                 </div>
               )}
               <div>
-                <h3 className="text-lg font-medium tracking-tight">{t.name}</h3>
-                <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-5xl font-light tracking-tight tabular-nums">
+                <h3 className="text-[15px] font-semibold tracking-tight">{t.name}</h3>
+                <div className="mt-3 flex items-baseline gap-1.5">
+                  <span className="text-4xl font-semibold tracking-[-0.03em] tabular-nums">
                     {t.price}
                   </span>
                   <span
-                    className={
-                      t.highlighted ? "text-surface/60 text-sm" : "text-muted-foreground text-sm"
-                    }
+                    className={`text-[13px] ${
+                      t.highlighted ? "text-surface/60" : "text-muted-foreground"
+                    }`}
                   >
                     {t.cadence}
                   </span>
                 </div>
                 <p
-                  className={`mt-3 text-sm font-light ${
+                  className={`mt-3 text-[13px] ${
                     t.highlighted ? "text-surface/70" : "text-muted-foreground"
                   }`}
                 >
@@ -125,38 +124,38 @@ function PricingPage() {
                 </p>
               </div>
 
-              <ul className="space-y-3 text-sm">
+              <ul className="space-y-2.5 text-[13px]">
                 {t.features.map((f) => (
-                  <li key={f} className="flex items-start gap-3">
+                  <li key={f} className="flex items-start gap-2.5">
                     <span
-                      className={`mt-2 size-1.5 rounded-full shrink-0 ${
-                        t.highlighted
-                          ? "bg-[color:var(--glow-start)]"
-                          : "bg-[color:var(--glow-end)]"
+                      className={`mt-1.5 size-1 rounded-full shrink-0 ${
+                        t.highlighted ? "bg-surface/60" : "bg-ink/40"
                       }`}
                     />
-                    <span className={t.highlighted ? "text-surface/85" : "text-ink/80"}>{f}</span>
+                    <span className={t.highlighted ? "text-surface/85" : "text-ink/80"}>
+                      {f}
+                    </span>
                   </li>
                 ))}
               </ul>
 
               <Link
                 to="/app"
-                className={`mt-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
+                className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors ${
                   t.highlighted
-                    ? "bg-secondary text-ink hover:-translate-y-0.5"
-                    : "bg-ink text-surface hover:-translate-y-0.5"
+                    ? "bg-surface text-ink hover:bg-surface/90"
+                    : "bg-ink text-surface hover:bg-ink/90"
                 }`}
               >
                 {t.cta}
-                <span>→</span>
+                <span aria-hidden>→</span>
               </Link>
             </div>
           ))}
         </div>
 
-        <p className="mt-12 text-center text-sm text-muted-foreground font-light">
-          All plans include a 7-day refund window. Cancel anytime from your workspace.
+        <p className="mt-10 text-center text-[12px] font-mono text-muted-foreground">
+          7-day refund window · Cancel anytime
         </p>
       </main>
 
