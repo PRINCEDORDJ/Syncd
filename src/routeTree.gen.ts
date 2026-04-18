@@ -9,13 +9,23 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiGenerateRouteImport } from './routes/api.generate'
+import { Route as ApiLinkedinStartRouteImport } from './routes/api.linkedin.start'
+import { Route as ApiLinkedinPublishRouteImport } from './routes/api.linkedin.publish'
+import { Route as ApiLinkedinDisconnectRouteImport } from './routes/api.linkedin.disconnect'
+import { Route as ApiLinkedinCallbackRouteImport } from './routes/api.linkedin.callback'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
@@ -46,6 +56,26 @@ const ApiGenerateRoute = ApiGenerateRouteImport.update({
   path: '/api/generate',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiLinkedinStartRoute = ApiLinkedinStartRouteImport.update({
+  id: '/api/linkedin/start',
+  path: '/api/linkedin/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLinkedinPublishRoute = ApiLinkedinPublishRouteImport.update({
+  id: '/api/linkedin/publish',
+  path: '/api/linkedin/publish',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLinkedinDisconnectRoute = ApiLinkedinDisconnectRouteImport.update({
+  id: '/api/linkedin/disconnect',
+  path: '/api/linkedin/disconnect',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLinkedinCallbackRoute = ApiLinkedinCallbackRouteImport.update({
+  id: '/api/linkedin/callback',
+  path: '/api/linkedin/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -53,7 +83,12 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
+  '/settings': typeof SettingsRoute
   '/api/generate': typeof ApiGenerateRoute
+  '/api/linkedin/callback': typeof ApiLinkedinCallbackRoute
+  '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
+  '/api/linkedin/publish': typeof ApiLinkedinPublishRoute
+  '/api/linkedin/start': typeof ApiLinkedinStartRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -61,7 +96,12 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
+  '/settings': typeof SettingsRoute
   '/api/generate': typeof ApiGenerateRoute
+  '/api/linkedin/callback': typeof ApiLinkedinCallbackRoute
+  '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
+  '/api/linkedin/publish': typeof ApiLinkedinPublishRoute
+  '/api/linkedin/start': typeof ApiLinkedinStartRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -70,7 +110,12 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
+  '/settings': typeof SettingsRoute
   '/api/generate': typeof ApiGenerateRoute
+  '/api/linkedin/callback': typeof ApiLinkedinCallbackRoute
+  '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
+  '/api/linkedin/publish': typeof ApiLinkedinPublishRoute
+  '/api/linkedin/start': typeof ApiLinkedinStartRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -80,9 +125,25 @@ export interface FileRouteTypes {
     | '/login'
     | '/methodology'
     | '/pricing'
+    | '/settings'
     | '/api/generate'
+    | '/api/linkedin/callback'
+    | '/api/linkedin/disconnect'
+    | '/api/linkedin/publish'
+    | '/api/linkedin/start'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/app' | '/login' | '/methodology' | '/pricing' | '/api/generate'
+  to:
+    | '/'
+    | '/app'
+    | '/login'
+    | '/methodology'
+    | '/pricing'
+    | '/settings'
+    | '/api/generate'
+    | '/api/linkedin/callback'
+    | '/api/linkedin/disconnect'
+    | '/api/linkedin/publish'
+    | '/api/linkedin/start'
   id:
     | '__root__'
     | '/'
@@ -90,7 +151,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/methodology'
     | '/pricing'
+    | '/settings'
     | '/api/generate'
+    | '/api/linkedin/callback'
+    | '/api/linkedin/disconnect'
+    | '/api/linkedin/publish'
+    | '/api/linkedin/start'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -99,11 +165,23 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MethodologyRoute: typeof MethodologyRoute
   PricingRoute: typeof PricingRoute
+  SettingsRoute: typeof SettingsRoute
   ApiGenerateRoute: typeof ApiGenerateRoute
+  ApiLinkedinCallbackRoute: typeof ApiLinkedinCallbackRoute
+  ApiLinkedinDisconnectRoute: typeof ApiLinkedinDisconnectRoute
+  ApiLinkedinPublishRoute: typeof ApiLinkedinPublishRoute
+  ApiLinkedinStartRoute: typeof ApiLinkedinStartRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pricing': {
       id: '/pricing'
       path: '/pricing'
@@ -146,6 +224,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGenerateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/linkedin/start': {
+      id: '/api/linkedin/start'
+      path: '/api/linkedin/start'
+      fullPath: '/api/linkedin/start'
+      preLoaderRoute: typeof ApiLinkedinStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/linkedin/publish': {
+      id: '/api/linkedin/publish'
+      path: '/api/linkedin/publish'
+      fullPath: '/api/linkedin/publish'
+      preLoaderRoute: typeof ApiLinkedinPublishRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/linkedin/disconnect': {
+      id: '/api/linkedin/disconnect'
+      path: '/api/linkedin/disconnect'
+      fullPath: '/api/linkedin/disconnect'
+      preLoaderRoute: typeof ApiLinkedinDisconnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/linkedin/callback': {
+      id: '/api/linkedin/callback'
+      path: '/api/linkedin/callback'
+      fullPath: '/api/linkedin/callback'
+      preLoaderRoute: typeof ApiLinkedinCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -155,7 +261,12 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MethodologyRoute: MethodologyRoute,
   PricingRoute: PricingRoute,
+  SettingsRoute: SettingsRoute,
   ApiGenerateRoute: ApiGenerateRoute,
+  ApiLinkedinCallbackRoute: ApiLinkedinCallbackRoute,
+  ApiLinkedinDisconnectRoute: ApiLinkedinDisconnectRoute,
+  ApiLinkedinPublishRoute: ApiLinkedinPublishRoute,
+  ApiLinkedinStartRoute: ApiLinkedinStartRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

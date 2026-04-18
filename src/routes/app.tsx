@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { SiteNav } from "@/components/SiteNav";
 
 export const Route = createFileRoute("/app")({
@@ -9,7 +10,7 @@ export const Route = createFileRoute("/app")({
       { title: "Workspace — SocialSync" },
       {
         name: "description",
-        content: "Draft, refine, and publish your next LinkedIn post in the SocialSync workspace.",
+        content: "Draft, refine, and publish your next LinkedIn post.",
       },
     ],
   }),
@@ -29,10 +30,7 @@ function WorkspaceGate() {
   if (loading || !user) {
     return (
       <div className="min-h-dvh bg-background text-ink flex items-center justify-center">
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <span className="size-1.5 rounded-full bg-[color:var(--glow-start)] animate-pulse" />
-          <span className="text-sm font-light">Opening your workspace…</span>
-        </div>
+        <span className="text-[13px] font-mono text-muted-foreground">Loading…</span>
       </div>
     );
   }
@@ -49,8 +47,10 @@ function Workspace() {
   const [input, setInput] = useState("");
   const [draft, setDraft] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [published, setPublished] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [linkedinConnected, setLinkedinConnected] = useState<boolean | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const charCount = draft.length;
@@ -60,10 +60,29 @@ function Workspace() {
     [draft],
   );
 
+  // Check LinkedIn connection status
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("linkedin_connections")
+        .select("user_id, expires_at")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const valid = !!data && new Date(data.expires_at).getTime() > Date.now();
+      setLinkedinConnected(valid);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   async function generate() {
     if (!input.trim() || generating) return;
     setError(null);
-    setPublished(false);
+    setSuccess(null);
     setGenerating(true);
     setDraft("");
 
@@ -72,9 +91,15 @@ function Workspace() {
     abortRef.current = controller;
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+
       const resp = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ input, tone }),
         signal: controller.signal,
       });
@@ -116,23 +141,6 @@ function Workspace() {
           }
         }
       }
-
-      // Flush
-      if (textBuffer.trim()) {
-        for (let raw of textBuffer.split("\n")) {
-          if (raw.endsWith("\r")) raw = raw.slice(0, -1);
-          if (!raw.startsWith("data: ")) continue;
-          const json = raw.slice(6).trim();
-          if (json === "[DONE]") continue;
-          try {
-            const parsed = JSON.parse(json);
-            const content: string | undefined = parsed.choices?.[0]?.delta?.content;
-            if (content) setDraft((prev) => prev + content);
-          } catch {
-            /* ignore */
-          }
-        }
-      }
     } catch (e) {
       if ((e as Error).name === "AbortError") return;
       setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -141,53 +149,103 @@ function Workspace() {
     }
   }
 
-  function publish() {
-    if (overLimit || !draft.trim()) return;
-    setPublished(true);
-    setTimeout(() => setPublished(false), 5000);
+  async function publish() {
+    if (overLimit || !draft.trim() || publishing) return;
+    setPublishing(true);
+    setError(null);
+    setSuccess(null);
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      setPublishing(false);
+      setError("Session expired — please sign in again.");
+      return;
+    }
+
+    const resp = await fetch("/api/linkedin/publish", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ content: draft }),
+    });
+    const data = (await resp.json().catch(() => ({}))) as {
+      success?: boolean;
+      error?: string;
+    };
+    setPublishing(false);
+    if (resp.ok && data.success) {
+      setSuccess("Published to LinkedIn successfully.");
+      // Save to drafts table as published
+      if (user) {
+        await supabase.from("drafts").insert({
+          user_id: user.id,
+          content: draft,
+          raw_input: input,
+          tone,
+          char_count: draft.length,
+          published: true,
+          title: draft.slice(0, 60),
+        });
+      }
+    } else {
+      setError(data.error ?? "Failed to publish.");
+    }
   }
 
   const greeting =
-    user?.user_metadata?.display_name ??
-    user?.email?.split("@")[0] ??
-    "writer";
+    user?.user_metadata?.display_name ?? user?.email?.split("@")[0] ?? "there";
 
   return (
     <div className="min-h-dvh bg-background text-ink flex flex-col">
       <SiteNav />
 
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 pb-12">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {/* Page header */}
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">
+            <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-2">
               Workspace
             </p>
-            <h1 className="text-3xl md:text-4xl tracking-tight font-light leading-tight">
-              Welcome back, <span className="font-serif italic">{greeting}</span>.
+            <h1 className="text-2xl md:text-3xl tracking-[-0.02em] font-semibold leading-tight">
+              Welcome back, {greeting}.
             </h1>
           </div>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-[color:var(--glow-start)] animate-pulse" />
-            LinkedIn not connected ·{" "}
-            <Link to="/methodology" className="text-ink hover:text-[color:var(--glow-end)]">
-              Learn more
-            </Link>
+          <div className="flex items-center gap-3 text-[12px] font-mono">
+            {linkedinConnected === null ? (
+              <span className="text-muted-foreground">Checking LinkedIn…</span>
+            ) : linkedinConnected ? (
+              <span className="inline-flex items-center gap-1.5 text-ink">
+                <span className="size-1.5 rounded-full bg-ink" />
+                LinkedIn connected
+              </span>
+            ) : (
+              <Link
+                to="/settings"
+                className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-ink"
+              >
+                <span className="size-1.5 rounded-full bg-muted-foreground" />
+                LinkedIn not connected · connect →
+              </Link>
+            )}
           </div>
         </div>
 
-        <div className="bg-card rounded-3xl p-2 shadow-glass border border-border/60 ring-1 ring-ink/[0.02]">
+        {/* Workspace card */}
+        <div className="border border-border rounded-xl bg-card overflow-hidden">
           {/* Header */}
-          <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 border-b border-border/60">
-            <div className="flex items-center gap-3 text-sm">
-              <div className="w-7 h-7 rounded bg-secondary flex items-center justify-center text-muted-foreground font-serif italic">
-                S
+          <div className="flex flex-wrap items-center justify-between gap-4 px-5 h-12 border-b border-border bg-subtle/40">
+            <div className="flex items-center gap-2 text-[13px]">
+              <div className="size-5 rounded-sm bg-ink flex items-center justify-center">
+                <span className="text-surface text-[10px] font-bold">S</span>
               </div>
               <span className="text-muted-foreground">/</span>
               <span className="font-medium text-ink">Untitled draft</span>
             </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mr-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.12em] mr-2">
                 Tone
               </span>
               {TONES.map((t) => (
@@ -195,10 +253,10 @@ function Workspace() {
                   key={t}
                   type="button"
                   onClick={() => setTone(t)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                  className={`h-7 px-2.5 rounded text-[12px] font-medium border transition-colors ${
                     tone === t
-                      ? "bg-ink text-white border-ink"
-                      : "bg-card text-ink border-border hover:border-ink/30"
+                      ? "bg-ink text-surface border-ink"
+                      : "bg-card text-ink border-border hover:bg-subtle"
                   }`}
                 >
                   {t}
@@ -208,17 +266,18 @@ function Workspace() {
           </div>
 
           {/* Body */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-px bg-border/60 rounded-b-2xl overflow-hidden">
-            <section className="md:col-span-4 bg-card p-6 flex flex-col gap-5 min-h-[60vh]">
+          <div className="grid grid-cols-1 md:grid-cols-12">
+            {/* Input */}
+            <section className="md:col-span-4 border-b md:border-b-0 md:border-r border-border p-5 flex flex-col gap-4 min-h-[60vh] bg-subtle/20">
               <div className="flex items-center justify-between">
                 <label
                   htmlFor="raw"
-                  className="block text-xs font-semibold text-muted-foreground uppercase tracking-widest"
+                  className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-[0.12em]"
                 >
-                  Raw material
+                  Raw input
                 </label>
-                <span className="text-[11px] text-muted-foreground tabular-nums">
-                  {input.length} chars
+                <span className="text-[11px] font-mono text-muted-foreground">
+                  {input.length} ch
                 </span>
               </div>
               <textarea
@@ -226,52 +285,36 @@ function Workspace() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Dump a thought, a voice note transcript, or three messy bullets…"
-                className="flex-1 resize-none p-4 bg-secondary/40 rounded-xl text-sm text-ink border border-border leading-relaxed focus:outline-none focus:ring-2 focus:ring-[color:var(--glow-end)]/40 focus:border-[color:var(--glow-end)]/50 transition-all min-h-[200px]"
+                className="flex-1 resize-none p-3 bg-card rounded-md text-[14px] text-ink border border-border leading-relaxed focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink min-h-[200px]"
               />
 
               <button
                 type="button"
                 onClick={generate}
                 disabled={generating || !input.trim()}
-                className="w-full py-3.5 rounded-xl bg-ink text-white font-medium shadow-cta hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:hover:translate-y-0 flex items-center justify-center gap-2"
+                className="h-10 rounded-md bg-ink text-surface text-[14px] font-medium hover:bg-ink/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
               >
-                {generating ? (
-                  <>
-                    <span className="size-1.5 rounded-full bg-[color:var(--glow-start)] animate-pulse" />
-                    Structuring narrative…
-                  </>
-                ) : draft ? (
-                  "Regenerate"
-                ) : (
-                  "Generate draft"
-                )}
+                {generating
+                  ? "Generating…"
+                  : draft
+                    ? "Regenerate"
+                    : "Generate draft"}
               </button>
 
-              {error && (
-                <div className="text-sm text-[color:var(--glow-end)] bg-[color:var(--glow-end)]/8 border border-[color:var(--glow-end)]/25 rounded-xl px-4 py-3">
-                  {error}
-                </div>
-              )}
-
-              <p className="text-[11px] text-muted-foreground text-center font-light">
-                Powered by Lovable AI · Gemini 3 Flash
+              <p className="text-[11px] font-mono text-muted-foreground text-center">
+                Powered by Lovable AI
               </p>
             </section>
 
-            <section className="md:col-span-8 bg-card p-6 md:p-10 flex flex-col">
-              <div className="flex items-center justify-between mb-5">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+            {/* Canvas */}
+            <section className="md:col-span-8 p-6 md:p-8 flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-[0.12em]">
                   Canvas
                 </p>
-                <div className="flex items-center gap-4 text-[11px] text-muted-foreground tabular-nums">
+                <div className="flex items-center gap-4 text-[11px] font-mono text-muted-foreground tabular-nums">
                   <span>{wordCount} words</span>
-                  <span
-                    className={
-                      overLimit
-                        ? "text-[color:var(--glow-end)] font-medium"
-                        : "text-muted-foreground"
-                    }
-                  >
+                  <span className={overLimit ? "text-destructive font-semibold" : ""}>
                     {charCount} / 3000
                   </span>
                 </div>
@@ -281,52 +324,66 @@ function Workspace() {
                 value={draft}
                 onChange={(e) => {
                   setDraft(e.target.value);
-                  setPublished(false);
+                  setSuccess(null);
                 }}
                 placeholder="Your generated post will appear here. Edit anything — it's yours."
-                className="flex-1 w-full resize-none bg-transparent text-ink text-lg leading-relaxed font-light focus:outline-none placeholder:text-muted-foreground/60 min-h-[40vh]"
+                className="flex-1 w-full resize-none bg-transparent text-ink text-[16px] leading-relaxed focus:outline-none placeholder:text-muted-foreground/60 min-h-[40vh]"
               />
 
-              <div className="flex flex-wrap items-center justify-between gap-4 pt-6 mt-6 border-t border-border/60">
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="px-2 py-1 rounded bg-secondary border border-border font-mono uppercase tracking-wider">
-                    Tone · {tone.split(" ")[0]}
+              {error && (
+                <div className="mt-4 px-3 py-2.5 rounded-md bg-destructive/5 border border-destructive/20 text-[13px] text-destructive">
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="mt-4 px-3 py-2.5 rounded-md bg-subtle border border-border text-[13px] text-ink flex items-center gap-2">
+                  <span className="size-1.5 rounded-full bg-ink" />
+                  {success}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-5 mt-5 border-t border-border">
+                <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
+                  <span className="px-2 py-0.5 rounded bg-subtle border border-border uppercase tracking-[0.1em]">
+                    {tone.split(" ")[0]}
                   </span>
                   {overLimit && (
-                    <span className="text-[color:var(--glow-end)] font-medium">
-                      Over the 3,000 character LinkedIn limit
+                    <span className="text-destructive font-semibold">
+                      Over LinkedIn limit
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => navigator.clipboard?.writeText(draft)}
                     disabled={!draft}
-                    className="px-4 py-2.5 rounded-xl text-sm font-medium text-ink border border-border hover:border-ink/30 transition-colors disabled:opacity-50"
+                    className="h-9 px-3 rounded-md text-[13px] font-medium text-ink border border-border hover:bg-subtle transition-colors disabled:opacity-50"
                   >
                     Copy
                   </button>
-                  <button
-                    type="button"
-                    onClick={publish}
-                    disabled={!draft.trim() || overLimit}
-                    className="px-5 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-glow-start to-glow-end text-white shadow-cta hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:hover:translate-y-0 flex items-center gap-2"
-                  >
-                    Publish to LinkedIn
-                    <span>→</span>
-                  </button>
+                  {linkedinConnected ? (
+                    <button
+                      type="button"
+                      onClick={publish}
+                      disabled={!draft.trim() || overLimit || publishing}
+                      className="h-9 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
+                    >
+                      {publishing ? "Publishing…" : "Publish to LinkedIn"}
+                      <span aria-hidden className="text-surface/60">→</span>
+                    </button>
+                  ) : (
+                    <Link
+                      to="/settings"
+                      className="h-9 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 inline-flex items-center gap-1.5"
+                    >
+                      Connect LinkedIn
+                      <span aria-hidden className="text-surface/60">→</span>
+                    </Link>
+                  )}
                 </div>
               </div>
-
-              {published && (
-                <div className="mt-4 px-4 py-3 rounded-xl bg-secondary/60 border border-[color:var(--glow-start)]/30 text-sm text-ink flex items-center gap-3">
-                  <span className="size-1.5 rounded-full bg-[color:var(--glow-end)]" />
-                  LinkedIn isn't connected yet — your draft is safely yours. We'll wire
-                  publishing next.
-                </div>
-              )}
             </section>
           </div>
         </div>

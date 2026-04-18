@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getRequestHeader } from "@tanstack/react-start/server";
 
 const SYSTEM_PROMPT = `You are SocialSync, an expert LinkedIn writing assistant.
 
@@ -39,6 +41,23 @@ export const Route = createFileRoute("/api/generate")({
           );
         }
 
+        // Optional: read voice notes from the authenticated user's profile
+        let voiceNotes = "";
+        const authHeader =
+          getRequestHeader("authorization") ?? getRequestHeader("Authorization");
+        if (authHeader?.startsWith("Bearer ")) {
+          const token = authHeader.slice(7);
+          const { data: userData } = await supabaseAdmin.auth.getUser(token);
+          if (userData.user) {
+            const { data: prof } = await supabaseAdmin
+              .from("profiles")
+              .select("voice_notes")
+              .eq("user_id", userData.user.id)
+              .maybeSingle();
+            voiceNotes = (prof?.voice_notes ?? "").trim();
+          }
+        }
+
         let body: unknown;
         try {
           body = await request.json();
@@ -49,10 +68,7 @@ export const Route = createFileRoute("/api/generate")({
           });
         }
 
-        const { input, tone } = (body ?? {}) as {
-          input?: unknown;
-          tone?: unknown;
-        };
+        const { input, tone } = (body ?? {}) as { input?: unknown; tone?: unknown };
 
         if (typeof input !== "string" || input.trim().length === 0) {
           return new Response(
@@ -69,7 +85,11 @@ export const Route = createFileRoute("/api/generate")({
 
         const safeTone: Tone = isValidTone(tone) ? tone : "Authoritative & Warm";
 
-        const userMessage = `Tone: ${safeTone}
+        const voiceBlock = voiceNotes
+          ? `\n\nWriter's voice notes (follow these strictly):\n"""\n${voiceNotes.slice(0, 1500)}\n"""`
+          : "";
+
+        const userMessage = `Tone: ${safeTone}${voiceBlock}
 
 Raw material from the writer:
 """
@@ -109,8 +129,7 @@ Write the LinkedIn post now.`;
           if (response.status === 402) {
             return new Response(
               JSON.stringify({
-                error:
-                  "AI credits exhausted. Add funds in Workspace → Usage to keep generating.",
+                error: "AI credits exhausted. Add funds to keep generating.",
               }),
               { status: 402, headers: { "Content-Type": "application/json" } },
             );
