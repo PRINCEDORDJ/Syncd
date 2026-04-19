@@ -1,13 +1,12 @@
 import { Link } from "@tanstack/react-router";
+import { BrandMark } from "@/components/BrandMark";
 
 export function SiteFooter() {
   return (
     <footer className="border-t border-border mt-24">
       <div className="max-w-7xl mx-auto px-6 md:px-8 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex items-center gap-2">
-          <div className="size-5 rounded-sm bg-ink flex items-center justify-center">
-            <span className="text-surface text-[10px] font-bold tracking-tighter">S</span>
-          </div>
+          <BrandMark size={22} />
           <span className="font-semibold tracking-tight text-ink text-[15px]">
             SocialSync
           </span>

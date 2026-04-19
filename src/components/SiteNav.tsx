@@ -1,5 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
+import { BrandMark } from "@/components/BrandMark";
 
 export function SiteNav() {
   const { user, signOut } = useAuth();
@@ -9,9 +10,7 @@ export function SiteNav() {
     <nav className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
       <div className="flex items-center justify-between px-6 md:px-8 h-14 w-full max-w-7xl mx-auto">
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="size-5 rounded-sm bg-ink flex items-center justify-center">
-            <span className="text-surface text-[10px] font-bold tracking-tighter">S</span>
-          </div>
+          <BrandMark size={22} />
           <span className="font-semibold tracking-tight text-[15px] text-ink">
             SocialSync
           </span>
