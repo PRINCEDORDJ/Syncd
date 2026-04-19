@@ -68,7 +68,11 @@ export const Route = createFileRoute("/api/generate")({
           });
         }
 
-        const { input, tone } = (body ?? {}) as { input?: unknown; tone?: unknown };
+        const { input, tone, images } = (body ?? {}) as {
+          input?: unknown;
+          tone?: unknown;
+          images?: unknown;
+        };
 
         if (typeof input !== "string" || input.trim().length === 0) {
           return new Response(
@@ -83,13 +87,31 @@ export const Route = createFileRoute("/api/generate")({
           );
         }
 
+        // Validate images: array of data URLs, max 4
+        const imageUrls: string[] = [];
+        if (Array.isArray(images)) {
+          for (const img of images.slice(0, 4)) {
+            if (
+              typeof img === "string" &&
+              img.startsWith("data:image/") &&
+              img.length < 7_000_000
+            ) {
+              imageUrls.push(img);
+            }
+          }
+        }
+
         const safeTone: Tone = isValidTone(tone) ? tone : "Authoritative & Warm";
 
         const voiceBlock = voiceNotes
           ? `\n\nWriter's voice notes (follow these strictly):\n"""\n${voiceNotes.slice(0, 1500)}\n"""`
           : "";
 
-        const userMessage = `Tone: ${safeTone}${voiceBlock}
+        const imageInstruction = imageUrls.length
+          ? `\n\nThe writer attached ${imageUrls.length} image(s) as additional context. Weave relevant visual details (people, places, screenshots, products, moments) into the post naturally if they add specificity.`
+          : "";
+
+        const userText = `Tone: ${safeTone}${voiceBlock}${imageInstruction}
 
 Raw material from the writer:
 """
@@ -97,6 +119,14 @@ ${input.trim()}
 """
 
 Write the LinkedIn post now.`;
+
+        const userContent: Array<
+          | { type: "text"; text: string }
+          | { type: "image_url"; image_url: { url: string } }
+        > = [{ type: "text", text: userText }];
+        for (const url of imageUrls) {
+          userContent.push({ type: "image_url", image_url: { url } });
+        }
 
         const response = await fetch(
           "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -107,11 +137,11 @@ Write the LinkedIn post now.`;
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              model: "google/gemini-3-flash-preview",
+              model: "google/gemini-2.5-flash",
               stream: true,
               messages: [
                 { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: userMessage },
+                { role: "user", content: userContent },
               ],
             }),
           },
