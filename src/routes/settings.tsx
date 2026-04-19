@@ -1,14 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { z } from "zod";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { SiteNav } from "@/components/SiteNav";
 
 export const Route = createFileRoute("/settings")({
-  validateSearch: z.object({
-    linkedin_connected: z.string().optional(),
-    linkedin_error: z.string().optional(),
+  validateSearch: (search: Record<string, unknown>) => ({
+    linkedin_connected:
+      search.linkedin_connected != null ? String(search.linkedin_connected) : undefined,
+    linkedin_error:
+      search.linkedin_error != null ? String(search.linkedin_error) : undefined,
   }),
   head: () => ({
     meta: [
