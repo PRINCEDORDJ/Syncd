@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteNav } from "@/components/SiteNav";
+import { BrandMark } from "@/components/BrandMark";
+import { ImagePlus, X } from "lucide-react";
 
 export const Route = createFileRoute("/app")({
   head: () => ({
@@ -45,6 +47,7 @@ function Workspace() {
   const { user } = useAuth();
   const [tone, setTone] = useState<Tone>("Authoritative & Warm");
   const [input, setInput] = useState("");
+  const [images, setImages] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -52,6 +55,44 @@ function Workspace() {
   const [success, setSuccess] = useState<string | null>(null);
   const [linkedinConnected, setLinkedinConnected] = useState<boolean | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const MAX_IMAGES = 4;
+
+  async function handleFiles(files: FileList | null) {
+    if (!files || !files.length) return;
+    const remaining = MAX_IMAGES - images.length;
+    if (remaining <= 0) {
+      setError(`You can attach up to ${MAX_IMAGES} images.`);
+      return;
+    }
+    const accepted: File[] = [];
+    for (const f of Array.from(files).slice(0, remaining)) {
+      if (!f.type.startsWith("image/")) continue;
+      if (f.size > 5 * 1024 * 1024) {
+        setError(`"${f.name}" is over 5MB.`);
+        continue;
+      }
+      accepted.push(f);
+    }
+    const dataUrls = await Promise.all(
+      accepted.map(
+        (f) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(f);
+          }),
+      ),
+    );
+    setImages((prev) => [...prev, ...dataUrls].slice(0, MAX_IMAGES));
+    setError(null);
+  }
+
+  function removeImage(idx: number) {
+    setImages((prev) => prev.filter((_, i) => i !== idx));
+  }
 
   const charCount = draft.length;
   const overLimit = charCount > 3000;
@@ -100,7 +141,7 @@ function Workspace() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ input, tone }),
+        body: JSON.stringify({ input, tone, images }),
         signal: controller.signal,
       });
 
@@ -238,9 +279,7 @@ function Workspace() {
           {/* Header */}
           <div className="flex flex-wrap items-center justify-between gap-4 px-5 h-12 border-b border-border bg-subtle/40">
             <div className="flex items-center gap-2 text-[13px]">
-              <div className="size-5 rounded-sm bg-ink flex items-center justify-center">
-                <span className="text-surface text-[10px] font-bold">S</span>
-              </div>
+              <BrandMark size={20} />
               <span className="text-muted-foreground">/</span>
               <span className="font-medium text-ink">Untitled draft</span>
             </div>
@@ -287,6 +326,62 @@ function Workspace() {
                 placeholder="Dump a thought, a voice note transcript, or three messy bullets…"
                 className="flex-1 resize-none p-3 bg-card rounded-md text-[14px] text-ink border border-border leading-relaxed focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink min-h-[200px]"
               />
+
+              {/* Image attachments */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-[0.12em]">
+                    Images
+                  </span>
+                  <span className="text-[11px] font-mono text-muted-foreground">
+                    {images.length} / {MAX_IMAGES}
+                  </span>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    handleFiles(e.target.files);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                />
+                {images.length > 0 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {images.map((src, i) => (
+                      <div
+                        key={i}
+                        className="relative aspect-square rounded-md overflow-hidden border border-border bg-card group"
+                      >
+                        <img
+                          src={src}
+                          alt={`Attachment ${i + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(i)}
+                          className="absolute top-1 right-1 size-5 rounded-full bg-ink/80 text-surface flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Remove image"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={images.length >= MAX_IMAGES}
+                  className="w-full h-9 rounded-md border border-dashed border-border text-[12px] font-medium text-muted-foreground hover:text-ink hover:border-ink/40 hover:bg-card transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                >
+                  <ImagePlus className="size-3.5" />
+                  {images.length === 0 ? "Add images" : "Add more"}
+                </button>
+              </div>
 
               <button
                 type="button"
