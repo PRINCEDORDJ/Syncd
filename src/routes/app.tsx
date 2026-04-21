@@ -398,10 +398,6 @@ function Workspace() {
                     ? "Regenerate"
                     : "Generate draft"}
               </button>
-
-              <p className="text-[11px] font-mono text-muted-foreground text-center">
-                Powered by Lovable AI
-              </p>
             </section>
 
             {/* Canvas */}
