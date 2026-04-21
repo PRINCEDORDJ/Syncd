@@ -265,7 +265,7 @@ function Workspace() {
             ) : (
               <Link
                 to="/settings"
-                search={{ linkedin_connected: undefined }}
+                search={{ linkedin_connected: undefined, linkedin_error: undefined }}
                 className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-ink"
               >
                 <span className="size-1.5 rounded-full bg-muted-foreground" />
@@ -474,6 +474,7 @@ function Workspace() {
                   ) : (
                     <Link
                       to="/settings"
+                      search={{ linkedin_connected: undefined, linkedin_error: undefined }}
                       className="h-9 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 inline-flex items-center gap-1.5"
                     >
                       Connect LinkedIn
