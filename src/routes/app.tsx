@@ -162,6 +162,16 @@ function Workspace() {
     };
   }, [user]);
 
+  // Debounced auto-save when draft or title changes (only after generation begins)
+  useEffect(() => {
+    if (!user || !draft.trim() || generating) return;
+    const t = setTimeout(() => {
+      saveDraft(false);
+    }, 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, title, user, generating]);
+
   async function generate() {
     if (!input.trim() || generating) return;
     setError(null);
