@@ -28,6 +28,9 @@ export function SiteNav() {
         <div className="flex items-center gap-2">
           {user ? (
             <>
+              <NavLink to="/drafts" current={pathname}>
+                Posts
+              </NavLink>
               <NavLink to="/settings" current={pathname}>
                 Settings
               </NavLink>
@@ -77,7 +80,7 @@ function NavLink({
   current,
   children,
 }: {
-  to: "/methodology" | "/pricing" | "/settings" | "/app";
+  to: "/methodology" | "/pricing" | "/settings" | "/app" | "/drafts";
   current: string;
   children: React.ReactNode;
 }) {
