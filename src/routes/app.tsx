@@ -265,6 +265,7 @@ function Workspace() {
             ) : (
               <Link
                 to="/settings"
+                search={{}}
                 className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-ink"
               >
                 <span className="size-1.5 rounded-full bg-muted-foreground" />
