@@ -369,6 +369,64 @@ function Workspace() {
                 className="flex-1 w-full resize-none bg-transparent text-ink text-[16px] leading-relaxed focus:outline-none placeholder:text-muted-foreground/60 min-h-[40vh]"
               />
 
+              {/* Image attachments — appear with the generated draft */}
+              {draft && (
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-[0.12em]">
+                      Images
+                    </span>
+                    <span className="text-[11px] font-mono text-muted-foreground">
+                      {images.length} / {MAX_IMAGES}
+                    </span>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      handleFiles(e.target.files);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                  />
+                  {images.length > 0 && (
+                    <div className="grid grid-cols-4 gap-2">
+                      {images.map((src, i) => (
+                        <div
+                          key={i}
+                          className="relative aspect-square rounded-md overflow-hidden border border-border bg-card group"
+                        >
+                          <img
+                            src={src}
+                            alt={`Attachment ${i + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(i)}
+                            className="absolute top-1 right-1 size-5 rounded-full bg-ink/80 text-surface flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            aria-label="Remove image"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={images.length >= MAX_IMAGES}
+                    className="w-full h-9 rounded-md border border-dashed border-border text-[12px] font-medium text-muted-foreground hover:text-ink hover:border-ink/40 hover:bg-card transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                  >
+                    <ImagePlus className="size-3.5" />
+                    {images.length === 0 ? "Add images to post" : "Add more"}
+                  </button>
+                </div>
+              )}
+
               {error && (
                 <div className="mt-4 px-3 py-2.5 rounded-md bg-destructive/5 border border-destructive/20 text-[13px] text-destructive">
                   {error}
