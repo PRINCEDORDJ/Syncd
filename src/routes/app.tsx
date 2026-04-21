@@ -222,17 +222,9 @@ function Workspace() {
     setPublishing(false);
     if (resp.ok && data.success) {
       setSuccess("Published to LinkedIn successfully.");
-      // Save to drafts table as published
+      // Mark saved draft as published
       if (user) {
-        await supabase.from("drafts").insert({
-          user_id: user.id,
-          content: draft,
-          raw_input: input,
-          tone,
-          char_count: draft.length,
-          published: true,
-          title: draft.slice(0, 60),
-        });
+        await saveDraft(true);
       }
     } else {
       setError(data.error ?? "Failed to publish.");
