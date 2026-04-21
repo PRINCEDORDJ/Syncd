@@ -425,8 +425,7 @@ function Workspace() {
               />
 
               {/* Image attachments — appear with the generated draft */}
-              {draft && (
-                <div className="mt-4 space-y-2">
+              <div className="mt-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-[0.12em]">
                       Images
@@ -479,8 +478,7 @@ function Workspace() {
                     <ImagePlus className="size-3.5" />
                     {images.length === 0 ? "Add images to post" : "Add more"}
                   </button>
-                </div>
-              )}
+              </div>
 
               {error && (
                 <div className="mt-4 px-3 py-2.5 rounded-md bg-destructive/5 border border-destructive/20 text-[13px] text-destructive">
