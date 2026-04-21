@@ -49,6 +49,9 @@ function Workspace() {
   const [input, setInput] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
+  const [title, setTitle] = useState("Untitled draft");
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
