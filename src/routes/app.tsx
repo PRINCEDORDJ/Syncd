@@ -328,7 +328,19 @@ function Workspace() {
             <div className="flex items-center gap-2 text-[13px]">
               <BrandMark size={20} />
               <span className="text-muted-foreground">/</span>
-              <span className="font-medium text-ink">Untitled draft</span>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Untitled draft"
+                className="font-medium text-ink bg-transparent border-0 focus:outline-none focus:ring-0 px-1 -mx-1 rounded hover:bg-card focus:bg-card transition-colors min-w-0 max-w-[260px]"
+                aria-label="Draft title"
+              />
+              {saving && (
+                <span className="text-[11px] font-mono text-muted-foreground ml-1">
+                  Saving…
+                </span>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.12em] mr-2">
