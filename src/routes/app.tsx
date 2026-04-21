@@ -178,6 +178,8 @@ function Workspace() {
     setSuccess(null);
     setGenerating(true);
     setDraft("");
+    setDraftId(null);
+    setTitle("Untitled draft");
 
     abortRef.current?.abort();
     const controller = new AbortController();
