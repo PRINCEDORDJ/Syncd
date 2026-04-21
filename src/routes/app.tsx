@@ -49,6 +49,9 @@ function Workspace() {
   const [input, setInput] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
+  const [title, setTitle] = useState("Untitled draft");
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +97,45 @@ function Workspace() {
     setImages((prev) => prev.filter((_, i) => i !== idx));
   }
 
+  async function saveDraft(asPublished = false): Promise<string | null> {
+    if (!user || !draft.trim()) return null;
+    setSaving(true);
+    try {
+      const payload = {
+        user_id: user.id,
+        content: draft,
+        raw_input: input,
+        tone,
+        char_count: draft.length,
+        title: title.trim() || "Untitled draft",
+        ...(asPublished ? { published: true } : {}),
+      };
+      if (draftId) {
+        const { error: upErr } = await supabase
+          .from("drafts")
+          .update(payload)
+          .eq("id", draftId)
+          .eq("user_id", user.id);
+        if (upErr) throw upErr;
+        return draftId;
+      } else {
+        const { data, error: insErr } = await supabase
+          .from("drafts")
+          .insert(payload)
+          .select("id")
+          .single();
+        if (insErr) throw insErr;
+        if (data?.id) setDraftId(data.id);
+        return data?.id ?? null;
+      }
+    } catch (e) {
+      console.error("saveDraft failed", e);
+      return null;
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const charCount = draft.length;
   const overLimit = charCount > 3000;
   const wordCount = useMemo(
@@ -120,12 +162,24 @@ function Workspace() {
     };
   }, [user]);
 
+  // Debounced auto-save when draft or title changes (only after generation begins)
+  useEffect(() => {
+    if (!user || !draft.trim() || generating) return;
+    const t = setTimeout(() => {
+      saveDraft(false);
+    }, 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, title, user, generating]);
+
   async function generate() {
     if (!input.trim() || generating) return;
     setError(null);
     setSuccess(null);
     setGenerating(true);
     setDraft("");
+    setDraftId(null);
+    setTitle("Untitled draft");
 
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -219,17 +273,9 @@ function Workspace() {
     setPublishing(false);
     if (resp.ok && data.success) {
       setSuccess("Published to LinkedIn successfully.");
-      // Save to drafts table as published
+      // Mark saved draft as published
       if (user) {
-        await supabase.from("drafts").insert({
-          user_id: user.id,
-          content: draft,
-          raw_input: input,
-          tone,
-          char_count: draft.length,
-          published: true,
-          title: draft.slice(0, 60),
-        });
+        await saveDraft(true);
       }
     } else {
       setError(data.error ?? "Failed to publish.");
@@ -282,7 +328,19 @@ function Workspace() {
             <div className="flex items-center gap-2 text-[13px]">
               <BrandMark size={20} />
               <span className="text-muted-foreground">/</span>
-              <span className="font-medium text-ink">Untitled draft</span>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Untitled draft"
+                className="font-medium text-ink bg-transparent border-0 focus:outline-none focus:ring-0 px-1 -mx-1 rounded hover:bg-card focus:bg-card transition-colors min-w-0 max-w-[260px]"
+                aria-label="Draft title"
+              />
+              {saving && (
+                <span className="text-[11px] font-mono text-muted-foreground ml-1">
+                  Saving…
+                </span>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.12em] mr-2">
@@ -340,10 +398,6 @@ function Workspace() {
                     ? "Regenerate"
                     : "Generate draft"}
               </button>
-
-              <p className="text-[11px] font-mono text-muted-foreground text-center">
-                Powered by Lovable AI
-              </p>
             </section>
 
             {/* Canvas */}
@@ -371,8 +425,7 @@ function Workspace() {
               />
 
               {/* Image attachments — appear with the generated draft */}
-              {draft && (
-                <div className="mt-4 space-y-2">
+              <div className="mt-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-[0.12em]">
                       Images
@@ -425,8 +478,7 @@ function Workspace() {
                     <ImagePlus className="size-3.5" />
                     {images.length === 0 ? "Add images to post" : "Add more"}
                   </button>
-                </div>
-              )}
+              </div>
 
               {error && (
                 <div className="mt-4 px-3 py-2.5 rounded-md bg-destructive/5 border border-destructive/20 text-[13px] text-destructive">

@@ -13,6 +13,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DraftsRouteImport } from './routes/drafts'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiGenerateRouteImport } from './routes/api.generate'
@@ -39,6 +40,11 @@ const MethodologyRoute = MethodologyRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DraftsRoute = DraftsRouteImport.update({
+  id: '/drafts',
+  path: '/drafts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -80,6 +86,7 @@ const ApiLinkedinCallbackRoute = ApiLinkedinCallbackRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
+  '/drafts': typeof DraftsRoute
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
+  '/drafts': typeof DraftsRoute
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRoute
+  '/drafts': typeof DraftsRoute
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/drafts'
     | '/login'
     | '/methodology'
     | '/pricing'
@@ -135,6 +145,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/app'
+    | '/drafts'
     | '/login'
     | '/methodology'
     | '/pricing'
@@ -148,6 +159,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/app'
+    | '/drafts'
     | '/login'
     | '/methodology'
     | '/pricing'
@@ -162,6 +174,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRoute
+  DraftsRoute: typeof DraftsRoute
   LoginRoute: typeof LoginRoute
   MethodologyRoute: typeof MethodologyRoute
   PricingRoute: typeof PricingRoute
@@ -201,6 +214,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/drafts': {
+      id: '/drafts'
+      path: '/drafts'
+      fullPath: '/drafts'
+      preLoaderRoute: typeof DraftsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -258,6 +278,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRoute,
+  DraftsRoute: DraftsRoute,
   LoginRoute: LoginRoute,
   MethodologyRoute: MethodologyRoute,
   PricingRoute: PricingRoute,
