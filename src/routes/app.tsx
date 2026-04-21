@@ -97,6 +97,45 @@ function Workspace() {
     setImages((prev) => prev.filter((_, i) => i !== idx));
   }
 
+  async function saveDraft(asPublished = false): Promise<string | null> {
+    if (!user || !draft.trim()) return null;
+    setSaving(true);
+    try {
+      const payload = {
+        user_id: user.id,
+        content: draft,
+        raw_input: input,
+        tone,
+        char_count: draft.length,
+        title: title.trim() || "Untitled draft",
+        ...(asPublished ? { published: true } : {}),
+      };
+      if (draftId) {
+        const { error: upErr } = await supabase
+          .from("drafts")
+          .update(payload)
+          .eq("id", draftId)
+          .eq("user_id", user.id);
+        if (upErr) throw upErr;
+        return draftId;
+      } else {
+        const { data, error: insErr } = await supabase
+          .from("drafts")
+          .insert(payload)
+          .select("id")
+          .single();
+        if (insErr) throw insErr;
+        if (data?.id) setDraftId(data.id);
+        return data?.id ?? null;
+      }
+    } catch (e) {
+      console.error("saveDraft failed", e);
+      return null;
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const charCount = draft.length;
   const overLimit = charCount > 3000;
   const wordCount = useMemo(
