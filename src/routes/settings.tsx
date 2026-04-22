@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { SiteNav } from "@/components/SiteNav";
+import { PLAN_LABELS, PLAN_LIMITS, type PlanTier } from "@/lib/plans";
 
 export const Route = createFileRoute("/settings")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/settings")({
       search.linkedin_connected != null ? String(search.linkedin_connected) : undefined,
     linkedin_error:
       search.linkedin_error != null ? String(search.linkedin_error) : undefined,
+    billing: search.billing != null ? String(search.billing) : undefined,
   }),
   head: () => ({
     meta: [
@@ -55,6 +57,15 @@ interface LinkedInConnection {
   scope: string | null;
 }
 
+interface SubscriptionRow {
+  plan: PlanTier;
+  status: string;
+  trial_end: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  polar_customer_id: string | null;
+}
+
 function SettingsPage() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -62,6 +73,9 @@ function SettingsPage() {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [conn, setConn] = useState<LinkedInConnection | null>(null);
+  const [sub, setSub] = useState<SubscriptionRow | null>(null);
+  const [openingPortal, setOpeningPortal] = useState(false);
+  const [billingMsg, setBillingMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Editable form state
@@ -94,13 +108,18 @@ function SettingsPage() {
         text: `LinkedIn connection failed: ${search.linkedin_error}`,
       });
     }
-  }, [search.linkedin_connected, search.linkedin_error]);
+    if (search.billing === "success") {
+      setBillingMsg(
+        "Payment received — your subscription will activate within a few seconds.",
+      );
+    }
+  }, [search.linkedin_connected, search.linkedin_error, search.billing]);
 
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     (async () => {
-      const [{ data: prof }, { data: linkedin }] = await Promise.all([
+      const [{ data: prof }, { data: linkedin }, { data: subRow }] = await Promise.all([
         supabase
           .from("profiles")
           .select("display_name, avatar_url, voice_notes")
@@ -111,6 +130,13 @@ function SettingsPage() {
           .select("linkedin_name, linkedin_picture_url, linkedin_member_urn, expires_at, scope")
           .eq("user_id", user.id)
           .maybeSingle(),
+        supabase
+          .from("subscriptions")
+          .select(
+            "plan, status, trial_end, current_period_end, cancel_at_period_end, polar_customer_id",
+          )
+          .eq("user_id", user.id)
+          .maybeSingle(),
       ]);
       if (cancelled) return;
       const p = prof ?? { display_name: null, avatar_url: null, voice_notes: null };
@@ -119,12 +145,39 @@ function SettingsPage() {
       setAvatarUrl(p.avatar_url ?? "");
       setVoiceNotes(p.voice_notes ?? "");
       setConn(linkedin ?? null);
+      setSub(subRow as SubscriptionRow | null);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
   }, [user]);
+
+  async function openBillingPortal() {
+    setOpeningPortal(true);
+    setBillingMsg(null);
+    const { data: sess } = await supabase.auth.getSession();
+    const token = sess.session?.access_token;
+    if (!token) {
+      setBillingMsg("Session expired — please sign in again.");
+      setOpeningPortal(false);
+      return;
+    }
+    const resp = await fetch("/api/polar/portal", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = (await resp.json().catch(() => ({}))) as {
+      url?: string;
+      error?: string;
+    };
+    if (!resp.ok || !data.url) {
+      setBillingMsg(data.error ?? "Failed to open billing portal.");
+      setOpeningPortal(false);
+      return;
+    }
+    window.location.href = data.url;
+  }
 
   async function saveProfile() {
     if (!user) return;
