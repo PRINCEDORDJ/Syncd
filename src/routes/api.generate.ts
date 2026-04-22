@@ -43,18 +43,44 @@ export const Route = createFileRoute("/api/generate")({
 
         // Optional: read voice notes from the authenticated user's profile
         let voiceNotes = "";
+        let userId: string | null = null;
         const authHeader =
           getRequestHeader("authorization") ?? getRequestHeader("Authorization");
         if (authHeader?.startsWith("Bearer ")) {
           const token = authHeader.slice(7);
           const { data: userData } = await supabaseAdmin.auth.getUser(token);
           if (userData.user) {
+            userId = userData.user.id;
             const { data: prof } = await supabaseAdmin
               .from("profiles")
               .select("voice_notes")
               .eq("user_id", userData.user.id)
               .maybeSingle();
             voiceNotes = (prof?.voice_notes ?? "").trim();
+          }
+        }
+
+        // Enforce plan limits server-side
+        if (userId) {
+          const { data: planRow } = await supabaseAdmin.rpc("get_user_plan", {
+            _user_id: userId,
+          });
+          const plan = (planRow as "trial" | "studio" | "teams" | null) ?? "trial";
+          if (plan === "trial") {
+            const { count } = await supabaseAdmin
+              .from("drafts")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", userId);
+            if ((count ?? 0) >= 5) {
+              return new Response(
+                JSON.stringify({
+                  error:
+                    "You've used your 5 free trial drafts. Upgrade to Studio for unlimited generations.",
+                  code: "PLAN_LIMIT",
+                }),
+                { status: 402, headers: { "Content-Type": "application/json" } },
+              );
+            }
           }
         }
 
