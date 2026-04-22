@@ -17,6 +17,7 @@ import { Route as DraftsRouteImport } from './routes/drafts'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiGenerateRouteImport } from './routes/api.generate'
+import { Route as ApiPolarCheckoutRouteImport } from './routes/api.polar.checkout'
 import { Route as ApiLinkedinStartRouteImport } from './routes/api.linkedin.start'
 import { Route as ApiLinkedinPublishRouteImport } from './routes/api.linkedin.publish'
 import { Route as ApiLinkedinDisconnectRouteImport } from './routes/api.linkedin.disconnect'
@@ -62,6 +63,11 @@ const ApiGenerateRoute = ApiGenerateRouteImport.update({
   path: '/api/generate',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPolarCheckoutRoute = ApiPolarCheckoutRouteImport.update({
+  id: '/api/polar/checkout',
+  path: '/api/polar/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiLinkedinStartRoute = ApiLinkedinStartRouteImport.update({
   id: '/api/linkedin/start',
   path: '/api/linkedin/start',
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
   '/api/linkedin/publish': typeof ApiLinkedinPublishRoute
   '/api/linkedin/start': typeof ApiLinkedinStartRoute
+  '/api/polar/checkout': typeof ApiPolarCheckoutRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
   '/api/linkedin/publish': typeof ApiLinkedinPublishRoute
   '/api/linkedin/start': typeof ApiLinkedinStartRoute
+  '/api/polar/checkout': typeof ApiPolarCheckoutRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
   '/api/linkedin/publish': typeof ApiLinkedinPublishRoute
   '/api/linkedin/start': typeof ApiLinkedinStartRoute
+  '/api/polar/checkout': typeof ApiPolarCheckoutRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/api/linkedin/disconnect'
     | '/api/linkedin/publish'
     | '/api/linkedin/start'
+    | '/api/polar/checkout'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
     | '/api/linkedin/disconnect'
     | '/api/linkedin/publish'
     | '/api/linkedin/start'
+    | '/api/polar/checkout'
   id:
     | '__root__'
     | '/'
@@ -169,6 +180,7 @@ export interface FileRouteTypes {
     | '/api/linkedin/disconnect'
     | '/api/linkedin/publish'
     | '/api/linkedin/start'
+    | '/api/polar/checkout'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -184,6 +196,7 @@ export interface RootRouteChildren {
   ApiLinkedinDisconnectRoute: typeof ApiLinkedinDisconnectRoute
   ApiLinkedinPublishRoute: typeof ApiLinkedinPublishRoute
   ApiLinkedinStartRoute: typeof ApiLinkedinStartRoute
+  ApiPolarCheckoutRoute: typeof ApiPolarCheckoutRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -244,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGenerateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/polar/checkout': {
+      id: '/api/polar/checkout'
+      path: '/api/polar/checkout'
+      fullPath: '/api/polar/checkout'
+      preLoaderRoute: typeof ApiPolarCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/linkedin/start': {
       id: '/api/linkedin/start'
       path: '/api/linkedin/start'
@@ -288,7 +308,17 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLinkedinDisconnectRoute: ApiLinkedinDisconnectRoute,
   ApiLinkedinPublishRoute: ApiLinkedinPublishRoute,
   ApiLinkedinStartRoute: ApiLinkedinStartRoute,
+  ApiPolarCheckoutRoute: ApiPolarCheckoutRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
