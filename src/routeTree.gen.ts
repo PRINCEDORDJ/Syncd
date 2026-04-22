@@ -17,6 +17,7 @@ import { Route as DraftsRouteImport } from './routes/drafts'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiGenerateRouteImport } from './routes/api.generate'
+import { Route as ApiPolarPortalRouteImport } from './routes/api.polar.portal'
 import { Route as ApiPolarCheckoutRouteImport } from './routes/api.polar.checkout'
 import { Route as ApiLinkedinStartRouteImport } from './routes/api.linkedin.start'
 import { Route as ApiLinkedinPublishRouteImport } from './routes/api.linkedin.publish'
@@ -63,6 +64,11 @@ const ApiGenerateRoute = ApiGenerateRouteImport.update({
   path: '/api/generate',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPolarPortalRoute = ApiPolarPortalRouteImport.update({
+  id: '/api/polar/portal',
+  path: '/api/polar/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPolarCheckoutRoute = ApiPolarCheckoutRouteImport.update({
   id: '/api/polar/checkout',
   path: '/api/polar/checkout',
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/api/linkedin/publish': typeof ApiLinkedinPublishRoute
   '/api/linkedin/start': typeof ApiLinkedinStartRoute
   '/api/polar/checkout': typeof ApiPolarCheckoutRoute
+  '/api/polar/portal': typeof ApiPolarPortalRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/api/linkedin/publish': typeof ApiLinkedinPublishRoute
   '/api/linkedin/start': typeof ApiLinkedinStartRoute
   '/api/polar/checkout': typeof ApiPolarCheckoutRoute
+  '/api/polar/portal': typeof ApiPolarPortalRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/api/linkedin/publish': typeof ApiLinkedinPublishRoute
   '/api/linkedin/start': typeof ApiLinkedinStartRoute
   '/api/polar/checkout': typeof ApiPolarCheckoutRoute
+  '/api/polar/portal': typeof ApiPolarPortalRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/api/linkedin/publish'
     | '/api/linkedin/start'
     | '/api/polar/checkout'
+    | '/api/polar/portal'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/api/linkedin/publish'
     | '/api/linkedin/start'
     | '/api/polar/checkout'
+    | '/api/polar/portal'
   id:
     | '__root__'
     | '/'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/api/linkedin/publish'
     | '/api/linkedin/start'
     | '/api/polar/checkout'
+    | '/api/polar/portal'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -197,6 +209,7 @@ export interface RootRouteChildren {
   ApiLinkedinPublishRoute: typeof ApiLinkedinPublishRoute
   ApiLinkedinStartRoute: typeof ApiLinkedinStartRoute
   ApiPolarCheckoutRoute: typeof ApiPolarCheckoutRoute
+  ApiPolarPortalRoute: typeof ApiPolarPortalRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -257,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGenerateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/polar/portal': {
+      id: '/api/polar/portal'
+      path: '/api/polar/portal'
+      fullPath: '/api/polar/portal'
+      preLoaderRoute: typeof ApiPolarPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/polar/checkout': {
       id: '/api/polar/checkout'
       path: '/api/polar/checkout'
@@ -309,6 +329,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLinkedinPublishRoute: ApiLinkedinPublishRoute,
   ApiLinkedinStartRoute: ApiLinkedinStartRoute,
   ApiPolarCheckoutRoute: ApiPolarCheckoutRoute,
+  ApiPolarPortalRoute: ApiPolarPortalRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
