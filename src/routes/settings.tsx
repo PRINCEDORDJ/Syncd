@@ -413,6 +413,67 @@ function SettingsPage() {
           )}
         </Section>
 
+        {/* Billing */}
+        <Section
+          title="Billing & plan"
+          subtitle="Your current subscription and usage limits."
+        >
+          {billingMsg && (
+            <div className="px-3 py-2 rounded-md border border-border bg-subtle text-[13px] text-ink">
+              {billingMsg}
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-4 p-4 border border-border rounded-md bg-subtle/40">
+            <div>
+              <div className="text-[14px] font-medium text-ink">
+                {PLAN_LABELS[sub?.plan ?? "trial"]} plan
+                <span className="ml-2 text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground">
+                  {sub?.status ?? "trialing"}
+                </span>
+              </div>
+              <div className="text-[12px] text-muted-foreground mt-1">
+                {(() => {
+                  const plan = sub?.plan ?? "trial";
+                  const limit = PLAN_LIMITS[plan].maxDrafts;
+                  const linkedInMax = PLAN_LIMITS[plan].maxLinkedInAccounts;
+                  const draftStr = limit === null ? "Unlimited drafts" : `${limit} drafts / period`;
+                  return `${draftStr} · ${linkedInMax} LinkedIn account${linkedInMax > 1 ? "s" : ""}`;
+                })()}
+              </div>
+              {sub?.plan === "trial" && sub.trial_end && (
+                <div className="text-[12px] text-muted-foreground mt-0.5">
+                  Trial ends {new Date(sub.trial_end).toLocaleDateString()}
+                </div>
+              )}
+              {sub && sub.plan !== "trial" && sub.current_period_end && (
+                <div className="text-[12px] text-muted-foreground mt-0.5">
+                  {sub.cancel_at_period_end ? "Cancels" : "Renews"} on{" "}
+                  {new Date(sub.current_period_end).toLocaleDateString()}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 items-end">
+              {sub?.polar_customer_id ? (
+                <button
+                  type="button"
+                  onClick={openBillingPortal}
+                  disabled={openingPortal}
+                  className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle disabled:opacity-60"
+                >
+                  {openingPortal ? "Opening…" : "Manage billing"}
+                </button>
+              ) : (
+                <Link
+                  to="/pricing"
+                  className="h-9 px-3 inline-flex items-center rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90"
+                >
+                  Upgrade →
+                </Link>
+              )}
+            </div>
+          </div>
+        </Section>
+
         {/* Account */}
         <Section title="Account" subtitle="Email, password, and session.">
           <Field label="Email">
