@@ -17,10 +17,13 @@ import { Route as DraftsRouteImport } from './routes/drafts'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiGenerateRouteImport } from './routes/api.generate'
+import { Route as ApiPolarPortalRouteImport } from './routes/api.polar.portal'
+import { Route as ApiPolarCheckoutRouteImport } from './routes/api.polar.checkout'
 import { Route as ApiLinkedinStartRouteImport } from './routes/api.linkedin.start'
 import { Route as ApiLinkedinPublishRouteImport } from './routes/api.linkedin.publish'
 import { Route as ApiLinkedinDisconnectRouteImport } from './routes/api.linkedin.disconnect'
 import { Route as ApiLinkedinCallbackRouteImport } from './routes/api.linkedin.callback'
+import { Route as ApiPublicPolarWebhookRouteImport } from './routes/api.public.polar.webhook'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -62,6 +65,16 @@ const ApiGenerateRoute = ApiGenerateRouteImport.update({
   path: '/api/generate',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPolarPortalRoute = ApiPolarPortalRouteImport.update({
+  id: '/api/polar/portal',
+  path: '/api/polar/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPolarCheckoutRoute = ApiPolarCheckoutRouteImport.update({
+  id: '/api/polar/checkout',
+  path: '/api/polar/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiLinkedinStartRoute = ApiLinkedinStartRouteImport.update({
   id: '/api/linkedin/start',
   path: '/api/linkedin/start',
@@ -82,6 +95,11 @@ const ApiLinkedinCallbackRoute = ApiLinkedinCallbackRouteImport.update({
   path: '/api/linkedin/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPolarWebhookRoute = ApiPublicPolarWebhookRouteImport.update({
+  id: '/api/public/polar/webhook',
+  path: '/api/public/polar/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -96,6 +114,9 @@ export interface FileRoutesByFullPath {
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
   '/api/linkedin/publish': typeof ApiLinkedinPublishRoute
   '/api/linkedin/start': typeof ApiLinkedinStartRoute
+  '/api/polar/checkout': typeof ApiPolarCheckoutRoute
+  '/api/polar/portal': typeof ApiPolarPortalRoute
+  '/api/public/polar/webhook': typeof ApiPublicPolarWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,6 +131,9 @@ export interface FileRoutesByTo {
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
   '/api/linkedin/publish': typeof ApiLinkedinPublishRoute
   '/api/linkedin/start': typeof ApiLinkedinStartRoute
+  '/api/polar/checkout': typeof ApiPolarCheckoutRoute
+  '/api/polar/portal': typeof ApiPolarPortalRoute
+  '/api/public/polar/webhook': typeof ApiPublicPolarWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -125,6 +149,9 @@ export interface FileRoutesById {
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
   '/api/linkedin/publish': typeof ApiLinkedinPublishRoute
   '/api/linkedin/start': typeof ApiLinkedinStartRoute
+  '/api/polar/checkout': typeof ApiPolarCheckoutRoute
+  '/api/polar/portal': typeof ApiPolarPortalRoute
+  '/api/public/polar/webhook': typeof ApiPublicPolarWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +168,9 @@ export interface FileRouteTypes {
     | '/api/linkedin/disconnect'
     | '/api/linkedin/publish'
     | '/api/linkedin/start'
+    | '/api/polar/checkout'
+    | '/api/polar/portal'
+    | '/api/public/polar/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -155,6 +185,9 @@ export interface FileRouteTypes {
     | '/api/linkedin/disconnect'
     | '/api/linkedin/publish'
     | '/api/linkedin/start'
+    | '/api/polar/checkout'
+    | '/api/polar/portal'
+    | '/api/public/polar/webhook'
   id:
     | '__root__'
     | '/'
@@ -169,6 +202,9 @@ export interface FileRouteTypes {
     | '/api/linkedin/disconnect'
     | '/api/linkedin/publish'
     | '/api/linkedin/start'
+    | '/api/polar/checkout'
+    | '/api/polar/portal'
+    | '/api/public/polar/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -184,6 +220,9 @@ export interface RootRouteChildren {
   ApiLinkedinDisconnectRoute: typeof ApiLinkedinDisconnectRoute
   ApiLinkedinPublishRoute: typeof ApiLinkedinPublishRoute
   ApiLinkedinStartRoute: typeof ApiLinkedinStartRoute
+  ApiPolarCheckoutRoute: typeof ApiPolarCheckoutRoute
+  ApiPolarPortalRoute: typeof ApiPolarPortalRoute
+  ApiPublicPolarWebhookRoute: typeof ApiPublicPolarWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -244,6 +283,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGenerateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/polar/portal': {
+      id: '/api/polar/portal'
+      path: '/api/polar/portal'
+      fullPath: '/api/polar/portal'
+      preLoaderRoute: typeof ApiPolarPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/polar/checkout': {
+      id: '/api/polar/checkout'
+      path: '/api/polar/checkout'
+      fullPath: '/api/polar/checkout'
+      preLoaderRoute: typeof ApiPolarCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/linkedin/start': {
       id: '/api/linkedin/start'
       path: '/api/linkedin/start'
@@ -272,6 +325,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLinkedinCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/polar/webhook': {
+      id: '/api/public/polar/webhook'
+      path: '/api/public/polar/webhook'
+      fullPath: '/api/public/polar/webhook'
+      preLoaderRoute: typeof ApiPublicPolarWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -288,16 +348,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLinkedinDisconnectRoute: ApiLinkedinDisconnectRoute,
   ApiLinkedinPublishRoute: ApiLinkedinPublishRoute,
   ApiLinkedinStartRoute: ApiLinkedinStartRoute,
+  ApiPolarCheckoutRoute: ApiPolarCheckoutRoute,
+  ApiPolarPortalRoute: ApiPolarPortalRoute,
+  ApiPublicPolarWebhookRoute: ApiPublicPolarWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

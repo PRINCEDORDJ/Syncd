@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -20,8 +23,20 @@ export const Route = createFileRoute("/pricing")({
   component: PricingPage,
 });
 
-const tiers = [
+type TierId = "trial" | "studio" | "teams";
+
+const tiers: Array<{
+  id: TierId;
+  name: string;
+  price: string;
+  cadence: string;
+  description: string;
+  features: string[];
+  cta: string;
+  highlighted: boolean;
+}> = [
   {
+    id: "trial",
     name: "Trial",
     price: "Free",
     cadence: "for 7 days",
@@ -36,6 +51,7 @@ const tiers = [
     highlighted: false,
   },
   {
+    id: "studio",
     name: "Studio",
     price: "$24",
     cadence: "per month",
@@ -48,10 +64,11 @@ const tiers = [
       "Publish history",
       "Priority support",
     ],
-    cta: "Open workspace",
+    cta: "Subscribe",
     highlighted: true,
   },
   {
+    id: "teams",
     name: "Teams",
     price: "$60",
     cadence: "per seat / month",
@@ -63,12 +80,50 @@ const tiers = [
       "Approval workflow",
       "SSO & audit log",
     ],
-    cta: "Talk to us",
+    cta: "Subscribe",
     highlighted: false,
   },
 ];
 
 function PricingPage() {
+  const { user } = useAuth();
+  const [loadingPlan, setLoadingPlan] = useState<TierId | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function startCheckout(plan: "studio" | "teams") {
+    setError(null);
+    if (!user) {
+      window.location.href = `/login?redirect=/pricing`;
+      return;
+    }
+    setLoadingPlan(plan);
+    const { data: sess } = await supabase.auth.getSession();
+    const token = sess.session?.access_token;
+    if (!token) {
+      setError("Session expired — please sign in again.");
+      setLoadingPlan(null);
+      return;
+    }
+    const resp = await fetch("/api/polar/checkout", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ plan }),
+    });
+    const data = (await resp.json().catch(() => ({}))) as {
+      url?: string;
+      error?: string;
+    };
+    if (!resp.ok || !data.url) {
+      setError(data.error ?? "Failed to start checkout.");
+      setLoadingPlan(null);
+      return;
+    }
+    window.location.href = data.url;
+  }
+
   return (
     <div className="min-h-dvh bg-background text-ink">
       <SiteNav />
@@ -84,12 +139,17 @@ function PricingPage() {
           <p className="mt-4 text-[16px] text-muted-foreground">
             No usage meters. No prompt budgets. No surprises.
           </p>
+          {error && (
+            <div className="mt-4 inline-block px-3 py-1.5 rounded-md bg-destructive/5 border border-destructive/20 text-destructive text-[13px]">
+              {error}
+            </div>
+          )}
         </div>
 
         <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-4">
           {tiers.map((t) => (
             <div
-              key={t.name}
+              key={t.id}
               className={`relative flex flex-col gap-6 p-7 rounded-xl border transition-all ${
                 t.highlighted
                   ? "bg-ink text-surface border-ink shadow-pop"
@@ -139,17 +199,33 @@ function PricingPage() {
                 ))}
               </ul>
 
-              <Link
-                to="/app"
-                className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors ${
-                  t.highlighted
-                    ? "bg-surface text-ink hover:bg-surface/90"
-                    : "bg-ink text-surface hover:bg-ink/90"
-                }`}
-              >
-                {t.cta}
-                <span aria-hidden>→</span>
-              </Link>
+              {t.id === "trial" ? (
+                <Link
+                  to="/app"
+                  className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors ${
+                    t.highlighted
+                      ? "bg-surface text-ink hover:bg-surface/90"
+                      : "bg-ink text-surface hover:bg-ink/90"
+                  }`}
+                >
+                  {t.cta}
+                  <span aria-hidden>→</span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => startCheckout(t.id as "studio" | "teams")}
+                  disabled={loadingPlan !== null}
+                  className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors disabled:opacity-60 ${
+                    t.highlighted
+                      ? "bg-surface text-ink hover:bg-surface/90"
+                      : "bg-ink text-surface hover:bg-ink/90"
+                  }`}
+                >
+                  {loadingPlan === t.id ? "Redirecting…" : t.cta}
+                  <span aria-hidden>→</span>
+                </button>
+              )}
             </div>
           ))}
         </div>
