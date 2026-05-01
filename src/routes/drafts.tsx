@@ -23,6 +23,7 @@ type DraftRow = {
   char_count: number;
   published: boolean;
   updated_at: string;
+  images: string[];
 };
 
 function DraftsGate() {
@@ -61,7 +62,7 @@ function DraftsList() {
     (async () => {
       const { data, error: err } = await supabase
         .from("drafts")
-        .select("id, title, content, tone, char_count, published, updated_at")
+        .select("id, title, content, tone, char_count, published, updated_at, images")
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false });
       if (cancelled) return;
@@ -69,7 +70,12 @@ function DraftsList() {
         setError(err.message);
         setRows([]);
       } else {
-        setRows(data ?? []);
+        setRows(
+          (data ?? []).map((r) => ({
+            ...r,
+            images: Array.isArray(r.images) ? (r.images as string[]) : [],
+          })),
+        );
       }
     })();
     return () => {
@@ -110,7 +116,7 @@ function DraftsList() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ content: row.content, images: [] }),
+        body: JSON.stringify({ content: row.content, images: row.images ?? [] }),
       });
       const data = (await resp.json().catch(() => ({}))) as {
         success?: boolean;
