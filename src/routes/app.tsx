@@ -289,14 +289,14 @@ function Workspace() {
     <div className="min-h-dvh bg-background text-ink flex flex-col">
       <SiteNav />
 
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 py-5 sm:py-8">
         {/* Page header */}
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-5 sm:mb-6">
           <div>
-            <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-2">
+            <p className="text-[10px] sm:text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-1.5 sm:mb-2">
               Workspace
             </p>
-            <h1 className="text-2xl md:text-3xl tracking-[-0.02em] font-semibold leading-tight">
+            <h1 className="text-xl sm:text-2xl md:text-3xl tracking-[-0.02em] font-semibold leading-tight">
               Welcome back, {greeting}.
             </h1>
           </div>
@@ -324,8 +324,8 @@ function Workspace() {
         {/* Workspace card */}
         <div className="border border-border rounded-xl bg-card overflow-hidden">
           {/* Header */}
-          <div className="flex flex-wrap items-center justify-between gap-4 px-5 h-12 border-b border-border bg-subtle/40">
-            <div className="flex items-center gap-2 text-[13px]">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 px-3 sm:px-5 py-2.5 sm:py-0 sm:h-12 border-b border-border bg-subtle/40">
+            <div className="flex items-center gap-2 text-[13px] min-w-0">
               <BrandMark size={20} />
               <span className="text-muted-foreground">/</span>
               <input
@@ -333,17 +333,17 @@ function Workspace() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Untitled draft"
-                className="font-medium text-ink bg-transparent border-0 focus:outline-none focus:ring-0 px-1 -mx-1 rounded hover:bg-card focus:bg-card transition-colors min-w-0 max-w-[260px]"
+                className="font-medium text-ink bg-transparent border-0 focus:outline-none focus:ring-0 px-1 -mx-1 rounded hover:bg-card focus:bg-card transition-colors min-w-0 flex-1 sm:flex-none sm:max-w-[260px]"
                 aria-label="Draft title"
               />
               {saving && (
-                <span className="text-[11px] font-mono text-muted-foreground ml-1">
+                <span className="text-[11px] font-mono text-muted-foreground ml-1 shrink-0">
                   Saving…
                 </span>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.12em] mr-2">
+            <div className="flex items-center gap-1.5 overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
+              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.12em] mr-1 sm:mr-2 shrink-0">
                 Tone
               </span>
               {TONES.map((t) => (
@@ -351,7 +351,7 @@ function Workspace() {
                   key={t}
                   type="button"
                   onClick={() => setTone(t)}
-                  className={`h-7 px-2.5 rounded text-[12px] font-medium border transition-colors ${
+                  className={`h-7 px-2.5 rounded text-[12px] font-medium border transition-colors shrink-0 ${
                     tone === t
                       ? "bg-ink text-surface border-ink"
                       : "bg-card text-ink border-border hover:bg-subtle"
@@ -366,7 +366,7 @@ function Workspace() {
           {/* Body */}
           <div className="grid grid-cols-1 md:grid-cols-12">
             {/* Input */}
-            <section className="md:col-span-4 border-b md:border-b-0 md:border-r border-border p-5 flex flex-col gap-4 min-h-[60vh] bg-subtle/20">
+            <section className="md:col-span-4 border-b md:border-b-0 md:border-r border-border p-4 sm:p-5 flex flex-col gap-4 min-h-[40vh] md:min-h-[60vh] bg-subtle/20">
               <div className="flex items-center justify-between">
                 <label
                   htmlFor="raw"
@@ -401,7 +401,7 @@ function Workspace() {
             </section>
 
             {/* Canvas */}
-            <section className="md:col-span-8 p-6 md:p-8 flex flex-col">
+            <section className="md:col-span-8 p-4 sm:p-6 md:p-8 flex flex-col">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-[0.12em]">
                   Canvas
@@ -492,7 +492,7 @@ function Workspace() {
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center justify-between gap-4 pt-5 mt-5 border-t border-border">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 sm:gap-4 pt-5 mt-5 border-t border-border">
                 <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
                   <span className="px-2 py-0.5 rounded bg-subtle border border-border uppercase tracking-[0.1em]">
                     {tone.split(" ")[0]}
@@ -504,12 +504,12 @@ function Workspace() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <button
                     type="button"
                     onClick={() => navigator.clipboard?.writeText(draft)}
                     disabled={!draft}
-                    className="h-9 px-3 rounded-md text-[13px] font-medium text-ink border border-border hover:bg-subtle transition-colors disabled:opacity-50"
+                    className="h-9 px-3 rounded-md text-[13px] font-medium text-ink border border-border hover:bg-subtle transition-colors disabled:opacity-50 flex-1 sm:flex-none"
                   >
                     Copy
                   </button>
@@ -518,7 +518,7 @@ function Workspace() {
                       type="button"
                       onClick={publish}
                       disabled={!draft.trim() || overLimit || publishing}
-                      className="h-9 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
+                      className="h-9 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 disabled:opacity-50 transition-colors inline-flex items-center justify-center gap-1.5 flex-1 sm:flex-none"
                     >
                       {publishing ? "Publishing…" : "Publish to LinkedIn"}
                       <span aria-hidden className="text-surface/60">→</span>
@@ -527,7 +527,7 @@ function Workspace() {
                     <Link
                       to="/settings"
                       search={{ linkedin_connected: undefined, linkedin_error: undefined, billing: undefined }}
-                      className="h-9 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 inline-flex items-center gap-1.5"
+                      className="h-9 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 inline-flex items-center justify-center gap-1.5 flex-1 sm:flex-none"
                     >
                       Connect LinkedIn
                       <span aria-hidden className="text-surface/60">→</span>
