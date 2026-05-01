@@ -297,6 +297,27 @@ function DraftsList() {
               <p className="text-[14px] sm:text-[15px] text-ink leading-relaxed whitespace-pre-wrap">
                 {selected.content}
               </p>
+              {selected.images && selected.images.length > 0 && (
+                <div className="mt-5">
+                  <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-[0.12em] mb-2">
+                    Attached images ({selected.images.length})
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {selected.images.map((src, i) => (
+                      <div
+                        key={i}
+                        className="relative aspect-square rounded-md overflow-hidden border border-border bg-card"
+                      >
+                        <img
+                          src={src}
+                          alt={`Attachment ${i + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {publishMsg && (
