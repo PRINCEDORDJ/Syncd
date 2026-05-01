@@ -8,10 +8,10 @@ export function SiteNav() {
 
   return (
     <nav className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
-      <div className="flex items-center justify-between px-6 md:px-8 h-14 w-full max-w-7xl mx-auto">
+      <div className="flex items-center justify-between px-3 sm:px-6 md:px-8 h-14 w-full max-w-7xl mx-auto gap-2">
         <Link to={user ? "/app" : "/"} className="flex items-center gap-2 group">
           <BrandMark size={22} />
-          <span className="font-semibold tracking-tight text-[15px] text-ink">
+          <span className="font-semibold tracking-tight text-[15px] text-ink hidden xs:inline sm:inline">
             SocialSync
           </span>
         </Link>
@@ -25,7 +25,7 @@ export function SiteNav() {
           </NavLink>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           {user ? (
             <>
               <NavLink to="/drafts" current={pathname}>
@@ -36,7 +36,7 @@ export function SiteNav() {
               </NavLink>
               <Link
                 to="/app"
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 transition-colors"
+                className="hidden sm:inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 transition-colors"
               >
                 Workspace
                 <span aria-hidden className="text-surface/60">
@@ -46,7 +46,7 @@ export function SiteNav() {
               <button
                 type="button"
                 onClick={() => signOut()}
-                className="text-[13px] text-muted-foreground hover:text-ink transition-colors px-2 h-8"
+                className="text-[13px] text-muted-foreground hover:text-ink transition-colors px-2 h-8 hidden sm:inline-flex items-center"
                 aria-label="Sign out"
               >
                 Sign out
@@ -88,7 +88,7 @@ function NavLink({
   return (
     <Link
       to={to}
-      className={`text-[13px] px-3 h-8 inline-flex items-center rounded-md transition-colors ${
+      className={`text-[13px] px-2 sm:px-3 h-8 inline-flex items-center rounded-md transition-colors ${
         active
           ? "text-ink bg-subtle"
           : "text-muted-foreground hover:text-ink hover:bg-subtle"
