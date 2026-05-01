@@ -20,6 +20,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          images: string[]
           published: boolean
           raw_input: string
           title: string
@@ -32,6 +33,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          images?: string[]
           published?: boolean
           raw_input?: string
           title?: string
@@ -44,6 +46,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          images?: string[]
           published?: boolean
           raw_input?: string
           title?: string

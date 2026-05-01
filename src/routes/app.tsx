@@ -108,6 +108,7 @@ function Workspace() {
         tone,
         char_count: draft.length,
         title: title.trim() || "Untitled draft",
+        images,
         ...(asPublished ? { published: true } : {}),
       };
       if (draftId) {
@@ -170,7 +171,7 @@ function Workspace() {
     }, 1200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft, title, user, generating]);
+  }, [draft, title, images, user, generating]);
 
   async function generate() {
     if (!input.trim() || generating) return;
