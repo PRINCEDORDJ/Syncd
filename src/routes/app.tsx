@@ -264,7 +264,7 @@ function Workspace() {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ content: draft }),
+      body: JSON.stringify({ content: draft, images }),
     });
     const data = (await resp.json().catch(() => ({}))) as {
       success?: boolean;
