@@ -108,6 +108,7 @@ function Workspace() {
         tone,
         char_count: draft.length,
         title: title.trim() || "Untitled draft",
+        images,
         ...(asPublished ? { published: true } : {}),
       };
       if (draftId) {
