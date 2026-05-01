@@ -342,7 +342,7 @@ function Workspace() {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1.5 overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
               <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.12em] mr-1 sm:mr-2 shrink-0">
                 Tone
               </span>

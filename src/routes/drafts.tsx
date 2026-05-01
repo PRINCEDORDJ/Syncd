@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteNav } from "@/components/SiteNav";
-import { Trash2 } from "lucide-react";
+import { Trash2, X, Send } from "lucide-react";
 
 export const Route = createFileRoute("/drafts")({
   head: () => ({
@@ -51,6 +51,9 @@ function DraftsList() {
   const [rows, setRows] = useState<DraftRow[] | null>(null);
   const [filter, setFilter] = useState<"all" | "published" | "drafts">("all");
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<DraftRow | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishMsg, setPublishMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -87,6 +90,50 @@ function DraftsList() {
       return;
     }
     setRows((prev) => (prev ? prev.filter((r) => r.id !== id) : prev));
+  }
+
+  async function publishDraft(row: DraftRow) {
+    if (!user || publishing) return;
+    setPublishing(true);
+    setPublishMsg(null);
+    setError(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        setError("Session expired — please sign in again.");
+        return;
+      }
+      const resp = await fetch("/api/linkedin/publish", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content: row.content, images: [] }),
+      });
+      const data = (await resp.json().catch(() => ({}))) as {
+        success?: boolean;
+        error?: string;
+      };
+      if (!resp.ok || !data.success) {
+        setPublishMsg(data.error ?? "Failed to publish.");
+        return;
+      }
+      // Mark draft as published in DB
+      await supabase
+        .from("drafts")
+        .update({ published: true })
+        .eq("id", row.id)
+        .eq("user_id", user.id);
+      setRows((prev) =>
+        prev ? prev.map((r) => (r.id === row.id ? { ...r, published: true } : r)) : prev,
+      );
+      setSelected({ ...row, published: true });
+      setPublishMsg("Published to LinkedIn successfully.");
+    } finally {
+      setPublishing(false);
+    }
   }
 
   const filtered =
@@ -150,7 +197,11 @@ function DraftsList() {
             {filtered.map((r) => (
               <li
                 key={r.id}
-                className="border border-border rounded-xl bg-card p-5 hover:border-ink/30 transition-colors"
+                className="border border-border rounded-xl bg-card p-5 hover:border-ink/30 transition-colors cursor-pointer"
+                onClick={() => {
+                  setSelected(r);
+                  setPublishMsg(null);
+                }}
               >
                 <div className="flex items-start justify-between gap-4 mb-2">
                   <div className="min-w-0 flex-1">
@@ -176,7 +227,10 @@ function DraftsList() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => remove(r.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      remove(r.id);
+                    }}
                     className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
                     aria-label="Delete"
                   >
@@ -191,6 +245,89 @@ function DraftsList() {
           </ul>
         )}
       </main>
+
+      {selected && (
+        <div
+          className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            className="bg-card border border-border rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 px-5 sm:px-6 py-4 border-b border-border">
+              <div className="min-w-0 flex-1">
+                <h2 className="font-semibold text-ink text-[16px] truncate">
+                  {selected.title || "Untitled draft"}
+                </h2>
+                <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground flex-wrap">
+                  <span
+                    className={`px-1.5 py-0.5 rounded border ${
+                      selected.published
+                        ? "bg-ink text-surface border-ink"
+                        : "bg-subtle border-border"
+                    }`}
+                  >
+                    {selected.published ? "Published" : "Draft"}
+                  </span>
+                  <span>{selected.tone}</span>
+                  <span>·</span>
+                  <span>{selected.char_count} ch</span>
+                  <span>·</span>
+                  <span>{new Date(selected.updated_at).toLocaleString()}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                className="p-1.5 text-muted-foreground hover:text-ink transition-colors"
+                aria-label="Close"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5">
+              <p className="text-[14px] sm:text-[15px] text-ink leading-relaxed whitespace-pre-wrap">
+                {selected.content}
+              </p>
+            </div>
+
+            {publishMsg && (
+              <div
+                className={`mx-5 sm:mx-6 mb-3 px-3 py-2.5 rounded-md text-[13px] border ${
+                  publishMsg.includes("success")
+                    ? "bg-subtle border-border text-ink"
+                    : "bg-destructive/5 border-destructive/20 text-destructive"
+                }`}
+              >
+                {publishMsg}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 px-5 sm:px-6 py-4 border-t border-border bg-subtle/40">
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                className="h-9 px-4 rounded-md text-[13px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors"
+              >
+                Close
+              </button>
+              {!selected.published && (
+                <button
+                  type="button"
+                  onClick={() => publishDraft(selected)}
+                  disabled={publishing}
+                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 disabled:opacity-60 transition-colors"
+                >
+                  <Send className="size-3.5" />
+                  {publishing ? "Publishing…" : "Publish to LinkedIn"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
