@@ -5,6 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { SiteNav } from "@/components/SiteNav";
 import { BrandMark } from "@/components/BrandMark";
 import { ImagePlus, X } from "lucide-react";
+import {
+  MAX_IMAGES,
+  MAX_IMAGE_BYTES,
+  MAX_TOTAL_BYTES,
+  dataUrlByteSize,
+  formatBytes,
+  validateImageBatch,
+} from "@/lib/image-validation";
 
 export const Route = createFileRoute("/app")({
   head: () => ({
@@ -60,24 +68,20 @@ function Workspace() {
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const MAX_IMAGES = 4;
-
   async function handleFiles(files: FileList | null) {
     if (!files || !files.length) return;
-    const remaining = MAX_IMAGES - images.length;
-    if (remaining <= 0) {
-      setError(`You can attach up to ${MAX_IMAGES} images.`);
-      return;
+    const existingBytes = images.reduce((sum, src) => sum + dataUrlByteSize(src), 0);
+    const { accepted, errors } = validateImageBatch(
+      Array.from(files),
+      images.length,
+      existingBytes,
+    );
+    if (errors.length) {
+      setError(errors.join(" "));
+    } else {
+      setError(null);
     }
-    const accepted: File[] = [];
-    for (const f of Array.from(files).slice(0, remaining)) {
-      if (!f.type.startsWith("image/")) continue;
-      if (f.size > 5 * 1024 * 1024) {
-        setError(`"${f.name}" is over 5MB.`);
-        continue;
-      }
-      accepted.push(f);
-    }
+    if (!accepted.length) return;
     const dataUrls = await Promise.all(
       accepted.map(
         (f) =>
@@ -90,7 +94,6 @@ function Workspace() {
       ),
     );
     setImages((prev) => [...prev, ...dataUrls].slice(0, MAX_IMAGES));
-    setError(null);
   }
 
   function removeImage(idx: number) {
