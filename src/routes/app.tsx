@@ -8,6 +8,7 @@ import { ImagePlus, X } from "lucide-react";
 import {
   MAX_IMAGES,
   dataUrlByteSize,
+  formatBytes,
   validateImageBatch,
 } from "@/lib/image-validation";
 
@@ -433,6 +434,8 @@ function Workspace() {
                     </span>
                     <span className="text-[11px] font-mono text-muted-foreground">
                       {images.length} / {MAX_IMAGES}
+                      {images.length > 0 &&
+                        ` · ${formatBytes(images.reduce((s, src) => s + dataUrlByteSize(src), 0))}`}
                     </span>
                   </div>
                   <input
