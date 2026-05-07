@@ -8,6 +8,7 @@ import { ImagePlus, X } from "lucide-react";
 import {
   MAX_IMAGES,
   dataUrlByteSize,
+  formatBytes,
   validateImageBatch,
 } from "@/lib/image-validation";
 
