@@ -41,27 +41,36 @@ export const Route = createFileRoute("/api/generate")({
           );
         }
 
-        // Optional: read voice notes from the authenticated user's profile
-        let voiceNotes = "";
-        let userId: string | null = null;
+        // Require authentication
         const authHeader =
           getRequestHeader("authorization") ?? getRequestHeader("Authorization");
-        if (authHeader?.startsWith("Bearer ")) {
-          const token = authHeader.slice(7);
-          const { data: userData } = await supabaseAdmin.auth.getUser(token);
-          if (userData.user) {
-            userId = userData.user.id;
-            const { data: prof } = await supabaseAdmin
-              .from("profiles")
-              .select("voice_notes")
-              .eq("user_id", userData.user.id)
-              .maybeSingle();
-            voiceNotes = (prof?.voice_notes ?? "").trim();
-          }
+        if (!authHeader?.startsWith("Bearer ")) {
+          return new Response(
+            JSON.stringify({ error: "Not authenticated." }),
+            { status: 401, headers: { "Content-Type": "application/json" } },
+          );
         }
+        const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(
+          authHeader.slice(7),
+        );
+        if (userErr || !userData.user) {
+          return new Response(
+            JSON.stringify({ error: "Not authenticated." }),
+            { status: 401, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        const userId = userData.user.id;
+
+        // Read voice notes from the authenticated user's profile
+        const { data: prof } = await supabaseAdmin
+          .from("profiles")
+          .select("voice_notes")
+          .eq("user_id", userId)
+          .maybeSingle();
+        const voiceNotes = (prof?.voice_notes ?? "").trim();
 
         // Enforce plan limits server-side
-        if (userId) {
+        {
           const { data: planRow } = await supabaseAdmin.rpc("get_user_plan", {
             _user_id: userId,
           });

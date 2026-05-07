@@ -44,8 +44,12 @@ export const Route = createFileRoute("/api/linkedin/start")({
         } catch {
           // empty body is fine
         }
-        const redirectTo =
+        const rawRedirect =
           typeof body.redirect_to === "string" ? body.redirect_to : "/settings";
+        // Only allow safe relative paths (no protocol, no host, no protocol-relative URLs).
+        const redirectTo = /^\/[a-zA-Z0-9/_-]*$/.test(rawRedirect)
+          ? rawRedirect
+          : "/settings";
 
         // CSRF state
         const state = crypto.randomUUID();
