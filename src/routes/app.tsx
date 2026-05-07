@@ -7,10 +7,7 @@ import { BrandMark } from "@/components/BrandMark";
 import { ImagePlus, X } from "lucide-react";
 import {
   MAX_IMAGES,
-  MAX_IMAGE_BYTES,
-  MAX_TOTAL_BYTES,
   dataUrlByteSize,
-  formatBytes,
   validateImageBatch,
 } from "@/lib/image-validation";
 
