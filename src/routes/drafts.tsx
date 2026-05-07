@@ -244,23 +244,23 @@ function DraftsList() {
   return (
     <div className="min-h-dvh bg-background text-ink flex flex-col">
       <SiteNav />
-      <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-10">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+      <main className="flex-1 w-full max-w-4xl mx-auto px-3 sm:px-6 py-6 sm:py-10">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-2">
+            <p className="text-[10px] sm:text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-2">
               Library
             </p>
-            <h1 className="text-2xl md:text-3xl tracking-[-0.02em] font-semibold leading-tight">
+            <h1 className="text-xl sm:text-2xl md:text-3xl tracking-[-0.02em] font-semibold leading-tight">
               Saved posts
             </h1>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 -mx-3 px-3 overflow-x-auto sm:mx-0 sm:px-0 sm:overflow-visible">
             {(["all", "drafts", "published"] as const).map((f) => (
               <button
                 key={f}
                 type="button"
                 onClick={() => setFilter(f)}
-                className={`h-7 px-2.5 rounded text-[12px] font-medium border transition-colors capitalize ${
+                className={`h-7 px-2.5 rounded text-[12px] font-medium border transition-colors capitalize shrink-0 ${
                   filter === f
                     ? "bg-ink text-surface border-ink"
                     : "bg-card text-ink border-border hover:bg-subtle"
@@ -297,18 +297,18 @@ function DraftsList() {
             {filtered.map((r) => (
               <li
                 key={r.id}
-                className="border border-border rounded-xl bg-card p-5 hover:border-ink/30 transition-colors cursor-pointer"
+                className="border border-border rounded-xl bg-card p-4 sm:p-5 hover:border-ink/30 transition-colors cursor-pointer"
                 onClick={() => {
                   setSelected(r);
                   setPublishMsg(null);
                 }}
               >
-                <div className="flex items-start justify-between gap-4 mb-2">
+                <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="min-w-0 flex-1">
                     <h2 className="font-medium text-ink text-[15px] truncate">
                       {r.title || "Untitled draft"}
                     </h2>
-                    <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground">
+                    <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground flex-wrap">
                       <span
                         className={`px-1.5 py-0.5 rounded border ${
                           r.published
@@ -348,14 +348,14 @@ function DraftsList() {
 
       {selected && (
         <div
-          className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
           onClick={closeModal}
         >
           <div
-            className="bg-card border border-border rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col"
+            className="bg-card border border-border rounded-t-xl sm:rounded-xl shadow-xl w-full max-w-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-4 px-5 sm:px-6 py-4 border-b border-border">
+            <div className="flex items-start justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-border">
               <div className="min-w-0 flex-1">
                 <h2 className="font-semibold text-ink text-[16px] truncate">
                   {selected.title || "Untitled draft"}
@@ -387,7 +387,7 @@ function DraftsList() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5">
               <p className="text-[14px] sm:text-[15px] text-ink leading-relaxed whitespace-pre-wrap">
                 {selected.content}
               </p>
@@ -465,11 +465,11 @@ function DraftsList() {
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-2 px-5 sm:px-6 py-4 border-t border-border bg-subtle/40">
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t border-border bg-subtle/40">
               <button
                 type="button"
                 onClick={closeModal}
-                className="h-9 px-4 rounded-md text-[13px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors"
+                className="h-9 px-4 rounded-md text-[13px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors w-full sm:w-auto"
               >
                 Close
               </button>
@@ -478,7 +478,7 @@ function DraftsList() {
                   type="button"
                   onClick={saveModalImages}
                   disabled={savingImages}
-                  className="h-9 px-4 rounded-md text-[13px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-60 inline-flex items-center gap-1.5"
+                  className="h-9 px-4 rounded-md text-[13px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-60 inline-flex items-center justify-center gap-1.5 w-full sm:w-auto"
                 >
                   <span className="size-1.5 rounded-full bg-ink" />
                   {savingImages ? "Saving…" : "Save changes"}
@@ -489,7 +489,7 @@ function DraftsList() {
                   type="button"
                   onClick={() => publishDraft(selected)}
                   disabled={publishing}
-                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 disabled:opacity-60 transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 disabled:opacity-60 transition-colors w-full sm:w-auto"
                 >
                   <Send className="size-3.5" />
                   {publishing ? "Publishing…" : "Publish to LinkedIn"}
