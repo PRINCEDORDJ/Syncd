@@ -1,9 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteNav } from "@/components/SiteNav";
-import { Trash2, X, Send } from "lucide-react";
+import { Trash2, X, Send, ImagePlus } from "lucide-react";
+import {
+  MAX_IMAGES,
+  dataUrlByteSize,
+  formatBytes,
+  validateImageBatch,
+} from "@/lib/image-validation";
 
 export const Route = createFileRoute("/drafts")({
   head: () => ({
@@ -55,6 +61,89 @@ function DraftsList() {
   const [selected, setSelected] = useState<DraftRow | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [publishMsg, setPublishMsg] = useState<string | null>(null);
+  const [modalImages, setModalImages] = useState<string[]>([]);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [savingImages, setSavingImages] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const dirty = useMemo(() => {
+    if (!selected) return false;
+    const a = selected.images ?? [];
+    if (a.length !== modalImages.length) return true;
+    for (let i = 0; i < a.length; i++) if (a[i] !== modalImages[i]) return true;
+    return false;
+  }, [selected, modalImages]);
+
+  const modalTotalBytes = useMemo(
+    () => modalImages.reduce((s, src) => s + dataUrlByteSize(src), 0),
+    [modalImages],
+  );
+
+  useEffect(() => {
+    setModalImages(selected?.images ?? []);
+    setModalError(null);
+  }, [selected?.id]);
+
+  function closeModal() {
+    setSelected(null);
+    setModalImages([]);
+    setModalError(null);
+    setPublishMsg(null);
+  }
+
+  async function handleModalFiles(files: FileList | null) {
+    if (!files || !files.length) return;
+    const existingBytes = modalImages.reduce((s, src) => s + dataUrlByteSize(src), 0);
+    const { accepted, errors } = validateImageBatch(
+      Array.from(files),
+      modalImages.length,
+      existingBytes,
+    );
+    setModalError(errors.length ? errors.join(" ") : null);
+    if (!accepted.length) return;
+    const dataUrls = await Promise.all(
+      accepted.map(
+        (f) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(f);
+          }),
+      ),
+    );
+    setModalImages((prev) => [...prev, ...dataUrls].slice(0, MAX_IMAGES));
+  }
+
+  function removeModalImage(idx: number) {
+    setModalImages((prev) => prev.filter((_, i) => i !== idx));
+    setModalError(null);
+  }
+
+  async function saveModalImages() {
+    if (!user || !selected || savingImages) return;
+    setSavingImages(true);
+    setModalError(null);
+    try {
+      const { error: err } = await supabase
+        .from("drafts")
+        .update({ images: modalImages })
+        .eq("id", selected.id)
+        .eq("user_id", user.id);
+      if (err) {
+        setModalError(err.message);
+        return;
+      }
+      setRows((prev) =>
+        prev
+          ? prev.map((r) => (r.id === selected.id ? { ...r, images: modalImages } : r))
+          : prev,
+      );
+      setSelected({ ...selected, images: modalImages });
+    } finally {
+      setSavingImages(false);
+    }
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -110,13 +199,14 @@ function DraftsList() {
         setError("Session expired — please sign in again.");
         return;
       }
+      const imagesToSend = modalImages.length ? modalImages : row.images ?? [];
       const resp = await fetch("/api/linkedin/publish", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ content: row.content, images: row.images ?? [] }),
+        body: JSON.stringify({ content: row.content, images: imagesToSend }),
       });
       const data = (await resp.json().catch(() => ({}))) as {
         success?: boolean;
@@ -126,16 +216,20 @@ function DraftsList() {
         setPublishMsg(data.error ?? "Failed to publish.");
         return;
       }
-      // Mark draft as published in DB
+      // Mark draft as published in DB and persist any pending image edits
       await supabase
         .from("drafts")
-        .update({ published: true })
+        .update({ published: true, images: imagesToSend })
         .eq("id", row.id)
         .eq("user_id", user.id);
       setRows((prev) =>
-        prev ? prev.map((r) => (r.id === row.id ? { ...r, published: true } : r)) : prev,
+        prev
+          ? prev.map((r) =>
+              r.id === row.id ? { ...r, published: true, images: imagesToSend } : r,
+            )
+          : prev,
       );
-      setSelected({ ...row, published: true });
+      setSelected({ ...row, published: true, images: imagesToSend });
       setPublishMsg("Published to LinkedIn successfully.");
     } finally {
       setPublishing(false);
