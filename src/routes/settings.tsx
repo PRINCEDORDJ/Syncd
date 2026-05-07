@@ -291,12 +291,12 @@ function SettingsPage() {
     <div className="min-h-dvh bg-background text-ink">
       <SiteNav />
 
-      <main className="max-w-3xl mx-auto px-6 py-12">
-        <div className="mb-10">
-          <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-3">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <div className="mb-8 sm:mb-10">
+          <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-2 sm:mb-3">
             Settings
           </p>
-          <h1 className="text-3xl tracking-[-0.02em] font-semibold leading-tight">
+          <h1 className="text-2xl sm:text-3xl tracking-[-0.02em] font-semibold leading-tight">
             Account & integrations
           </h1>
         </div>
@@ -362,7 +362,7 @@ function SettingsPage() {
           subtitle="Authorize once. Publish drafts straight from the workspace."
         >
           {conn ? (
-            <div className="flex items-center justify-between gap-4 p-4 border border-border rounded-md bg-subtle/40">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 border border-border rounded-md bg-subtle/40">
               <div className="flex items-center gap-3 min-w-0">
                 {conn.linkedin_picture_url ? (
                   <img
@@ -387,14 +387,14 @@ function SettingsPage() {
               <button
                 type="button"
                 onClick={disconnectLinkedIn}
-                className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle"
+                className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle w-full sm:w-auto"
               >
                 Disconnect
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-between gap-4 p-4 border border-border rounded-md">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 border border-border rounded-md">
+              <div className="min-w-0">
                 <div className="text-[14px] text-ink font-medium">Not connected</div>
                 <div className="text-[12px] text-muted-foreground mt-0.5">
                   Required to publish posts directly from SocialSync.
@@ -404,7 +404,7 @@ function SettingsPage() {
                 type="button"
                 onClick={connectLinkedIn}
                 disabled={connectingLinkedIn}
-                className="h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-60 inline-flex items-center gap-2"
+                className="h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-60 inline-flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 {connectingLinkedIn ? "Redirecting…" : "Connect LinkedIn"}
                 <span aria-hidden>→</span>
@@ -423,8 +423,8 @@ function SettingsPage() {
               {billingMsg}
             </div>
           )}
-          <div className="flex items-center justify-between gap-4 p-4 border border-border rounded-md bg-subtle/40">
-            <div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 border border-border rounded-md bg-subtle/40">
+            <div className="min-w-0">
               <div className="text-[14px] font-medium text-ink">
                 {PLAN_LABELS[sub?.plan ?? "trial"]} plan
                 <span className="ml-2 text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground">
@@ -452,20 +452,20 @@ function SettingsPage() {
                 </div>
               )}
             </div>
-            <div className="flex flex-col gap-2 items-end">
+            <div className="flex flex-col gap-2 sm:items-end w-full sm:w-auto">
               {sub?.polar_customer_id ? (
                 <button
                   type="button"
                   onClick={openBillingPortal}
                   disabled={openingPortal}
-                  className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle disabled:opacity-60"
+                  className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle disabled:opacity-60 w-full sm:w-auto"
                 >
                   {openingPortal ? "Opening…" : "Manage billing"}
                 </button>
               ) : (
                 <Link
                   to="/pricing"
-                  className="h-9 px-3 inline-flex items-center rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90"
+                  className="h-9 px-3 inline-flex items-center justify-center rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 w-full sm:w-auto"
                 >
                   Upgrade →
                 </Link>
@@ -567,13 +567,13 @@ function Section({
         tone === "danger" ? "border-destructive/30" : "border-border"
       }`}
     >
-      <div className="px-6 py-5 border-b border-border">
+      <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-border">
         <h2 className="text-[15px] font-semibold tracking-tight text-ink">{title}</h2>
         {subtitle && (
           <p className="text-[13px] text-muted-foreground mt-1">{subtitle}</p>
         )}
       </div>
-      <div className="px-6 py-5 flex flex-col gap-4">{children}</div>
+      <div className="px-4 sm:px-6 py-4 sm:py-5 flex flex-col gap-4">{children}</div>
     </section>
   );
 }

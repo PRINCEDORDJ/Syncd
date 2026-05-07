@@ -152,6 +152,17 @@
     background-color: var(--ink);
     color: var(--surface);
   }
+
+  /* Hide scrollbars globally while preserving scrolling. */
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  *::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
 }
 
 @utility text-balance {
