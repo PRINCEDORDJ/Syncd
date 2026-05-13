@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as MethodologyRouteImport } from './routes/methodology'
@@ -25,6 +26,11 @@ import { Route as ApiLinkedinDisconnectRouteImport } from './routes/api.linkedin
 import { Route as ApiLinkedinCallbackRouteImport } from './routes/api.linkedin.callback'
 import { Route as ApiPublicPolarWebhookRouteImport } from './routes/api.public.polar.webhook'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/linkedin/callback': typeof ApiLinkedinCallbackRoute
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/linkedin/callback': typeof ApiLinkedinCallbackRoute
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/linkedin/callback': typeof ApiLinkedinCallbackRoute
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/methodology'
     | '/pricing'
     | '/settings'
+    | '/sitemap.xml'
     | '/api/generate'
     | '/api/linkedin/callback'
     | '/api/linkedin/disconnect'
@@ -180,6 +190,7 @@ export interface FileRouteTypes {
     | '/methodology'
     | '/pricing'
     | '/settings'
+    | '/sitemap.xml'
     | '/api/generate'
     | '/api/linkedin/callback'
     | '/api/linkedin/disconnect'
@@ -197,6 +208,7 @@ export interface FileRouteTypes {
     | '/methodology'
     | '/pricing'
     | '/settings'
+    | '/sitemap.xml'
     | '/api/generate'
     | '/api/linkedin/callback'
     | '/api/linkedin/disconnect'
@@ -215,6 +227,7 @@ export interface RootRouteChildren {
   MethodologyRoute: typeof MethodologyRoute
   PricingRoute: typeof PricingRoute
   SettingsRoute: typeof SettingsRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiGenerateRoute: typeof ApiGenerateRoute
   ApiLinkedinCallbackRoute: typeof ApiLinkedinCallbackRoute
   ApiLinkedinDisconnectRoute: typeof ApiLinkedinDisconnectRoute
@@ -227,6 +240,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -343,6 +363,7 @@ const rootRouteChildren: RootRouteChildren = {
   MethodologyRoute: MethodologyRoute,
   PricingRoute: PricingRoute,
   SettingsRoute: SettingsRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiGenerateRoute: ApiGenerateRoute,
   ApiLinkedinCallbackRoute: ApiLinkedinCallbackRoute,
   ApiLinkedinDisconnectRoute: ApiLinkedinDisconnectRoute,
