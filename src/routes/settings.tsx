@@ -74,6 +74,7 @@ function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [conn, setConn] = useState<LinkedInConnection | null>(null);
   const [sub, setSub] = useState<SubscriptionRow | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [openingPortal, setOpeningPortal] = useState(false);
   const [billingMsg, setBillingMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,6 +85,7 @@ function SettingsPage() {
   const [voiceNotes, setVoiceNotes] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Account
   const [newPassword, setNewPassword] = useState("");
@@ -119,7 +121,7 @@ function SettingsPage() {
     if (!user) return;
     let cancelled = false;
     (async () => {
-      const [{ data: prof }, { data: linkedin }, { data: subRow }] = await Promise.all([
+      const [{ data: prof }, { data: linkedin }, { data: subRow }, { data: roles }] = await Promise.all([
         supabase
           .from("profiles")
           .select("display_name, avatar_url, voice_notes")
@@ -137,6 +139,10 @@ function SettingsPage() {
           )
           .eq("user_id", user.id)
           .maybeSingle(),
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id),
       ]);
       if (cancelled) return;
       const p = prof ?? { display_name: null, avatar_url: null, voice_notes: null };
@@ -146,12 +152,106 @@ function SettingsPage() {
       setVoiceNotes(p.voice_notes ?? "");
       setConn(linkedin ?? null);
       setSub(subRow as SubscriptionRow | null);
+      setIsAdmin(!!roles?.some((r) => r.role === "admin"));
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
   }, [user]);
+
+  // Live-refresh subscription on focus + realtime updates so the plan
+  // panel reflects the latest billing state without a manual reload.
+  useEffect(() => {
+    if (!user) return;
+    const refresh = async () => {
+      const { data } = await supabase
+        .from("subscriptions")
+        .select(
+          "plan, status, trial_end, current_period_end, cancel_at_period_end, polar_customer_id",
+        )
+        .eq("user_id", user.id)
+        .maybeSingle();
+      setSub((data as SubscriptionRow | null) ?? null);
+    };
+    const onFocus = () => void refresh();
+    window.addEventListener("focus", onFocus);
+    const channel = supabase
+      .channel(`sub-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${user.id}` },
+        () => void refresh(),
+      )
+      .subscribe();
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  async function uploadAvatar(file: File) {
+    if (!user) return;
+    if (!file.type.startsWith("image/")) {
+      setProfileMsg("Please choose an image file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setProfileMsg("Image must be under 5MB.");
+      return;
+    }
+    setUploadingAvatar(true);
+    setProfileMsg(null);
+    const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+    const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from("avatars")
+      .upload(path, file, { upsert: true, contentType: file.type });
+    if (upErr) {
+      setUploadingAvatar(false);
+      setProfileMsg(`Upload failed: ${upErr.message}`);
+      return;
+    }
+    const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+    const url = pub.publicUrl;
+    const { error: profErr } = await supabase.from("profiles").upsert(
+      { user_id: user.id, avatar_url: url },
+      { onConflict: "user_id" },
+    );
+    setUploadingAvatar(false);
+    if (profErr) {
+      setProfileMsg(`Failed to save: ${profErr.message}`);
+      return;
+    }
+    setAvatarUrl(url);
+    setProfile((prev) => ({
+      display_name: prev?.display_name ?? null,
+      voice_notes: prev?.voice_notes ?? null,
+      avatar_url: url,
+    }));
+    setProfileMsg("Avatar updated.");
+  }
+
+  async function removeAvatar() {
+    if (!user) return;
+    setUploadingAvatar(true);
+    setProfileMsg(null);
+    const { error } = await supabase
+      .from("profiles")
+      .upsert({ user_id: user.id, avatar_url: null }, { onConflict: "user_id" });
+    setUploadingAvatar(false);
+    if (error) {
+      setProfileMsg(`Failed: ${error.message}`);
+      return;
+    }
+    setAvatarUrl("");
+    setProfile((prev) => ({
+      display_name: prev?.display_name ?? null,
+      voice_notes: prev?.voice_notes ?? null,
+      avatar_url: null,
+    }));
+    setProfileMsg("Avatar removed.");
+  }
 
   async function openBillingPortal() {
     setOpeningPortal(true);
