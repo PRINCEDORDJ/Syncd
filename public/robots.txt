@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /app
+Disallow: /drafts
+Disallow: /settings
+Disallow: /api/
+
+Sitemap: https://sociosync.lovable.app/sitemap.xml
