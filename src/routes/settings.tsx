@@ -556,37 +556,41 @@ function SettingsPage() {
               {billingMsg}
             </div>
           )}
+          {(() => {
+            const effectivePlan: PlanTier = isAdmin ? "teams" : (sub?.plan ?? "trial");
+            const effectiveStatus = isAdmin ? "admin" : (sub?.status ?? "trialing");
+            const limit = PLAN_LIMITS[effectivePlan].maxDrafts;
+            const linkedInMax = PLAN_LIMITS[effectivePlan].maxLinkedInAccounts;
+            const draftStr = limit === null ? "Unlimited drafts" : `${limit} drafts / period`;
+            return (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 border border-border rounded-md bg-subtle/40">
             <div className="min-w-0">
               <div className="text-[14px] font-medium text-ink">
-                {PLAN_LABELS[sub?.plan ?? "trial"]} plan
+                {PLAN_LABELS[effectivePlan]} plan
                 <span className="ml-2 text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground">
-                  {sub?.status ?? "trialing"}
+                  {effectiveStatus}
                 </span>
               </div>
               <div className="text-[12px] text-muted-foreground mt-1">
-                {(() => {
-                  const plan = sub?.plan ?? "trial";
-                  const limit = PLAN_LIMITS[plan].maxDrafts;
-                  const linkedInMax = PLAN_LIMITS[plan].maxLinkedInAccounts;
-                  const draftStr = limit === null ? "Unlimited drafts" : `${limit} drafts / period`;
-                  return `${draftStr} · ${linkedInMax} LinkedIn account${linkedInMax > 1 ? "s" : ""}`;
-                })()}
+                {draftStr} · {linkedInMax} LinkedIn account{linkedInMax > 1 ? "s" : ""}
               </div>
-              {sub?.plan === "trial" && sub.trial_end && (
+              {isAdmin ? (
+                <div className="text-[12px] text-muted-foreground mt-0.5">
+                  Admin access — all features unlocked, no billing required.
+                </div>
+              ) : sub?.plan === "trial" && sub.trial_end ? (
                 <div className="text-[12px] text-muted-foreground mt-0.5">
                   Trial ends {new Date(sub.trial_end).toLocaleDateString()}
                 </div>
-              )}
-              {sub && sub.plan !== "trial" && sub.current_period_end && (
+              ) : sub && sub.plan !== "trial" && sub.current_period_end ? (
                 <div className="text-[12px] text-muted-foreground mt-0.5">
                   {sub.cancel_at_period_end ? "Cancels" : "Renews"} on{" "}
                   {new Date(sub.current_period_end).toLocaleDateString()}
                 </div>
-              )}
+              ) : null}
             </div>
             <div className="flex flex-col gap-2 sm:items-end w-full sm:w-auto">
-              {sub?.polar_customer_id ? (
+              {isAdmin ? null : sub?.polar_customer_id ? (
                 <button
                   type="button"
                   onClick={openBillingPortal}
@@ -605,6 +609,8 @@ function SettingsPage() {
               )}
             </div>
           </div>
+            );
+          })()}
         </Section>
 
         {/* Account */}
