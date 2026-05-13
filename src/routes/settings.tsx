@@ -423,13 +423,46 @@ function SettingsPage() {
               className="h-10 w-full px-3 rounded-md border border-border bg-card text-[14px] focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
             />
           </Field>
-          <Field label="Avatar URL" hint="Paste a link to your profile picture (optional).">
-            <input
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              placeholder="https://…"
-              className="h-10 w-full px-3 rounded-md border border-border bg-card text-[14px] focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
-            />
+          <Field label="Avatar" hint="Upload a square image (PNG/JPG, up to 5MB).">
+            <div className="flex items-center gap-4">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="size-16 rounded-full object-cover border border-border"
+                />
+              ) : (
+                <div className="size-16 rounded-full bg-subtle border border-border flex items-center justify-center text-[14px] font-semibold text-muted-foreground">
+                  {(displayName || user?.email || "?")[0]?.toUpperCase()}
+                </div>
+              )}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <label className="h-9 px-3 inline-flex items-center justify-center rounded-md border border-border text-[13px] text-ink hover:bg-subtle cursor-pointer">
+                  {uploadingAvatar ? "Uploading…" : avatarUrl ? "Replace" : "Upload image"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingAvatar}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void uploadAvatar(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                {avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={removeAvatar}
+                    disabled={uploadingAvatar}
+                    className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle disabled:opacity-60"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
           </Field>
           <Field
             label="Voice notes"
