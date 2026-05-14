@@ -371,6 +371,38 @@ function DraftsList() {
                     <Trash2 className="size-4" />
                   </button>
                 </div>
+                {!r.published && r.images.length > 0 && (
+                  <div className="mb-2 flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1">
+                    {r.images.map((src, i) => (
+                      <img
+                        key={i}
+                        src={src}
+                        alt={`Thumb ${i + 1}`}
+                        className="h-[72px] w-auto max-h-[120px] rounded-md border border-border object-cover shrink-0"
+                      />
+                    ))}
+                  </div>
+                )}
+                {!r.published && r.attachments.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {r.attachments.map((a, i) => {
+                      const Icon = attachmentIcon(a.name, a.type);
+                      return (
+                        <div
+                          key={i}
+                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-subtle text-[11px] font-mono text-ink max-w-[200px]"
+                          title={a.name}
+                        >
+                          <Icon className="size-3 text-muted-foreground shrink-0" />
+                          <span className="truncate">{a.name}</span>
+                          <span className="text-muted-foreground tabular-nums shrink-0">
+                            {formatBytes(a.size)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <p className="text-[14px] text-ink/80 leading-relaxed line-clamp-3 whitespace-pre-wrap">
                   {r.content}
                 </p>
