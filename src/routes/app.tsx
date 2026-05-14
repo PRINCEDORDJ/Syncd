@@ -49,6 +49,29 @@ function WorkspaceGate() {
 const TONES = ["Authoritative & Warm", "Conversational", "Contrarian", "Storytelling"] as const;
 type Tone = (typeof TONES)[number];
 
+function deriveTitle(content: string): string {
+  const cleaned = content
+    // strip markdown emphasis / headings / list markers
+    .replace(/[#*_`>~]+/g, " ")
+    // strip emojis & pictographs
+    .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return "Untitled draft";
+  // Prefer first sentence; fall back to first line
+  const firstSentence = cleaned.split(/(?<=[.!?])\s+/)[0] ?? cleaned;
+  let title = firstSentence.trim();
+  const MAX = 60;
+  if (title.length > MAX) {
+    const slice = title.slice(0, MAX);
+    const lastSpace = slice.lastIndexOf(" ");
+    title = (lastSpace > 30 ? slice.slice(0, lastSpace) : slice).trim() + "…";
+  }
+  // Strip trailing punctuation for a cleaner title
+  title = title.replace(/[.,;:!?\-–—]+$/g, "").trim();
+  return title || "Untitled draft";
+}
+
 function Workspace() {
   const { user } = useAuth();
   const [tone, setTone] = useState<Tone>("Authoritative & Warm");
