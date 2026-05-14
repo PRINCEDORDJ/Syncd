@@ -149,19 +149,19 @@ export function SiteNav() {
               <Menu className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
                 <Link to="/methodology">Methodology</Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
                 <Link to="/pricing">Pricing</Link>
               </DropdownMenuItem>
               {user && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
+                  <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
                     <Link to="/app">Workspace</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
+                  <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
                     <Link to="/drafts">Posts</Link>
                   </DropdownMenuItem>
                 </>
