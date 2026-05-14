@@ -8,6 +8,7 @@ import {
   X,
   Send,
   ImagePlus,
+  Paperclip,
   FileText,
   Sheet,
   Presentation,
@@ -15,9 +16,11 @@ import {
 } from "lucide-react";
 import {
   MAX_IMAGES,
+  MAX_ATTACHMENTS,
   dataUrlByteSize,
   formatBytes,
   validateImageBatch,
+  validateAttachmentBatch,
 } from "@/lib/image-validation";
 
 type DraftAttachment = {
@@ -91,17 +94,28 @@ function DraftsList() {
   const [publishing, setPublishing] = useState(false);
   const [publishMsg, setPublishMsg] = useState<string | null>(null);
   const [modalImages, setModalImages] = useState<string[]>([]);
+  const [modalAttachments, setModalAttachments] = useState<DraftAttachment[]>([]);
   const [modalError, setModalError] = useState<string | null>(null);
-  const [savingImages, setSavingImages] = useState(false);
+  const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const fileAttachInputRef = useRef<HTMLInputElement | null>(null);
 
   const dirty = useMemo(() => {
     if (!selected) return false;
     const a = selected.images ?? [];
     if (a.length !== modalImages.length) return true;
     for (let i = 0; i < a.length; i++) if (a[i] !== modalImages[i]) return true;
+    
+    const b = selected.attachments ?? [];
+    if (b.length !== modalAttachments.length) return true;
+    for (let i = 0; i < b.length; i++) {
+      if (b[i].name !== modalAttachments[i].name) return true;
+      if (b[i].size !== modalAttachments[i].size) return true;
+      if (b[i].dataUrl !== modalAttachments[i].dataUrl) return true;
+    }
+    
     return false;
-  }, [selected, modalImages]);
+  }, [selected, modalImages, modalAttachments]);
 
   const modalTotalBytes = useMemo(
     () => modalImages.reduce((s, src) => s + dataUrlByteSize(src), 0),
@@ -110,12 +124,14 @@ function DraftsList() {
 
   useEffect(() => {
     setModalImages(selected?.images ?? []);
+    setModalAttachments(selected?.attachments ?? []);
     setModalError(null);
   }, [selected?.id]);
 
   function closeModal() {
     setSelected(null);
     setModalImages([]);
+    setModalAttachments([]);
     setModalError(null);
     setPublishMsg(null);
   }
@@ -149,14 +165,50 @@ function DraftsList() {
     setModalError(null);
   }
 
-  async function saveModalImages() {
-    if (!user || !selected || savingImages) return;
-    setSavingImages(true);
+  async function handleModalAttachments(files: FileList | null) {
+    if (!files || !files.length) return;
+    const { accepted, errors } = validateAttachmentBatch(
+      Array.from(files),
+      modalAttachments.length,
+    );
+    setModalError(errors.length ? errors.join(" ") : null);
+    if (!accepted.length) return;
+    const items = await Promise.all(
+      accepted.map(
+        (f) =>
+          new Promise<DraftAttachment>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () =>
+              resolve({
+                name: f.name,
+                size: f.size,
+                type: f.type || "application/octet-stream",
+                dataUrl: String(reader.result),
+              });
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(f);
+          }),
+      ),
+    );
+    setModalAttachments((prev) => [...prev, ...items].slice(0, MAX_ATTACHMENTS));
+  }
+
+  function removeModalAttachment(idx: number) {
+    setModalAttachments((prev) => prev.filter((_, i) => i !== idx));
+    setModalError(null);
+  }
+
+  async function saveModalChanges() {
+    if (!user || !selected || saving) return;
+    setSaving(true);
     setModalError(null);
     try {
       const { error: err } = await supabase
         .from("drafts")
-        .update({ images: modalImages })
+        .update({
+          images: modalImages,
+          attachments: modalAttachments as any,
+        })
         .eq("id", selected.id)
         .eq("user_id", user.id);
       if (err) {
@@ -165,12 +217,16 @@ function DraftsList() {
       }
       setRows((prev) =>
         prev
-          ? prev.map((r) => (r.id === selected.id ? { ...r, images: modalImages } : r))
+          ? prev.map((r) =>
+              r.id === selected.id
+                ? { ...r, images: modalImages, attachments: modalAttachments }
+                : r,
+            )
           : prev,
       );
-      setSelected({ ...selected, images: modalImages });
+      setSelected({ ...selected, images: modalImages, attachments: modalAttachments });
     } finally {
-      setSavingImages(false);
+      setSaving(false);
     }
   }
 
@@ -240,7 +296,11 @@ function DraftsList() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ content: row.content, images: imagesToSend }),
+        body: JSON.stringify({
+          content: row.content,
+          images: imagesToSend,
+          attachments: modalAttachments.length ? modalAttachments : row.attachments,
+        }),
       });
       const data = (await resp.json().catch(() => ({}))) as {
         success?: boolean;
@@ -251,19 +311,26 @@ function DraftsList() {
         return;
       }
       // Mark draft as published in DB and persist any pending image edits
+      const attachmentsToSend = modalAttachments.length ? modalAttachments : row.attachments;
       await supabase
         .from("drafts")
-        .update({ published: true, images: imagesToSend })
+        .update({
+          published: true,
+          images: imagesToSend,
+          attachments: attachmentsToSend as any,
+        })
         .eq("id", row.id)
         .eq("user_id", user.id);
       setRows((prev) =>
         prev
           ? prev.map((r) =>
-              r.id === row.id ? { ...r, published: true, images: imagesToSend } : r,
+              r.id === row.id
+                ? { ...r, published: true, images: imagesToSend, attachments: attachmentsToSend }
+                : r,
             )
           : prev,
       );
-      setSelected({ ...row, published: true, images: imagesToSend });
+      setSelected({ ...row, published: true, images: imagesToSend, attachments: attachmentsToSend });
       setPublishMsg("Published to LinkedIn successfully.");
     } finally {
       setPublishing(false);
@@ -443,14 +510,40 @@ function DraftsList() {
                   <span>{new Date(selected.updated_at).toLocaleString()}</span>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={closeModal}
-                className="p-1.5 text-muted-foreground hover:text-ink transition-colors"
-                aria-label="Close"
-              >
-                <X className="size-4" />
-              </button>
+              <div className="flex items-center gap-1.5">
+                {!selected.published && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={modalImages.length >= MAX_IMAGES}
+                      title="Add image"
+                      aria-label="Add image"
+                      className="h-8 w-8 inline-flex items-center justify-center rounded border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                    >
+                      <ImagePlus className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileAttachInputRef.current?.click()}
+                      disabled={modalAttachments.length >= MAX_ATTACHMENTS}
+                      title="Add file"
+                      aria-label="Add file"
+                      className="h-8 w-8 inline-flex items-center justify-center rounded border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                    >
+                      <Paperclip className="size-4" />
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="p-1.5 text-muted-foreground hover:text-ink transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5">
@@ -462,11 +555,18 @@ function DraftsList() {
                   <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-[0.12em]">
                     Images
                   </p>
-                  <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.12em]">
-                    {modalImages.length} / {MAX_IMAGES}
-                    {modalImages.length > 0 && ` · ${formatBytes(modalTotalBytes)}`}
-                  </span>
                 </div>
+                <input
+                  ref={fileAttachInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.csv,.txt,.xls,.xlsx,.ppt,.pptx"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    handleModalAttachments(e.target.files);
+                    if (fileAttachInputRef.current) fileAttachInputRef.current.value = "";
+                  }}
+                />
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -479,38 +579,59 @@ function DraftsList() {
                   }}
                 />
                 {modalImages.length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar -mx-1 px-1">
                     {modalImages.map((src, i) => (
                       <div
                         key={i}
-                        className="relative aspect-square rounded-md overflow-hidden border border-border bg-card group"
+                        className="relative flex-none aspect-square h-32 sm:h-40 rounded-md overflow-hidden border border-border bg-card group"
                       >
                         <img
                           src={src}
                           alt={`Attachment ${i + 1}`}
                           className="w-full h-full object-cover"
                         />
-                        <button
-                          type="button"
-                          onClick={() => removeModalImage(i)}
-                          className="absolute top-1 right-1 size-5 rounded-full bg-ink/80 text-surface flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          aria-label="Remove image"
-                        >
-                          <X className="size-3" />
-                        </button>
+                        {!selected.published && (
+                          <button
+                            type="button"
+                            onClick={() => removeModalImage(i)}
+                            className="absolute top-1 right-1 size-5 rounded-full bg-ink/80 text-surface flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            aria-label="Remove image"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
                 )}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={modalImages.length >= MAX_IMAGES}
-                  className="w-full h-9 rounded-md border border-dashed border-border text-[12px] font-medium text-muted-foreground hover:text-ink hover:border-ink/40 hover:bg-card transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-                >
-                  <ImagePlus className="size-3.5" />
-                  {modalImages.length === 0 ? "Add images to post" : "Add more"}
-                </button>
+                {modalAttachments.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar -mx-1 px-1 mt-1">
+                    {modalAttachments.map((a, i) => {
+                      const Icon = attachmentIcon(a.name, a.type);
+                      return (
+                        <div
+                          key={`${a.name}-${i}`}
+                          className="relative flex-none inline-flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-subtle hover:bg-muted transition-colors group h-10"
+                        >
+                          <Icon className="size-4 text-muted-foreground shrink-0" />
+                          <span className="text-[13px] text-ink truncate max-w-[150px]" title={a.name}>
+                            {a.name}
+                          </span>
+                          {!selected.published && (
+                            <button
+                              type="button"
+                              onClick={() => removeModalAttachment(i)}
+                              className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-ink/80 text-surface flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              aria-label="Remove attachment"
+                            >
+                              <X className="size-3" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 {modalError && (
                   <div className="px-3 py-2.5 rounded-md bg-destructive/5 border border-destructive/20 text-[13px] text-destructive">
                     {modalError}
@@ -542,12 +663,12 @@ function DraftsList() {
               {dirty && (
                 <button
                   type="button"
-                  onClick={saveModalImages}
-                  disabled={savingImages}
+                  onClick={saveModalChanges}
+                  disabled={saving}
                   className="h-9 px-4 rounded-md text-[13px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-60 inline-flex items-center justify-center gap-1.5 w-full sm:w-auto"
                 >
                   <span className="size-1.5 rounded-full bg-ink" />
-                  {savingImages ? "Saving…" : "Save changes"}
+                  {saving ? "Saving…" : "Save changes"}
                 </button>
               )}
               {!selected.published && (

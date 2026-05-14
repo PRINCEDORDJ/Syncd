@@ -14,12 +14,18 @@ export function SiteFooter() {
             © {new Date().getFullYear()}
           </span>
         </div>
-        <div className="flex items-center gap-6 text-[13px] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px] text-muted-foreground">
           <Link to="/methodology" className="hover:text-ink transition-colors">
             Methodology
           </Link>
           <Link to="/pricing" className="hover:text-ink transition-colors">
             Pricing
+          </Link>
+          <Link to="/privacy" className="hover:text-ink transition-colors">
+            Privacy
+          </Link>
+          <Link to="/terms" className="hover:text-ink transition-colors">
+            Terms
           </Link>
           <a href="mailto:hello@socialsync.app" className="hover:text-ink transition-colors">
             Contact

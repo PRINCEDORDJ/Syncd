@@ -9,8 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as LoginRouteImport } from './routes/login'
@@ -26,6 +28,11 @@ import { Route as ApiLinkedinDisconnectRouteImport } from './routes/api.linkedin
 import { Route as ApiLinkedinCallbackRouteImport } from './routes/api.linkedin.callback'
 import { Route as ApiPublicPolarWebhookRouteImport } from './routes/api.public.polar.webhook'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -34,6 +41,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingRoute = PricingRouteImport.update({
@@ -114,8 +126,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/linkedin/callback': typeof ApiLinkedinCallbackRoute
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
@@ -132,8 +146,10 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/linkedin/callback': typeof ApiLinkedinCallbackRoute
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
@@ -151,8 +167,10 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/api/generate': typeof ApiGenerateRoute
   '/api/linkedin/callback': typeof ApiLinkedinCallbackRoute
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
@@ -171,8 +189,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/methodology'
     | '/pricing'
+    | '/privacy'
     | '/settings'
     | '/sitemap.xml'
+    | '/terms'
     | '/api/generate'
     | '/api/linkedin/callback'
     | '/api/linkedin/disconnect'
@@ -189,8 +209,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/methodology'
     | '/pricing'
+    | '/privacy'
     | '/settings'
     | '/sitemap.xml'
+    | '/terms'
     | '/api/generate'
     | '/api/linkedin/callback'
     | '/api/linkedin/disconnect'
@@ -207,8 +229,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/methodology'
     | '/pricing'
+    | '/privacy'
     | '/settings'
     | '/sitemap.xml'
+    | '/terms'
     | '/api/generate'
     | '/api/linkedin/callback'
     | '/api/linkedin/disconnect'
@@ -226,8 +250,10 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MethodologyRoute: typeof MethodologyRoute
   PricingRoute: typeof PricingRoute
+  PrivacyRoute: typeof PrivacyRoute
   SettingsRoute: typeof SettingsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TermsRoute: typeof TermsRoute
   ApiGenerateRoute: typeof ApiGenerateRoute
   ApiLinkedinCallbackRoute: typeof ApiLinkedinCallbackRoute
   ApiLinkedinDisconnectRoute: typeof ApiLinkedinDisconnectRoute
@@ -240,6 +266,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -252,6 +285,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -362,8 +402,10 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MethodologyRoute: MethodologyRoute,
   PricingRoute: PricingRoute,
+  PrivacyRoute: PrivacyRoute,
   SettingsRoute: SettingsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TermsRoute: TermsRoute,
   ApiGenerateRoute: ApiGenerateRoute,
   ApiLinkedinCallbackRoute: ApiLinkedinCallbackRoute,
   ApiLinkedinDisconnectRoute: ApiLinkedinDisconnectRoute,
@@ -376,3 +418,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
