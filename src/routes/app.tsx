@@ -184,7 +184,7 @@ function Workspace() {
         char_count: draft.length,
         title: title.trim() || "Untitled draft",
         images,
-        attachments,
+        attachments: attachments as unknown as Record<string, unknown>[],
         ...(asPublished ? { published: true } : {}),
       };
       if (draftId) {
