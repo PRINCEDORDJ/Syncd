@@ -3,13 +3,41 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteNav } from "@/components/SiteNav";
-import { Trash2, X, Send, ImagePlus } from "lucide-react";
+import {
+  Trash2,
+  X,
+  Send,
+  ImagePlus,
+  FileText,
+  Sheet,
+  Presentation,
+  File as FileIcon,
+} from "lucide-react";
 import {
   MAX_IMAGES,
   dataUrlByteSize,
   formatBytes,
   validateImageBatch,
 } from "@/lib/image-validation";
+
+type DraftAttachment = {
+  name: string;
+  size: number;
+  type: string;
+  dataUrl?: string;
+};
+
+function attachmentIcon(name: string, type: string) {
+  const lower = name.toLowerCase();
+  if (lower.endsWith(".pdf")) return FileText;
+  if (lower.endsWith(".csv") || lower.endsWith(".xls") || lower.endsWith(".xlsx"))
+    return Sheet;
+  if (lower.endsWith(".ppt") || lower.endsWith(".pptx")) return Presentation;
+  if (lower.endsWith(".doc") || lower.endsWith(".docx") || lower.endsWith(".txt"))
+    return FileText;
+  if (type?.startsWith("text/")) return FileText;
+  return FileIcon;
+}
 
 export const Route = createFileRoute("/drafts")({
   head: () => ({
@@ -30,6 +58,7 @@ type DraftRow = {
   published: boolean;
   updated_at: string;
   images: string[];
+  attachments: DraftAttachment[];
 };
 
 function DraftsGate() {
@@ -151,7 +180,9 @@ function DraftsList() {
     (async () => {
       const { data, error: err } = await supabase
         .from("drafts")
-        .select("id, title, content, tone, char_count, published, updated_at, images")
+        .select(
+          "id, title, content, tone, char_count, published, updated_at, images, attachments",
+        )
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false });
       if (cancelled) return;
@@ -163,6 +194,9 @@ function DraftsList() {
           (data ?? []).map((r) => ({
             ...r,
             images: Array.isArray(r.images) ? (r.images as string[]) : [],
+            attachments: Array.isArray(r.attachments)
+              ? (r.attachments as unknown as DraftAttachment[])
+              : [],
           })),
         );
       }
