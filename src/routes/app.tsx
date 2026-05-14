@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteNav } from "@/components/SiteNav";
 import { BrandMark } from "@/components/BrandMark";
+import type { Json } from "@/integrations/supabase/types";
 import {
   ImagePlus,
   Paperclip,
@@ -184,7 +185,7 @@ function Workspace() {
         char_count: draft.length,
         title: title.trim() || "Untitled draft",
         images,
-        attachments: attachments as unknown as Record<string, unknown>[],
+        attachments: attachments as unknown as Json,
         ...(asPublished ? { published: true } : {}),
       };
       if (draftId) {
