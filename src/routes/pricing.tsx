@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { type PlanTier } from "@/lib/plans";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -87,8 +88,45 @@ const tiers: Array<{
 
 function PricingPage() {
   const { user } = useAuth();
+  const [subPlan, setSubPlan] = useState<PlanTier | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [loadingPlan, setLoadingPlan] = useState<TierId | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setInitialLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      const [{ data: subRow }, { data: roles }] = await Promise.all([
+        supabase
+          .from("subscriptions")
+          .select("plan")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", user.id),
+      ]);
+
+      if (cancelled) return;
+
+      if (subRow) {
+        setSubPlan(subRow.plan as PlanTier);
+      } else {
+        setSubPlan("trial");
+      }
+
+      setIsAdmin(!!roles?.some((r) => r.role === "admin"));
+      setInitialLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   async function startCheckout(plan: "studio" | "teams") {
     setError(null);
@@ -147,87 +185,115 @@ function PricingPage() {
         </div>
 
         <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-4">
-          {tiers.map((t) => (
-            <div
-              key={t.id}
-              className={`relative flex flex-col gap-6 p-7 rounded-xl border transition-all ${
-                t.highlighted
-                  ? "bg-ink text-surface border-ink shadow-pop"
-                  : "bg-card text-ink border-border hover:border-ink/30"
-              }`}
-            >
-              {t.highlighted && (
-                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-surface text-ink text-[10px] font-mono uppercase tracking-[0.12em] border border-border">
-                  Most chosen
-                </div>
-              )}
-              <div>
-                <h3 className="text-[15px] font-semibold tracking-tight">{t.name}</h3>
-                <div className="mt-3 flex items-baseline gap-1.5">
-                  <span className="text-4xl font-semibold tracking-[-0.03em] tabular-nums">
-                    {t.price}
-                  </span>
-                  <span
-                    className={`text-[13px] ${
-                      t.highlighted ? "text-surface/60" : "text-muted-foreground"
+          {tiers.map((t) => {
+            const isCurrentPlan = subPlan === t.id;
+            const showAdminAccess = isAdmin && t.id === "teams";
+            const isActive = isCurrentPlan || showAdminAccess;
+
+            return (
+              <div
+                key={t.id}
+                className={`relative flex flex-col gap-6 p-7 rounded-xl border transition-all ${
+                  t.highlighted
+                    ? "bg-ink text-surface border-ink shadow-pop"
+                    : "bg-card text-ink border-border hover:border-ink/30"
+                }`}
+              >
+                {t.highlighted && (
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-surface text-ink text-[10px] font-mono uppercase tracking-[0.12em] border border-border">
+                    Most chosen
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[15px] font-semibold tracking-tight">{t.name}</h3>
+                    {isActive && (
+                      <span
+                        className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                          t.highlighted
+                            ? "bg-surface/10 border-surface/20 text-surface"
+                            : "bg-subtle border-border text-muted-foreground"
+                        }`}
+                      >
+                        {isAdmin && t.id === "teams" ? "Admin Access" : "Current Plan"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-3 flex items-baseline gap-1.5">
+                    <span className="text-4xl font-semibold tracking-[-0.03em] tabular-nums">
+                      {t.price}
+                    </span>
+                    <span
+                      className={`text-[13px] ${
+                        t.highlighted ? "text-surface/60" : "text-muted-foreground"
+                      }`}
+                    >
+                      {t.cadence}
+                    </span>
+                  </div>
+                  <p
+                    className={`mt-3 text-[13px] ${
+                      t.highlighted ? "text-surface/70" : "text-muted-foreground"
                     }`}
                   >
-                    {t.cadence}
-                  </span>
+                    {t.description}
+                  </p>
                 </div>
-                <p
-                  className={`mt-3 text-[13px] ${
-                    t.highlighted ? "text-surface/70" : "text-muted-foreground"
-                  }`}
-                >
-                  {t.description}
-                </p>
+
+                <ul className="space-y-2.5 text-[13px]">
+                  {t.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2.5">
+                      <span
+                        className={`mt-1.5 size-1 rounded-full shrink-0 ${
+                          t.highlighted ? "bg-surface/60" : "bg-ink/40"
+                        }`}
+                      />
+                      <span className={t.highlighted ? "text-surface/85" : "text-ink/80"}>
+                        {f}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                {t.id === "trial" ? (
+                  <Link
+                    to="/app"
+                    disabled={isActive}
+                    className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors ${
+                      isActive ? "opacity-50 cursor-default" : ""
+                    } ${
+                      t.highlighted
+                        ? "bg-surface text-ink hover:bg-surface/90"
+                        : "bg-ink text-surface hover:bg-ink/90"
+                    }`}
+                  >
+                    {isActive ? "Already active" : t.cta}
+                    {!isActive && <span aria-hidden>→</span>}
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => startCheckout(t.id as "studio" | "teams")}
+                    disabled={loadingPlan !== null || isActive || (isAdmin && t.id !== "teams")}
+                    className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors disabled:opacity-50 ${
+                      t.highlighted
+                        ? "bg-surface text-ink hover:bg-surface/90"
+                        : "bg-ink text-surface hover:bg-ink/90"
+                    }`}
+                  >
+                    {loadingPlan === t.id
+                      ? "Redirecting…"
+                      : isActive
+                        ? "Already active"
+                        : isAdmin
+                          ? "Included"
+                          : t.cta}
+                    {!isActive && !isAdmin && <span aria-hidden>→</span>}
+                  </button>
+                )}
               </div>
-
-              <ul className="space-y-2.5 text-[13px]">
-                {t.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5">
-                    <span
-                      className={`mt-1.5 size-1 rounded-full shrink-0 ${
-                        t.highlighted ? "bg-surface/60" : "bg-ink/40"
-                      }`}
-                    />
-                    <span className={t.highlighted ? "text-surface/85" : "text-ink/80"}>
-                      {f}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              {t.id === "trial" ? (
-                <Link
-                  to="/app"
-                  className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors ${
-                    t.highlighted
-                      ? "bg-surface text-ink hover:bg-surface/90"
-                      : "bg-ink text-surface hover:bg-ink/90"
-                  }`}
-                >
-                  {t.cta}
-                  <span aria-hidden>→</span>
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => startCheckout(t.id as "studio" | "teams")}
-                  disabled={loadingPlan !== null}
-                  className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors disabled:opacity-60 ${
-                    t.highlighted
-                      ? "bg-surface text-ink hover:bg-surface/90"
-                      : "bg-ink text-surface hover:bg-ink/90"
-                  }`}
-                >
-                  {loadingPlan === t.id ? "Redirecting…" : t.cta}
-                  <span aria-hidden>→</span>
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <p className="mt-10 text-center text-[12px] font-mono text-muted-foreground">

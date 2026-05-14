@@ -73,3 +73,4 @@ social-sync-connect/
 - **Header Actions**: Relocated media upload buttons to the modal header and removed redundant UI elements like image counts and footer upload buttons for a cleaner interface.
 - **Persistence**: Updated draft saving and LinkedIn publishing logic to support both images and file attachments in the drafts library.
 - **Legal Infrastructure**: Added dedicated `Privacy Policy` and `Terms of Service` pages to the landing page and footer to ensure transparency and compliance for LinkedIn OAuth and data handling.
+- **Dynamic Pricing**: Updated the pricing page (`/pricing`) to dynamically reflect the user's current subscription status and admin privileges, highlighting active plans and granting full access to admin users.
