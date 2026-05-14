@@ -379,6 +379,18 @@ function Workspace() {
   const greeting =
     user?.user_metadata?.display_name ?? user?.email?.split("@")[0] ?? "there";
 
+  function attachmentIcon(name: string, type: string) {
+    const lower = name.toLowerCase();
+    if (lower.endsWith(".pdf")) return FileText;
+    if (lower.endsWith(".csv") || lower.endsWith(".xls") || lower.endsWith(".xlsx"))
+      return Sheet;
+    if (lower.endsWith(".ppt") || lower.endsWith(".pptx")) return Presentation;
+    if (lower.endsWith(".doc") || lower.endsWith(".docx") || lower.endsWith(".txt"))
+      return FileText;
+    if (type.startsWith("text/")) return FileText;
+    return FileIcon;
+  }
+
   return (
     <div className="min-h-dvh bg-background text-ink flex flex-col">
       <SiteNav />
@@ -457,6 +469,49 @@ function Workspace() {
                   {t}
                 </button>
               ))}
+              <span className="w-px h-5 bg-border mx-1 shrink-0" aria-hidden />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  handleFiles(e.target.files);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+              />
+              <input
+                ref={fileAttachInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.csv,.txt,.xls,.xlsx,.ppt,.pptx"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  handleAttachFiles(e.target.files);
+                  if (fileAttachInputRef.current) fileAttachInputRef.current.value = "";
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={images.length >= MAX_IMAGES}
+                title="Add image"
+                aria-label="Add image"
+                className="h-7 w-7 inline-flex items-center justify-center rounded border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              >
+                <ImagePlus className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => fileAttachInputRef.current?.click()}
+                disabled={attachments.length >= MAX_ATTACHMENTS}
+                title="Add file"
+                aria-label="Add file"
+                className="h-7 w-7 inline-flex items-center justify-center rounded border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              >
+                <Paperclip className="size-3.5" />
+              </button>
             </div>
           </div>
 
@@ -518,66 +573,118 @@ function Workspace() {
                   setSuccess(null);
                 }}
                 placeholder="Your generated post will appear here. Edit anything — it's yours."
-                className="flex-1 w-full resize-none bg-transparent text-ink text-[16px] leading-relaxed focus:outline-none placeholder:text-muted-foreground/60 min-h-[40vh]"
+                className="w-full resize-none bg-transparent text-ink text-[16px] leading-relaxed focus:outline-none placeholder:text-muted-foreground/60 min-h-[40vh]"
               />
 
-              {/* Image attachments — appear with the generated draft */}
-              <div className="mt-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-[0.12em]">
-                      Images
-                    </span>
-                    <span className="text-[11px] font-mono text-muted-foreground">
-                      {images.length} / {MAX_IMAGES}
-                      {images.length > 0 &&
-                        ` · ${formatBytes(images.reduce((s, src) => s + dataUrlByteSize(src), 0))}`}
-                    </span>
-                  </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      handleFiles(e.target.files);
-                      if (fileInputRef.current) fileInputRef.current.value = "";
+              {/* Reddit-style image carousel — full width, horizontal scroll */}
+              {images.length > 0 && (
+                <div className="mt-4 relative group/carousel">
+                  <div
+                    ref={carouselRef}
+                    className="flex overflow-x-auto snap-x snap-mandatory rounded-lg border border-border bg-subtle/40 no-scrollbar"
+                    onScroll={(e) => {
+                      const el = e.currentTarget;
+                      const idx = Math.round(el.scrollLeft / el.clientWidth);
+                      if (idx !== carouselIndex) setCarouselIndex(idx);
                     }}
-                  />
-                  {images.length > 0 && (
-                    <div className="grid grid-cols-4 gap-2">
-                      {images.map((src, i) => (
-                        <div
-                          key={i}
-                          className="relative aspect-square rounded-md overflow-hidden border border-border bg-card group"
-                        >
-                          <img
-                            src={src}
-                            alt={`Attachment ${i + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeImage(i)}
-                            className="absolute top-1 right-1 size-5 rounded-full bg-ink/80 text-surface flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            aria-label="Remove image"
-                          >
-                            <X className="size-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={images.length >= MAX_IMAGES}
-                    className="w-full h-9 rounded-md border border-dashed border-border text-[12px] font-medium text-muted-foreground hover:text-ink hover:border-ink/40 hover:bg-card transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                   >
-                    <ImagePlus className="size-3.5" />
-                    {images.length === 0 ? "Add images to post" : "Add more"}
-                  </button>
-              </div>
+                    {images.map((src, i) => (
+                      <div
+                        key={i}
+                        className="relative w-full shrink-0 snap-center flex items-center justify-center bg-ink/5"
+                      >
+                        <img
+                          src={src}
+                          alt={`Attachment ${i + 1}`}
+                          className="w-full h-auto max-h-[480px] object-contain"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(i)}
+                          className="absolute top-2 right-2 size-7 rounded-full bg-ink/80 text-surface hover:bg-ink flex items-center justify-center transition-colors"
+                          aria-label="Remove image"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  {images.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        aria-label="Previous image"
+                        onClick={() => {
+                          const el = carouselRef.current;
+                          if (!el) return;
+                          el.scrollTo({
+                            left: Math.max(0, (carouselIndex - 1) * el.clientWidth),
+                            behavior: "smooth",
+                          });
+                        }}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 size-8 rounded-full bg-ink/70 text-surface hover:bg-ink flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-opacity"
+                      >
+                        <ChevronLeft className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Next image"
+                        onClick={() => {
+                          const el = carouselRef.current;
+                          if (!el) return;
+                          el.scrollTo({
+                            left: Math.min(
+                              (images.length - 1) * el.clientWidth,
+                              (carouselIndex + 1) * el.clientWidth,
+                            ),
+                            behavior: "smooth",
+                          });
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 size-8 rounded-full bg-ink/70 text-surface hover:bg-ink flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-opacity"
+                      >
+                        <ChevronRight className="size-4" />
+                      </button>
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-ink/70 text-surface text-[11px] font-mono tabular-nums">
+                        {carouselIndex + 1} / {images.length}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* File attachments — pill list */}
+              {attachments.length > 0 && (
+                <div className="mt-3 flex flex-col gap-1.5">
+                  {attachments.map((a, i) => {
+                    const Icon = attachmentIcon(a.name, a.type);
+                    return (
+                      <div
+                        key={`${a.name}-${i}`}
+                        className="group/attach flex items-center gap-2.5 px-3 py-2 rounded-md border border-border bg-muted/40 hover:bg-muted transition-colors"
+                      >
+                        <Icon className="size-4 text-muted-foreground shrink-0" />
+                        <span
+                          className="text-[13px] text-ink truncate flex-1 min-w-0"
+                          title={a.name}
+                        >
+                          {a.name}
+                        </span>
+                        <span className="text-[11px] font-mono text-muted-foreground tabular-nums shrink-0">
+                          {formatBytes(a.size)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(i)}
+                          className="p-1 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover/attach:opacity-100 shrink-0"
+                          aria-label={`Remove ${a.name}`}
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {error && (
                 <div className="mt-4 px-3 py-2.5 rounded-md bg-destructive/5 border border-destructive/20 text-[13px] text-destructive">
