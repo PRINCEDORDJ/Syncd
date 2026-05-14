@@ -4,12 +4,25 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteNav } from "@/components/SiteNav";
 import { BrandMark } from "@/components/BrandMark";
-import { ImagePlus, X } from "lucide-react";
+import {
+  ImagePlus,
+  Paperclip,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Sheet,
+  Presentation,
+  File as FileIcon,
+} from "lucide-react";
 import {
   MAX_IMAGES,
+  MAX_ATTACHMENTS,
   dataUrlByteSize,
   formatBytes,
   validateImageBatch,
+  validateAttachmentBatch,
+  type AttachmentItem,
 } from "@/lib/image-validation";
 
 export const Route = createFileRoute("/app")({
@@ -77,6 +90,7 @@ function Workspace() {
   const [tone, setTone] = useState<Tone>("Authoritative & Warm");
   const [input, setInput] = useState("");
   const [images, setImages] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [draft, setDraft] = useState("");
   const [title, setTitle] = useState("Untitled draft");
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -87,8 +101,11 @@ function Workspace() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [linkedinConnected, setLinkedinConnected] = useState<boolean | null>(null);
+  const [carouselIndex, setCarouselIndex] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const fileAttachInputRef = useRef<HTMLInputElement | null>(null);
+  const carouselRef = useRef<HTMLDivElement | null>(null);
 
   async function handleFiles(files: FileList | null) {
     if (!files || !files.length) return;
@@ -122,6 +139,39 @@ function Workspace() {
     setImages((prev) => prev.filter((_, i) => i !== idx));
   }
 
+  async function handleAttachFiles(files: FileList | null) {
+    if (!files || !files.length) return;
+    const { accepted, errors } = validateAttachmentBatch(
+      Array.from(files),
+      attachments.length,
+    );
+    if (errors.length) setError(errors.join(" "));
+    else setError(null);
+    if (!accepted.length) return;
+    const items = await Promise.all(
+      accepted.map(
+        (f) =>
+          new Promise<AttachmentItem>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () =>
+              resolve({
+                name: f.name,
+                size: f.size,
+                type: f.type || "application/octet-stream",
+                dataUrl: String(reader.result),
+              });
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(f);
+          }),
+      ),
+    );
+    setAttachments((prev) => [...prev, ...items].slice(0, MAX_ATTACHMENTS));
+  }
+
+  function removeAttachment(idx: number) {
+    setAttachments((prev) => prev.filter((_, i) => i !== idx));
+  }
+
   async function saveDraft(asPublished = false): Promise<string | null> {
     if (!user || !draft.trim()) return null;
     setSaving(true);
@@ -134,6 +184,7 @@ function Workspace() {
         char_count: draft.length,
         title: title.trim() || "Untitled draft",
         images,
+        attachments,
         ...(asPublished ? { published: true } : {}),
       };
       if (draftId) {
@@ -196,7 +247,7 @@ function Workspace() {
     }, 1200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft, title, images, user, generating]);
+  }, [draft, title, images, attachments, user, generating]);
 
   async function generate() {
     if (!input.trim() || generating) return;
@@ -318,6 +369,11 @@ function Workspace() {
       setError(data.error ?? "Failed to publish.");
     }
   }
+
+  // Keep carousel index in valid range as images change
+  useEffect(() => {
+    if (carouselIndex >= images.length) setCarouselIndex(Math.max(0, images.length - 1));
+  }, [images.length, carouselIndex]);
 
   const greeting =
     user?.user_metadata?.display_name ?? user?.email?.split("@")[0] ?? "there";
