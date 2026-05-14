@@ -96,3 +96,70 @@ export function validateImageBatch(
 
   return { accepted, errors };
 }
+
+// ====== File attachments (non-image) ======
+
+export const MAX_ATTACHMENTS = 5;
+export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10MB per file
+export const ALLOWED_ATTACHMENT_EXTENSIONS = [
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".csv",
+  ".txt",
+  ".xls",
+  ".xlsx",
+  ".ppt",
+  ".pptx",
+] as const;
+
+export interface AttachmentItem {
+  name: string;
+  size: number;
+  type: string;
+  dataUrl: string;
+}
+
+function hasAllowedExtension(name: string): boolean {
+  const lower = name.toLowerCase();
+  return ALLOWED_ATTACHMENT_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
+export function validateAttachmentBatch(
+  incoming: File[],
+  existingCount: number,
+): { accepted: File[]; errors: string[] } {
+  const errors: string[] = [];
+  const accepted: File[] = [];
+  let remaining = MAX_ATTACHMENTS - existingCount;
+
+  if (remaining <= 0) {
+    errors.push(`You can attach up to ${MAX_ATTACHMENTS} files.`);
+    return { accepted, errors };
+  }
+
+  for (const file of incoming) {
+    if (remaining <= 0) {
+      errors.push(`Only ${MAX_ATTACHMENTS} files allowed — "${file.name}" skipped.`);
+      continue;
+    }
+    if (!hasAllowedExtension(file.name)) {
+      errors.push(`"${file.name}" — unsupported file type.`);
+      continue;
+    }
+    if (file.size === 0) {
+      errors.push(`"${file.name}" is empty.`);
+      continue;
+    }
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      errors.push(
+        `"${file.name}" is ${formatBytes(file.size)} — max is ${formatBytes(MAX_ATTACHMENT_BYTES)}.`,
+      );
+      continue;
+    }
+    accepted.push(file);
+    remaining -= 1;
+  }
+
+  return { accepted, errors };
+}

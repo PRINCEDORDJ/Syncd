@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       drafts: {
         Row: {
+          attachments: Json
           char_count: number
           content: string
           created_at: string
@@ -29,6 +30,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attachments?: Json
           char_count?: number
           content?: string
           created_at?: string
@@ -42,6 +44,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attachments?: Json
           char_count?: number
           content?: string
           created_at?: string
