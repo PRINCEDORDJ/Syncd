@@ -57,6 +57,7 @@ function Workspace() {
   const [draft, setDraft] = useState("");
   const [title, setTitle] = useState("Untitled draft");
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [titleEdited, setTitleEdited] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -182,6 +183,7 @@ function Workspace() {
     setDraft("");
     setDraftId(null);
     setTitle("Untitled draft");
+    setTitleEdited(false);
 
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -245,6 +247,16 @@ function Workspace() {
       setGenerating(false);
     }
   }
+
+  // Auto-derive a clean title from the generated content once streaming ends
+  useEffect(() => {
+    if (generating) return;
+    if (titleEdited) return;
+    if (!draft.trim()) return;
+    const suggested = deriveTitle(draft);
+    if (suggested && suggested !== title) setTitle(suggested);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generating, draft, titleEdited]);
 
   async function publish() {
     if (overLimit || !draft.trim() || publishing) return;
@@ -333,7 +345,10 @@ function Workspace() {
               <input
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  setTitleEdited(true);
+                }}
                 placeholder="Untitled draft"
                 className="font-medium text-ink bg-transparent border-0 focus:outline-none focus:ring-0 px-1 -mx-1 rounded hover:bg-card focus:bg-card transition-colors min-w-0 flex-1 sm:flex-none sm:max-w-[260px]"
                 aria-label="Draft title"
