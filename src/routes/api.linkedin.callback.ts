@@ -87,12 +87,18 @@ export const Route = createFileRoute("/api/linkedin/callback")({
             href: `/settings?linkedin_error=${encodeURIComponent("userinfo_failed")}`,
           });
         }
-        const userinfo = (await userinfoResp.json()) as {
-          sub: string;
-          name?: string;
-          picture?: string;
-          email?: string;
-        };
+        const userinfo = (await userinfoResp.json()) as any;
+        
+        console.log("[linkedin/callback] userinfo received", {
+          sub: userinfo.sub,
+          name: userinfo.name,
+          hasPicture: !!userinfo.picture,
+          email: userinfo.email ? "present" : "absent"
+        });
+
+        // OpenID Connect "picture" is standard, but some versions might use "profile_picture" 
+        // or have it nested. We try a few common locations.
+        const pictureUrl = userinfo.picture || userinfo.profile_picture || null;
 
         const expiresAt = new Date(
           Date.now() + tokenJson.expires_in * 1000,
@@ -107,7 +113,7 @@ export const Route = createFileRoute("/api/linkedin/callback")({
               user_id: stateRow.user_id,
               linkedin_member_urn: memberUrn,
               linkedin_name: userinfo.name ?? null,
-              linkedin_picture_url: userinfo.picture ?? null,
+              linkedin_picture_url: pictureUrl,
               access_token: tokenJson.access_token,
               refresh_token: tokenJson.refresh_token ?? null,
               expires_at: expiresAt,

@@ -55,17 +55,27 @@ export function SiteNav() {
       <div className="flex items-center justify-between px-4 sm:px-6 md:px-8 h-14 w-full max-w-7xl mx-auto gap-3">
         <Link to={user ? "/app" : "/"} className="flex items-center gap-2 group">
           <BrandMark size={22} />
-          <span className="font-semibold tracking-tight text-[15px] text-ink">
-            SocialSync
-          </span>
+          <span className="font-semibold tracking-tight text-[15px] text-ink">SocialSync</span>
         </Link>
 
         {/* Center nav links */}
         <div className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
-          <NavLink to="/methodology" current={pathname}>Methodology</NavLink>
-          <NavLink to="/pricing" current={pathname}>Pricing</NavLink>
-          {user && <NavLink to="/drafts" current={pathname}>Posts</NavLink>}
-          {user && <NavLink to="/app" current={pathname}>Workspace</NavLink>}
+          <NavLink to="/methodology" current={pathname}>
+            Methodology
+          </NavLink>
+          <NavLink to="/pricing" current={pathname}>
+            Pricing
+          </NavLink>
+          {user && (
+            <NavLink to="/drafts" current={pathname}>
+              Posts
+            </NavLink>
+          )}
+          {user && (
+            <NavLink to="/app" current={pathname}>
+              Workspace
+            </NavLink>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -88,9 +98,7 @@ export function SiteNav() {
                     <span className="text-sm font-medium text-ink truncate">
                       {displayName || "Account"}
                     </span>
-                    <span className="text-xs text-muted-foreground truncate">
-                      {user.email}
-                    </span>
+                    <span className="text-xs text-muted-foreground truncate">{user.email}</span>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -163,6 +171,19 @@ export function SiteNav() {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
                     <Link to="/drafts">Posts</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings" className="cursor-pointer">
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => signOut()}
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign out
                   </DropdownMenuItem>
                 </>
               )}

@@ -67,7 +67,7 @@ interface SubscriptionRow {
 }
 
 function SettingsPage() {
-  const { user, signOut } = useAuth();
+  const { user, session, signOut } = useAuth();
   const navigate = useNavigate();
   const search = Route.useSearch();
 
@@ -96,6 +96,7 @@ function SettingsPage() {
 
   // LinkedIn flow
   const [connectingLinkedIn, setConnectingLinkedIn] = useState(false);
+  const [disconnectingLinkedIn, setDisconnectingLinkedIn] = useState(false);
   const [linkedInBanner, setLinkedInBanner] = useState<{
     type: "success" | "error";
     text: string;
@@ -346,19 +347,34 @@ function SettingsPage() {
   }
 
   async function disconnectLinkedIn() {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-    if (!token) return;
-    const resp = await fetch("/api/linkedin/disconnect", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (resp.ok) {
-      setConn(null);
-      setLinkedInBanner({ type: "success", text: "LinkedIn disconnected." });
-    } else {
-      const j = await resp.json().catch(() => ({}));
-      setLinkedInBanner({ type: "error", text: j.error ?? "Failed to disconnect." });
+    if (!session?.access_token) {
+      setLinkedInBanner({ type: "error", text: "Session expired — please sign in again." });
+      return;
+    }
+
+    setDisconnectingLinkedIn(true);
+    setLinkedInBanner(null);
+
+    try {
+      const resp = await fetch("/api/linkedin/disconnect", {
+        method: "POST",
+        headers: { 
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json"
+        },
+      });
+
+      if (resp.ok) {
+        setConn(null);
+        setLinkedInBanner({ type: "success", text: "LinkedIn disconnected successfully." });
+      } else {
+        const j = await resp.json().catch(() => ({}));
+        setLinkedInBanner({ type: "error", text: j.error ?? "Failed to disconnect." });
+      }
+    } catch (err) {
+      setLinkedInBanner({ type: "error", text: "Connection error. Please try again." });
+    } finally {
+      setDisconnectingLinkedIn(false);
     }
   }
 
@@ -497,10 +513,10 @@ function SettingsPage() {
           {conn ? (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 border border-border rounded-md bg-subtle/40">
               <div className="flex items-center gap-3 min-w-0">
-                {conn.linkedin_picture_url ? (
+                {!!conn.linkedin_picture_url ? (
                   <img
                     src={conn.linkedin_picture_url}
-                    alt=""
+                    alt={conn.linkedin_name ?? "LinkedIn profile"}
                     className="size-10 rounded-full border border-border"
                   />
                 ) : (
@@ -520,9 +536,10 @@ function SettingsPage() {
               <button
                 type="button"
                 onClick={disconnectLinkedIn}
-                className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle w-full sm:w-auto"
+                disabled={disconnectingLinkedIn}
+                className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle w-full sm:w-auto disabled:opacity-60"
               >
-                Disconnect
+                {disconnectingLinkedIn ? "Disconnecting…" : "Disconnect"}
               </button>
             </div>
           ) : (
@@ -547,10 +564,7 @@ function SettingsPage() {
         </Section>
 
         {/* Billing */}
-        <Section
-          title="Billing & plan"
-          subtitle="Your current subscription and usage limits."
-        >
+        <Section title="Billing & plan" subtitle="Your current subscription and usage limits.">
           {billingMsg && (
             <div className="px-3 py-2 rounded-md border border-border bg-subtle text-[13px] text-ink">
               {billingMsg}
@@ -563,52 +577,52 @@ function SettingsPage() {
             const linkedInMax = PLAN_LIMITS[effectivePlan].maxLinkedInAccounts;
             const draftStr = limit === null ? "Unlimited drafts" : `${limit} drafts / period`;
             return (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 border border-border rounded-md bg-subtle/40">
-            <div className="min-w-0">
-              <div className="text-[14px] font-medium text-ink">
-                {PLAN_LABELS[effectivePlan]} plan
-                <span className="ml-2 text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground">
-                  {effectiveStatus}
-                </span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 border border-border rounded-md bg-subtle/40">
+                <div className="min-w-0">
+                  <div className="text-[14px] font-medium text-ink">
+                    {PLAN_LABELS[effectivePlan]} plan
+                    <span className="ml-2 text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground">
+                      {effectiveStatus}
+                    </span>
+                  </div>
+                  <div className="text-[12px] text-muted-foreground mt-1">
+                    {draftStr} · {linkedInMax} LinkedIn account{linkedInMax > 1 ? "s" : ""}
+                  </div>
+                  {isAdmin ? (
+                    <div className="text-[12px] text-muted-foreground mt-0.5">
+                      Admin access — all features unlocked, no billing required.
+                    </div>
+                  ) : sub?.plan === "trial" && sub.trial_end ? (
+                    <div className="text-[12px] text-muted-foreground mt-0.5">
+                      Trial ends {new Date(sub.trial_end).toLocaleDateString()}
+                    </div>
+                  ) : sub && sub.plan !== "trial" && sub.current_period_end ? (
+                    <div className="text-[12px] text-muted-foreground mt-0.5">
+                      {sub.cancel_at_period_end ? "Cancels" : "Renews"} on{" "}
+                      {new Date(sub.current_period_end).toLocaleDateString()}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="flex flex-col gap-2 sm:items-end w-full sm:w-auto">
+                  {isAdmin ? null : sub?.polar_customer_id ? (
+                    <button
+                      type="button"
+                      onClick={openBillingPortal}
+                      disabled={openingPortal}
+                      className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle disabled:opacity-60 w-full sm:w-auto"
+                    >
+                      {openingPortal ? "Opening…" : "Manage billing"}
+                    </button>
+                  ) : (
+                    <Link
+                      to="/pricing"
+                      className="h-9 px-3 inline-flex items-center justify-center rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 w-full sm:w-auto"
+                    >
+                      Upgrade →
+                    </Link>
+                  )}
+                </div>
               </div>
-              <div className="text-[12px] text-muted-foreground mt-1">
-                {draftStr} · {linkedInMax} LinkedIn account{linkedInMax > 1 ? "s" : ""}
-              </div>
-              {isAdmin ? (
-                <div className="text-[12px] text-muted-foreground mt-0.5">
-                  Admin access — all features unlocked, no billing required.
-                </div>
-              ) : sub?.plan === "trial" && sub.trial_end ? (
-                <div className="text-[12px] text-muted-foreground mt-0.5">
-                  Trial ends {new Date(sub.trial_end).toLocaleDateString()}
-                </div>
-              ) : sub && sub.plan !== "trial" && sub.current_period_end ? (
-                <div className="text-[12px] text-muted-foreground mt-0.5">
-                  {sub.cancel_at_period_end ? "Cancels" : "Renews"} on{" "}
-                  {new Date(sub.current_period_end).toLocaleDateString()}
-                </div>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2 sm:items-end w-full sm:w-auto">
-              {isAdmin ? null : sub?.polar_customer_id ? (
-                <button
-                  type="button"
-                  onClick={openBillingPortal}
-                  disabled={openingPortal}
-                  className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle disabled:opacity-60 w-full sm:w-auto"
-                >
-                  {openingPortal ? "Opening…" : "Manage billing"}
-                </button>
-              ) : (
-                <Link
-                  to="/pricing"
-                  className="h-9 px-3 inline-flex items-center justify-center rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 w-full sm:w-auto"
-                >
-                  Upgrade →
-                </Link>
-              )}
-            </div>
-          </div>
             );
           })()}
         </Section>
@@ -676,13 +690,16 @@ function SettingsPage() {
             {deleting ? "Deleting…" : "Delete all my data"}
           </button>
           <p className="text-[12px] text-muted-foreground">
-            Removes drafts, profile, and LinkedIn token. Your auth account stays — contact
-            support to fully erase it.
+            Removes drafts, profile, and LinkedIn token. Your auth account stays — contact support
+            to fully erase it.
           </p>
         </Section>
 
         <p className="mt-12 text-[13px] text-muted-foreground">
-          ← <Link to="/app" className="hover:text-ink">Back to workspace</Link>
+          ←{" "}
+          <Link to="/app" className="hover:text-ink">
+            Back to workspace
+          </Link>
         </p>
       </main>
     </div>

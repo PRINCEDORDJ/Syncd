@@ -14,6 +14,7 @@ import {
   Presentation,
   File as FileIcon,
 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   MAX_IMAGES,
   MAX_ATTACHMENTS,
@@ -99,6 +100,7 @@ function DraftsList() {
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileAttachInputRef = useRef<HTMLInputElement | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const dirty = useMemo(() => {
     if (!selected) return false;
@@ -264,7 +266,13 @@ function DraftsList() {
 
   async function remove(id: string) {
     if (!user) return;
-    if (!confirm("Delete this post? This cannot be undone.")) return;
+    setDeleteId(id);
+  }
+
+  async function handleConfirmDelete() {
+    if (!user || !deleteId) return;
+    const id = deleteId;
+    setDeleteId(null);
     const { error: err } = await supabase
       .from("drafts")
       .delete()
@@ -438,19 +446,23 @@ function DraftsList() {
                     <Trash2 className="size-4" />
                   </button>
                 </div>
-                {!r.published && r.images.length > 0 && (
-                  <div className="mb-2 flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1">
+                {r.images.length > 0 && (
+                  <div className={`mb-3 ${r.images.length === 1 ? "" : "flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1"}`}>
                     {r.images.map((src, i) => (
                       <img
                         key={i}
                         src={src}
                         alt={`Thumb ${i + 1}`}
-                        className="h-[72px] w-auto max-h-[120px] rounded-md border border-border object-cover shrink-0"
+                        className={`rounded-lg border border-border object-cover shrink-0 ${
+                          r.images.length === 1
+                            ? "w-full aspect-video max-h-[240px]"
+                            : "h-24 w-auto aspect-square sm:h-32"
+                        }`}
                       />
                     ))}
                   </div>
                 )}
-                {!r.published && r.attachments.length > 0 && (
+                {r.attachments.length > 0 && (
                   <div className="mb-2 flex flex-wrap gap-1.5">
                     {r.attachments.map((a, i) => {
                       const Icon = attachmentIcon(a.name, a.type);
@@ -579,11 +591,15 @@ function DraftsList() {
                   }}
                 />
                 {modalImages.length > 0 && (
-                  <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar -mx-1 px-1">
+                  <div className={`flex gap-3 overflow-x-auto pb-4 no-scrollbar -mx-1 px-1 snap-x ${modalImages.length === 1 ? "" : "snap-mandatory"}`}>
                     {modalImages.map((src, i) => (
                       <div
                         key={i}
-                        className="relative flex-none aspect-square h-32 sm:h-40 rounded-md overflow-hidden border border-border bg-card group"
+                        className={`relative flex-none rounded-xl overflow-hidden border border-border bg-card group snap-center ${
+                          modalImages.length === 1
+                            ? "w-full aspect-video"
+                            : "w-[85%] sm:w-[400px] aspect-square sm:aspect-video"
+                        }`}
                       >
                         <img
                           src={src}
@@ -594,10 +610,10 @@ function DraftsList() {
                           <button
                             type="button"
                             onClick={() => removeModalImage(i)}
-                            className="absolute top-1 right-1 size-5 rounded-full bg-ink/80 text-surface flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute top-2 right-2 size-6 rounded-full bg-ink/80 text-surface flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
                             aria-label="Remove image"
                           >
-                            <X className="size-3" />
+                            <X className="size-3.5" />
                           </button>
                         )}
                       </div>
@@ -686,6 +702,16 @@ function DraftsList() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        onOpenChange={(o) => !o && setDeleteId(null)}
+        title="Delete post?"
+        description="This will permanently remove this draft from your library. This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        confirmText="Delete post"
+        variant="destructive"
+      />
     </div>
   );
 }
