@@ -49,6 +49,29 @@ function WorkspaceGate() {
 const TONES = ["Authoritative & Warm", "Conversational", "Contrarian", "Storytelling"] as const;
 type Tone = (typeof TONES)[number];
 
+function deriveTitle(content: string): string {
+  const cleaned = content
+    // strip markdown emphasis / headings / list markers
+    .replace(/[#*_`>~]+/g, " ")
+    // strip emojis & pictographs
+    .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return "Untitled draft";
+  // Prefer first sentence; fall back to first line
+  const firstSentence = cleaned.split(/(?<=[.!?])\s+/)[0] ?? cleaned;
+  let title = firstSentence.trim();
+  const MAX = 60;
+  if (title.length > MAX) {
+    const slice = title.slice(0, MAX);
+    const lastSpace = slice.lastIndexOf(" ");
+    title = (lastSpace > 30 ? slice.slice(0, lastSpace) : slice).trim() + "…";
+  }
+  // Strip trailing punctuation for a cleaner title
+  title = title.replace(/[.,;:!?\-–—]+$/g, "").trim();
+  return title || "Untitled draft";
+}
+
 function Workspace() {
   const { user } = useAuth();
   const [tone, setTone] = useState<Tone>("Authoritative & Warm");
@@ -57,6 +80,7 @@ function Workspace() {
   const [draft, setDraft] = useState("");
   const [title, setTitle] = useState("Untitled draft");
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [titleEdited, setTitleEdited] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -182,6 +206,7 @@ function Workspace() {
     setDraft("");
     setDraftId(null);
     setTitle("Untitled draft");
+    setTitleEdited(false);
 
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -245,6 +270,16 @@ function Workspace() {
       setGenerating(false);
     }
   }
+
+  // Auto-derive a clean title from the generated content once streaming ends
+  useEffect(() => {
+    if (generating) return;
+    if (titleEdited) return;
+    if (!draft.trim()) return;
+    const suggested = deriveTitle(draft);
+    if (suggested && suggested !== title) setTitle(suggested);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generating, draft, titleEdited]);
 
   async function publish() {
     if (overLimit || !draft.trim() || publishing) return;
@@ -333,7 +368,10 @@ function Workspace() {
               <input
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  setTitleEdited(true);
+                }}
                 placeholder="Untitled draft"
                 className="font-medium text-ink bg-transparent border-0 focus:outline-none focus:ring-0 px-1 -mx-1 rounded hover:bg-card focus:bg-card transition-colors min-w-0 flex-1 sm:flex-none sm:max-w-[260px]"
                 aria-label="Draft title"
