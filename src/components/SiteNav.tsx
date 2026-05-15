@@ -1,7 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { BrandMark } from "@/components/BrandMark";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
@@ -11,8 +11,23 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, Settings as SettingsIcon, LayoutGrid, FileText, Menu } from "lucide-react";
+import {
+  LogOut,
+  Settings as SettingsIcon,
+  LayoutGrid,
+  FileText,
+  Menu,
+  ChevronDown,
+  Eye,
+  Upload,
+  Trash2,
+  Loader2,
+} from "lucide-react";
+import { uploadAvatar, removeAvatar } from "@/lib/avatar-upload";
+import { toast } from "sonner";
 
 export function SiteNav() {
   const { user, signOut } = useAuth();
@@ -20,6 +35,10 @@ export function SiteNav() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) {
@@ -49,6 +68,36 @@ export function SiteNav() {
     .slice(0, 2)
     .map((s) => s[0]?.toUpperCase())
     .join("");
+
+  async function handleFile(file: File) {
+    if (!user) return;
+    setAvatarMenuOpen(false);
+    setUploading(true);
+    try {
+      const { url } = await uploadAvatar(user.id, file);
+      setAvatarUrl(url);
+      toast.success("Profile photo updated");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleRemove() {
+    if (!user) return;
+    setAvatarMenuOpen(false);
+    setUploading(true);
+    try {
+      await removeAvatar(user.id);
+      setAvatarUrl(null);
+      toast.success("Profile photo removed");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   return (
     <nav className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
@@ -80,19 +129,86 @@ export function SiteNav() {
 
         <div className="flex items-center gap-2">
           {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className="flex items-center gap-2 rounded-full p-0.5 pr-2 hover:bg-subtle transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="Account menu"
-              >
-                <Avatar className="h-8 w-8 border border-border">
-                  {avatarUrl && <AvatarImage src={avatarUrl} alt={displayName ?? "Profile"} />}
-                  <AvatarFallback className="text-[11px] font-medium bg-subtle text-ink">
-                    {initials || "U"}
-                  </AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+            <div className="flex items-center gap-1">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleFile(f);
+                  e.target.value = "";
+                }}
+              />
+              <Popover open={avatarMenuOpen} onOpenChange={setAvatarMenuOpen}>
+                <PopoverTrigger
+                  className="relative rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring hover:opacity-90 transition-opacity"
+                  aria-label="Profile photo"
+                >
+                  <Avatar className="h-8 w-8 border border-border">
+                    {avatarUrl && (
+                      <AvatarImage
+                        src={avatarUrl}
+                        alt={displayName ?? "Profile"}
+                        loading="lazy"
+                      />
+                    )}
+                    <AvatarFallback className="text-[11px] font-medium bg-subtle text-ink">
+                      {initials || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  {uploading && (
+                    <span className="absolute inset-0 flex items-center justify-center rounded-full bg-background/70">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-ink" />
+                    </span>
+                  )}
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-48 p-1">
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAvatarMenuOpen(false);
+                        setViewerOpen(true);
+                      }}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent text-left"
+                    >
+                      <Eye className="h-4 w-4" />
+                      View photo
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent text-left disabled:opacity-50"
+                  >
+                    <Upload className="h-4 w-4" />
+                    {avatarUrl ? "Change photo" : "Upload photo"}
+                  </button>
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={handleRemove}
+                      disabled={uploading}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent text-left text-destructive disabled:opacity-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Remove photo
+                    </button>
+                  )}
+                </PopoverContent>
+              </Popover>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="h-8 w-6 inline-flex items-center justify-center rounded-md hover:bg-subtle transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Account menu"
+                >
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-ink truncate">
@@ -128,8 +244,21 @@ export function SiteNav() {
                   <LogOut className="h-4 w-4" />
                   Sign out
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
+                <DialogContent className="max-w-[90vw] sm:max-w-[640px] p-0 bg-transparent border-none shadow-none">
+                  {avatarUrl && (
+                    <img
+                      src={avatarUrl}
+                      alt={displayName ?? "Profile photo"}
+                      className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                    />
+                  )}
+                </DialogContent>
+              </Dialog>
+            </div>
           ) : (
             <>
               <Link
