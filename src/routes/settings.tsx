@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { SiteNav } from "@/components/SiteNav";
 import { PLAN_LABELS, PLAN_LIMITS, type PlanTier } from "@/lib/plans";
+import { uploadAvatar as uploadAvatarFn, removeAvatar as removeAvatarFn } from "@/lib/avatar-upload";
 
 export const Route = createFileRoute("/settings")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -193,65 +194,47 @@ function SettingsPage() {
 
   async function uploadAvatar(file: File) {
     if (!user) return;
-    if (!file.type.startsWith("image/")) {
-      setProfileMsg("Please choose an image file.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setProfileMsg("Image must be under 5MB.");
-      return;
-    }
     setUploadingAvatar(true);
     setProfileMsg(null);
-    const ext = file.name.split(".").pop()?.toLowerCase() || "png";
-    const path = `${user.id}/avatar-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage
-      .from("avatars")
-      .upload(path, file, { upsert: true, contentType: file.type });
-    if (upErr) {
+    try {
+      const { url } = await uploadAvatarFn(user.id, file);
+      setAvatarUrl(url);
+      setProfile((prev) => ({
+        display_name: prev?.display_name ?? null,
+        voice_notes: prev?.voice_notes ?? null,
+        avatar_url: url,
+      }));
+      setProfileMsg("Avatar updated.");
+    } catch (e) {
+      setProfileMsg(e instanceof Error ? e.message : "Upload failed.");
+    } finally {
       setUploadingAvatar(false);
-      setProfileMsg(`Upload failed: ${upErr.message}`);
-      return;
     }
-    const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
-    const url = pub.publicUrl;
-    const { error: profErr } = await supabase.from("profiles").upsert(
-      { user_id: user.id, avatar_url: url },
-      { onConflict: "user_id" },
-    );
-    setUploadingAvatar(false);
-    if (profErr) {
-      setProfileMsg(`Failed to save: ${profErr.message}`);
-      return;
-    }
-    setAvatarUrl(url);
-    setProfile((prev) => ({
-      display_name: prev?.display_name ?? null,
-      voice_notes: prev?.voice_notes ?? null,
-      avatar_url: url,
-    }));
-    setProfileMsg("Avatar updated.");
   }
 
   async function removeAvatar() {
     if (!user) return;
     setUploadingAvatar(true);
     setProfileMsg(null);
-    const { error } = await supabase
-      .from("profiles")
-      .upsert({ user_id: user.id, avatar_url: null }, { onConflict: "user_id" });
-    setUploadingAvatar(false);
-    if (error) {
-      setProfileMsg(`Failed: ${error.message}`);
-      return;
+    try {
+      await removeAvatarFn(user.id);
+      setAvatarUrl("");
+      setProfile((prev) => ({
+        display_name: prev?.display_name ?? null,
+        voice_notes: prev?.voice_notes ?? null,
+        avatar_url: null,
+      }));
+      setProfileMsg("Avatar removed.");
+    } catch (e) {
+      setProfileMsg(e instanceof Error ? e.message : "Failed.");
+    } finally {
+      setUploadingAvatar(false);
     }
-    setAvatarUrl("");
-    setProfile((prev) => ({
-      display_name: prev?.display_name ?? null,
-      voice_notes: prev?.voice_notes ?? null,
-      avatar_url: null,
-    }));
-    setProfileMsg("Avatar removed.");
+  }
+
+  // legacy stubs removed below — keep file structure
+  async function _legacyAvatarUploadDeprecated() {
+      return;
   }
 
   async function openBillingPortal() {
