@@ -232,11 +232,6 @@ function SettingsPage() {
     }
   }
 
-  // legacy stubs removed below — keep file structure
-  async function _legacyAvatarUploadDeprecated() {
-      return;
-  }
-
   async function openBillingPortal() {
     setOpeningPortal(true);
     setBillingMsg(null);
