@@ -38,7 +38,6 @@ export function SiteNav() {
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -76,7 +75,6 @@ export function SiteNav() {
     setUploading(true);
     try {
       const { url } = await uploadAvatar(user.id, file);
-      setImgLoaded(false);
       setAvatarUrl(url);
       toast.success("Profile photo updated");
     } catch (e) {
@@ -154,8 +152,6 @@ export function SiteNav() {
                         src={avatarUrl}
                         alt={displayName ?? "Profile"}
                         loading="lazy"
-                        onLoad={() => setImgLoaded(true)}
-                        className={`transition-opacity duration-200 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
                       />
                     )}
                     <AvatarFallback className="text-[11px] font-medium bg-subtle text-ink">
