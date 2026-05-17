@@ -468,58 +468,147 @@ function SettingsPage() {
               className="h-10 w-full px-3 rounded-md border border-border bg-card text-[14px] focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
             />
           </Field>
-          <Field label="Avatar" hint="Upload a square image (PNG/JPG, up to 5MB).">
+          <Field label="Avatar" hint="Click your avatar to view, upload, or change it (PNG/JPG, up to 5MB).">
             <div className="flex items-center gap-4">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt=""
-                  className="size-16 rounded-full object-cover border border-border"
-                />
-              ) : (
-                <div className="size-16 rounded-full bg-subtle border border-border flex items-center justify-center text-[14px] font-semibold text-muted-foreground">
-                  {(displayName || user?.email || "?")[0]?.toUpperCase()}
-                </div>
-              )}
-              <div className="flex flex-col sm:flex-row gap-2">
-                <label className="h-9 px-3 inline-flex items-center justify-center rounded-md border border-border text-[13px] text-ink hover:bg-subtle cursor-pointer">
-                  {uploadingAvatar ? "Uploading…" : avatarUrl ? "Replace" : "Upload image"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={uploadingAvatar}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) void uploadAvatar(f);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-                {avatarUrl && (
+              <Popover open={avatarMenuOpen} onOpenChange={setAvatarMenuOpen}>
+                <PopoverTrigger asChild>
                   <button
                     type="button"
-                    onClick={removeAvatar}
+                    aria-label="Avatar actions"
                     disabled={uploadingAvatar}
-                    className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle disabled:opacity-60"
+                    className="relative size-16 rounded-full overflow-hidden border border-border hover:ring-2 hover:ring-ink/20 transition disabled:opacity-60"
                   >
-                    Remove
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt="Your avatar"
+                        loading="lazy"
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <div className="size-full bg-subtle flex items-center justify-center text-[16px] font-semibold text-muted-foreground">
+                        {(displayName || user?.email || "?")[0]?.toUpperCase()}
+                      </div>
+                    )}
+                    {uploadingAvatar && (
+                      <div className="absolute inset-0 bg-background/70 flex items-center justify-center text-[11px] font-mono">
+                        …
+                      </div>
+                    )}
                   </button>
-                )}
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-48 p-1">
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAvatarMenuOpen(false);
+                        setViewerOpen(true);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-md text-[13px] hover:bg-subtle"
+                    >
+                      View photo
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAvatarMenuOpen(false);
+                      avatarFileRef.current?.click();
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-md text-[13px] hover:bg-subtle"
+                  >
+                    {avatarUrl ? "Change photo" : "Upload photo"}
+                  </button>
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAvatarMenuOpen(false);
+                        void removeAvatar();
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-md text-[13px] text-destructive hover:bg-destructive/10"
+                    >
+                      Remove photo
+                    </button>
+                  )}
+                </PopoverContent>
+              </Popover>
+              <input
+                ref={avatarFileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void uploadAvatar(f);
+                  e.target.value = "";
+                }}
+              />
+              <div className="text-[12px] text-muted-foreground">
+                {uploadingAvatar ? "Uploading…" : "Click the avatar for options."}
               </div>
             </div>
+            <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
+              <DialogContent className="max-w-[90vw] sm:max-w-2xl bg-background p-2 sm:p-4">
+                <DialogTitle className="sr-only">Profile photo</DialogTitle>
+                {avatarUrl && (
+                  <img
+                    src={avatarUrl}
+                    alt="Profile photo"
+                    className="w-full max-h-[80vh] object-contain rounded-md"
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
           </Field>
           <Field
             label="Voice notes"
             hint="Free-text notes the AI will read before every generation. Hedge words you avoid, examples you reuse, your point of view."
           >
-            <textarea
-              value={voiceNotes}
-              onChange={(e) => setVoiceNotes(e.target.value)}
-              placeholder="I write in short paragraphs. I avoid the words 'leverage' and 'unlock'. My recurring theme is…"
-              rows={5}
-              className="w-full px-3 py-2.5 rounded-md border border-border bg-card text-[14px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink resize-none"
-            />
+            <div className="flex flex-col gap-2">
+              <textarea
+                value={voiceNotes}
+                onChange={(e) => setVoiceNotes(e.target.value)}
+                placeholder="I write in short paragraphs. I avoid the words 'leverage' and 'unlock'. My recurring theme is…"
+                rows={5}
+                className="w-full px-3 py-2.5 rounded-md border border-border bg-card text-[14px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink resize-none"
+              />
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="text-[12px] text-muted-foreground">
+                  {recording
+                    ? "Listening… speak naturally, then click Stop."
+                    : voiceMsg ?? `${voiceNotes.length} characters`}
+                </div>
+                <div className="flex items-center gap-2">
+                  {voiceNotes && !recording && (
+                    <button
+                      type="button"
+                      onClick={() => setVoiceNotes("")}
+                      className="h-8 px-3 rounded-md border border-border text-[12px] text-ink hover:bg-subtle"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={toggleDictation}
+                    className={`h-8 px-3 rounded-md text-[12px] font-medium inline-flex items-center gap-1.5 ${
+                      recording
+                        ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        : "bg-ink text-surface hover:bg-ink/90"
+                    }`}
+                  >
+                    <span
+                      className={`size-2 rounded-full ${
+                        recording ? "bg-current animate-pulse" : "bg-current/70"
+                      }`}
+                    />
+                    {recording ? "Stop recording" : "Record voice note"}
+                  </button>
+                </div>
+              </div>
+            </div>
           </Field>
           <div className="flex items-center justify-between pt-2">
             <span className="text-[13px] text-muted-foreground">{profileMsg}</span>
