@@ -242,6 +242,47 @@ function SettingsPage() {
     }
   }
 
+  function toggleDictation() {
+    if (recording) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const SR =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      setVoiceMsg("Voice dictation isn't supported in this browser. Try Chrome or Edge.");
+      return;
+    }
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = false;
+    rec.lang = navigator.language || "en-US";
+    rec.onresult = (event: any) => {
+      let transcript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) transcript += event.results[i][0].transcript;
+      }
+      if (transcript) {
+        setVoiceNotes((prev) =>
+          prev ? `${prev.replace(/\s+$/, "")} ${transcript.trim()}` : transcript.trim(),
+        );
+      }
+    };
+    rec.onerror = (e: any) => {
+      setVoiceMsg(`Mic error: ${e.error ?? "unknown"}`);
+      setRecording(false);
+    };
+    rec.onend = () => setRecording(false);
+    recognitionRef.current = rec;
+    setVoiceMsg(null);
+    setRecording(true);
+    try {
+      rec.start();
+    } catch {
+      setRecording(false);
+    }
+  }
+
   async function openBillingPortal() {
     setOpeningPortal(true);
     setBillingMsg(null);
