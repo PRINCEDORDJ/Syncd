@@ -89,6 +89,14 @@ function SettingsPage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const avatarFileRef = useRef<HTMLInputElement>(null);
+
+  // Voice notes dictation
+  const [recording, setRecording] = useState(false);
+  const [voiceMsg, setVoiceMsg] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   // Account
   const [newPassword, setNewPassword] = useState("");
