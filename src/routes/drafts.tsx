@@ -13,6 +13,7 @@ import {
   Sheet,
   Presentation,
   File as FileIcon,
+  Pencil,
 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
@@ -96,6 +97,9 @@ function DraftsList() {
   const [publishMsg, setPublishMsg] = useState<string | null>(null);
   const [modalImages, setModalImages] = useState<string[]>([]);
   const [modalAttachments, setModalAttachments] = useState<DraftAttachment[]>([]);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalContent, setModalContent] = useState("");
+  const [editing, setEditing] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -104,6 +108,8 @@ function DraftsList() {
 
   const dirty = useMemo(() => {
     if (!selected) return false;
+    if ((selected.title ?? "") !== modalTitle) return true;
+    if ((selected.content ?? "") !== modalContent) return true;
     const a = selected.images ?? [];
     if (a.length !== modalImages.length) return true;
     for (let i = 0; i < a.length; i++) if (a[i] !== modalImages[i]) return true;
@@ -117,7 +123,7 @@ function DraftsList() {
     }
     
     return false;
-  }, [selected, modalImages, modalAttachments]);
+  }, [selected, modalImages, modalAttachments, modalTitle, modalContent]);
 
   const modalTotalBytes = useMemo(
     () => modalImages.reduce((s, src) => s + dataUrlByteSize(src), 0),
@@ -127,6 +133,9 @@ function DraftsList() {
   useEffect(() => {
     setModalImages(selected?.images ?? []);
     setModalAttachments(selected?.attachments ?? []);
+    setModalTitle(selected?.title ?? "");
+    setModalContent(selected?.content ?? "");
+    setEditing(false);
     setModalError(null);
   }, [selected?.id]);
 
@@ -134,6 +143,9 @@ function DraftsList() {
     setSelected(null);
     setModalImages([]);
     setModalAttachments([]);
+    setModalTitle("");
+    setModalContent("");
+    setEditing(false);
     setModalError(null);
     setPublishMsg(null);
   }
@@ -205,9 +217,15 @@ function DraftsList() {
     setSaving(true);
     setModalError(null);
     try {
+      const nextTitle = modalTitle.trim();
+      const nextContent = modalContent;
+      const nextCharCount = nextContent.length;
       const { error: err } = await supabase
         .from("drafts")
         .update({
+          title: nextTitle,
+          content: nextContent,
+          char_count: nextCharCount,
           images: modalImages,
           attachments: modalAttachments as any,
         })
@@ -221,12 +239,27 @@ function DraftsList() {
         prev
           ? prev.map((r) =>
               r.id === selected.id
-                ? { ...r, images: modalImages, attachments: modalAttachments }
+                ? {
+                    ...r,
+                    title: nextTitle,
+                    content: nextContent,
+                    char_count: nextCharCount,
+                    images: modalImages,
+                    attachments: modalAttachments,
+                  }
                 : r,
             )
           : prev,
       );
-      setSelected({ ...selected, images: modalImages, attachments: modalAttachments });
+      setSelected({
+        ...selected,
+        title: nextTitle,
+        content: nextContent,
+        char_count: nextCharCount,
+        images: modalImages,
+        attachments: modalAttachments,
+      });
+      setEditing(false);
     } finally {
       setSaving(false);
     }
