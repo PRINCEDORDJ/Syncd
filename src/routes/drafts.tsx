@@ -763,6 +763,14 @@ function DraftsList() {
               >
                 Close
               </button>
+              <button
+                type="button"
+                onClick={() => setDeleteId(selected.id)}
+                className="h-9 px-4 rounded-md text-[13px] font-medium border border-destructive/30 text-destructive hover:bg-destructive/5 transition-colors inline-flex items-center justify-center gap-1.5 w-full sm:w-auto"
+              >
+                <Trash2 className="size-3.5" />
+                Delete post
+              </button>
               {dirty && (
                 <button
                   type="button"
