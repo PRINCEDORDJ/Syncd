@@ -331,6 +331,7 @@ function DraftsList() {
         return;
       }
       const imagesToSend = modalImages.length ? modalImages : row.images ?? [];
+      const contentToSend = modalContent || row.content;
       const resp = await fetch("/api/linkedin/publish", {
         method: "POST",
         headers: {
@@ -338,7 +339,7 @@ function DraftsList() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          content: row.content,
+          content: contentToSend,
           images: imagesToSend,
           attachments: modalAttachments.length ? modalAttachments : row.attachments,
         }),
@@ -353,10 +354,14 @@ function DraftsList() {
       }
       // Mark draft as published in DB and persist any pending image edits
       const attachmentsToSend = modalAttachments.length ? modalAttachments : row.attachments;
+      const titleToSend = modalTitle || row.title;
       await supabase
         .from("drafts")
         .update({
           published: true,
+          title: titleToSend,
+          content: contentToSend,
+          char_count: contentToSend.length,
           images: imagesToSend,
           attachments: attachmentsToSend as any,
         })
@@ -366,12 +371,28 @@ function DraftsList() {
         prev
           ? prev.map((r) =>
               r.id === row.id
-                ? { ...r, published: true, images: imagesToSend, attachments: attachmentsToSend }
+                ? {
+                    ...r,
+                    published: true,
+                    title: titleToSend,
+                    content: contentToSend,
+                    char_count: contentToSend.length,
+                    images: imagesToSend,
+                    attachments: attachmentsToSend,
+                  }
                 : r,
             )
           : prev,
       );
-      setSelected({ ...row, published: true, images: imagesToSend, attachments: attachmentsToSend });
+      setSelected({
+        ...row,
+        published: true,
+        title: titleToSend,
+        content: contentToSend,
+        char_count: contentToSend.length,
+        images: imagesToSend,
+        attachments: attachmentsToSend,
+      });
       setPublishMsg("Published to LinkedIn successfully.");
     } finally {
       setPublishing(false);
