@@ -532,7 +532,7 @@ function SettingsPage() {
                       type="button"
                       onClick={() => {
                         setAvatarMenuOpen(false);
-                        void removeAvatar();
+                        setConfirmRemoveAvatar(true);
                       }}
                       className="w-full text-left px-3 py-2 rounded-md text-[13px] text-destructive hover:bg-destructive/10"
                     >
