@@ -316,6 +316,7 @@ function DraftsList() {
       return;
     }
     setRows((prev) => (prev ? prev.filter((r) => r.id !== id) : prev));
+    if (selected?.id === id) closeModal();
   }
 
   async function publishDraft(row: DraftRow) {
