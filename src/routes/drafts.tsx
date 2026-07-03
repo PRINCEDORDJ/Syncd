@@ -535,9 +535,19 @@ function DraftsList() {
           >
             <div className="flex items-start justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-border">
               <div className="min-w-0 flex-1">
-                <h2 className="font-semibold text-ink text-[16px] truncate">
-                  {selected.title || "Untitled draft"}
-                </h2>
+                {editing ? (
+                  <input
+                    type="text"
+                    value={modalTitle}
+                    onChange={(e) => setModalTitle(e.target.value)}
+                    placeholder="Untitled draft"
+                    className="w-full font-semibold text-ink text-[16px] bg-transparent border-b border-border focus:border-ink outline-none pb-1"
+                  />
+                ) : (
+                  <h2 className="font-semibold text-ink text-[16px] truncate">
+                    {modalTitle || "Untitled draft"}
+                  </h2>
+                )}
                 <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground flex-wrap">
                   <span
                     className={`px-1.5 py-0.5 rounded border ${
@@ -550,12 +560,25 @@ function DraftsList() {
                   </span>
                   <span>{selected.tone}</span>
                   <span>·</span>
-                  <span>{selected.char_count} ch</span>
+                  <span>{modalContent.length} ch</span>
                   <span>·</span>
                   <span>{new Date(selected.updated_at).toLocaleString()}</span>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setEditing((v) => !v)}
+                  title={editing ? "Done editing" : "Edit post"}
+                  aria-label={editing ? "Done editing" : "Edit post"}
+                  className={`h-8 w-8 inline-flex items-center justify-center rounded border transition-colors shrink-0 ${
+                    editing
+                      ? "bg-ink text-surface border-ink"
+                      : "bg-card text-ink border-border hover:bg-subtle"
+                  }`}
+                >
+                  <Pencil className="size-4" />
+                </button>
                 {!selected.published && (
                   <>
                     <button
