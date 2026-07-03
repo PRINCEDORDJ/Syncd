@@ -8,6 +8,7 @@ import { PLAN_LABELS, PLAN_LIMITS, type PlanTier } from "@/lib/plans";
 import { uploadAvatar as uploadAvatarFn, removeAvatar as removeAvatarFn } from "@/lib/avatar-upload";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export const Route = createFileRoute("/settings")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -112,6 +113,12 @@ function SettingsPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  // Confirmation dialogs
+  const [confirmRemoveAvatar, setConfirmRemoveAvatar] = useState(false);
+  const [confirmDisconnectLI, setConfirmDisconnectLI] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [confirmWipe, setConfirmWipe] = useState(false);
 
   useEffect(() => {
     if (search.linkedin_connected === "1") {
