@@ -8,6 +8,7 @@ import { PLAN_LABELS, PLAN_LIMITS, type PlanTier } from "@/lib/plans";
 import { uploadAvatar as uploadAvatarFn, removeAvatar as removeAvatarFn } from "@/lib/avatar-upload";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export const Route = createFileRoute("/settings")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -112,6 +113,12 @@ function SettingsPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  // Confirmation dialogs
+  const [confirmRemoveAvatar, setConfirmRemoveAvatar] = useState(false);
+  const [confirmDisconnectLI, setConfirmDisconnectLI] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [confirmWipe, setConfirmWipe] = useState(false);
 
   useEffect(() => {
     if (search.linkedin_connected === "1") {
@@ -525,7 +532,7 @@ function SettingsPage() {
                       type="button"
                       onClick={() => {
                         setAvatarMenuOpen(false);
-                        void removeAvatar();
+                        setConfirmRemoveAvatar(true);
                       }}
                       className="w-full text-left px-3 py-2 rounded-md text-[13px] text-destructive hover:bg-destructive/10"
                     >
@@ -653,7 +660,7 @@ function SettingsPage() {
               </div>
               <button
                 type="button"
-                onClick={disconnectLinkedIn}
+                onClick={() => setConfirmDisconnectLI(true)}
                 disabled={disconnectingLinkedIn}
                 className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle w-full sm:w-auto disabled:opacity-60"
               >
@@ -777,7 +784,7 @@ function SettingsPage() {
           <div className="pt-2">
             <button
               type="button"
-              onClick={() => signOut()}
+              onClick={() => setConfirmSignOut(true)}
               className="h-9 px-4 rounded-md border border-border text-[13px] text-ink hover:bg-subtle"
             >
               Sign out
@@ -801,7 +808,7 @@ function SettingsPage() {
           </Field>
           <button
             type="button"
-            onClick={deleteAccount}
+            onClick={() => setConfirmWipe(true)}
             disabled={deleting || confirmDelete !== "DELETE"}
             className="h-9 px-4 rounded-md bg-destructive text-destructive-foreground text-[13px] font-medium hover:bg-destructive/90 disabled:opacity-60"
           >
@@ -820,6 +827,54 @@ function SettingsPage() {
           </Link>
         </p>
       </main>
+
+      <ConfirmDialog
+        open={confirmRemoveAvatar}
+        onOpenChange={setConfirmRemoveAvatar}
+        title="Remove profile photo?"
+        description="Your avatar will revert to your initials until you upload a new photo."
+        confirmText="Remove photo"
+        variant="destructive"
+        onConfirm={() => {
+          setConfirmRemoveAvatar(false);
+          void removeAvatar();
+        }}
+      />
+      <ConfirmDialog
+        open={confirmDisconnectLI}
+        onOpenChange={setConfirmDisconnectLI}
+        title="Disconnect LinkedIn?"
+        description="You won't be able to publish directly to LinkedIn until you reconnect."
+        confirmText="Disconnect"
+        variant="destructive"
+        onConfirm={() => {
+          setConfirmDisconnectLI(false);
+          void disconnectLinkedIn();
+        }}
+      />
+      <ConfirmDialog
+        open={confirmSignOut}
+        onOpenChange={setConfirmSignOut}
+        title="Sign out?"
+        description="You'll need to sign in again to access your workspace, drafts, and settings."
+        confirmText="Sign out"
+        onConfirm={() => {
+          setConfirmSignOut(false);
+          void signOut();
+        }}
+      />
+      <ConfirmDialog
+        open={confirmWipe}
+        onOpenChange={setConfirmWipe}
+        title="Delete all your data?"
+        description="This permanently removes your drafts, profile, and LinkedIn connection. This cannot be undone."
+        confirmText="Delete everything"
+        variant="destructive"
+        onConfirm={() => {
+          setConfirmWipe(false);
+          void deleteAccount();
+        }}
+      />
     </div>
   );
 }

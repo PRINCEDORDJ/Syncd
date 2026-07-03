@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { LogOut, Settings as SettingsIcon, LayoutGrid, FileText, Menu } from "lucide-react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export function SiteNav() {
   const { user, signOut } = useAuth();
@@ -20,6 +21,7 @@ export function SiteNav() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -124,7 +126,10 @@ export function SiteNav() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => signOut()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setConfirmSignOut(true);
+                  }}
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <LogOut className="h-4 w-4" />
@@ -181,7 +186,11 @@ export function SiteNav() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => signOut()}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      setMobileOpen(false);
+                      setConfirmSignOut(true);
+                    }}
                     className="cursor-pointer text-destructive focus:text-destructive"
                   >
                     <LogOut className="h-4 w-4" />
@@ -193,6 +202,17 @@ export function SiteNav() {
           </DropdownMenu>
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmSignOut}
+        onOpenChange={setConfirmSignOut}
+        title="Sign out?"
+        description="You'll need to sign in again to access your workspace, drafts, and settings."
+        confirmText="Sign out"
+        onConfirm={() => {
+          setConfirmSignOut(false);
+          void signOut();
+        }}
+      />
     </nav>
   );
 }
