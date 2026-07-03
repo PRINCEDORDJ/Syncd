@@ -615,9 +615,19 @@ function DraftsList() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5">
-              <p className="text-[14px] sm:text-[15px] text-ink leading-relaxed whitespace-pre-wrap">
-                {selected.content}
-              </p>
+              {editing ? (
+                <textarea
+                  value={modalContent}
+                  onChange={(e) => setModalContent(e.target.value)}
+                  rows={12}
+                  maxLength={3000}
+                  className="w-full text-[14px] sm:text-[15px] text-ink leading-relaxed bg-card border border-border rounded-md p-3 outline-none focus:border-ink resize-y min-h-[240px]"
+                />
+              ) : (
+                <p className="text-[14px] sm:text-[15px] text-ink leading-relaxed whitespace-pre-wrap">
+                  {modalContent}
+                </p>
+              )}
               <div className="mt-5 space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-[0.12em]">
