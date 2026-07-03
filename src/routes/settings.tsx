@@ -827,6 +827,54 @@ function SettingsPage() {
           </Link>
         </p>
       </main>
+
+      <ConfirmDialog
+        open={confirmRemoveAvatar}
+        onOpenChange={setConfirmRemoveAvatar}
+        title="Remove profile photo?"
+        description="Your avatar will revert to your initials until you upload a new photo."
+        confirmText="Remove photo"
+        variant="destructive"
+        onConfirm={() => {
+          setConfirmRemoveAvatar(false);
+          void removeAvatar();
+        }}
+      />
+      <ConfirmDialog
+        open={confirmDisconnectLI}
+        onOpenChange={setConfirmDisconnectLI}
+        title="Disconnect LinkedIn?"
+        description="You won't be able to publish directly to LinkedIn until you reconnect."
+        confirmText="Disconnect"
+        variant="destructive"
+        onConfirm={() => {
+          setConfirmDisconnectLI(false);
+          void disconnectLinkedIn();
+        }}
+      />
+      <ConfirmDialog
+        open={confirmSignOut}
+        onOpenChange={setConfirmSignOut}
+        title="Sign out?"
+        description="You'll need to sign in again to access your workspace, drafts, and settings."
+        confirmText="Sign out"
+        onConfirm={() => {
+          setConfirmSignOut(false);
+          void signOut();
+        }}
+      />
+      <ConfirmDialog
+        open={confirmWipe}
+        onOpenChange={setConfirmWipe}
+        title="Delete all your data?"
+        description="This permanently removes your drafts, profile, and LinkedIn connection. This cannot be undone."
+        confirmText="Delete everything"
+        variant="destructive"
+        onConfirm={() => {
+          setConfirmWipe(false);
+          void deleteAccount();
+        }}
+      />
     </div>
   );
 }
