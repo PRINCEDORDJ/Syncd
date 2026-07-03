@@ -660,7 +660,7 @@ function SettingsPage() {
               </div>
               <button
                 type="button"
-                onClick={disconnectLinkedIn}
+                onClick={() => setConfirmDisconnectLI(true)}
                 disabled={disconnectingLinkedIn}
                 className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle w-full sm:w-auto disabled:opacity-60"
               >
@@ -784,7 +784,7 @@ function SettingsPage() {
           <div className="pt-2">
             <button
               type="button"
-              onClick={() => signOut()}
+              onClick={() => setConfirmSignOut(true)}
               className="h-9 px-4 rounded-md border border-border text-[13px] text-ink hover:bg-subtle"
             >
               Sign out
@@ -808,7 +808,7 @@ function SettingsPage() {
           </Field>
           <button
             type="button"
-            onClick={deleteAccount}
+            onClick={() => setConfirmWipe(true)}
             disabled={deleting || confirmDelete !== "DELETE"}
             className="h-9 px-4 rounded-md bg-destructive text-destructive-foreground text-[13px] font-medium hover:bg-destructive/90 disabled:opacity-60"
           >
