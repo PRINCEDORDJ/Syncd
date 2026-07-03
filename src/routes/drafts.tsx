@@ -13,6 +13,7 @@ import {
   Sheet,
   Presentation,
   File as FileIcon,
+  Pencil,
 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
@@ -96,6 +97,9 @@ function DraftsList() {
   const [publishMsg, setPublishMsg] = useState<string | null>(null);
   const [modalImages, setModalImages] = useState<string[]>([]);
   const [modalAttachments, setModalAttachments] = useState<DraftAttachment[]>([]);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalContent, setModalContent] = useState("");
+  const [editing, setEditing] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -104,6 +108,8 @@ function DraftsList() {
 
   const dirty = useMemo(() => {
     if (!selected) return false;
+    if ((selected.title ?? "") !== modalTitle) return true;
+    if ((selected.content ?? "") !== modalContent) return true;
     const a = selected.images ?? [];
     if (a.length !== modalImages.length) return true;
     for (let i = 0; i < a.length; i++) if (a[i] !== modalImages[i]) return true;
@@ -117,7 +123,7 @@ function DraftsList() {
     }
     
     return false;
-  }, [selected, modalImages, modalAttachments]);
+  }, [selected, modalImages, modalAttachments, modalTitle, modalContent]);
 
   const modalTotalBytes = useMemo(
     () => modalImages.reduce((s, src) => s + dataUrlByteSize(src), 0),
@@ -127,6 +133,9 @@ function DraftsList() {
   useEffect(() => {
     setModalImages(selected?.images ?? []);
     setModalAttachments(selected?.attachments ?? []);
+    setModalTitle(selected?.title ?? "");
+    setModalContent(selected?.content ?? "");
+    setEditing(false);
     setModalError(null);
   }, [selected?.id]);
 
@@ -134,6 +143,9 @@ function DraftsList() {
     setSelected(null);
     setModalImages([]);
     setModalAttachments([]);
+    setModalTitle("");
+    setModalContent("");
+    setEditing(false);
     setModalError(null);
     setPublishMsg(null);
   }
@@ -205,9 +217,15 @@ function DraftsList() {
     setSaving(true);
     setModalError(null);
     try {
+      const nextTitle = modalTitle.trim();
+      const nextContent = modalContent;
+      const nextCharCount = nextContent.length;
       const { error: err } = await supabase
         .from("drafts")
         .update({
+          title: nextTitle,
+          content: nextContent,
+          char_count: nextCharCount,
           images: modalImages,
           attachments: modalAttachments as any,
         })
@@ -221,12 +239,27 @@ function DraftsList() {
         prev
           ? prev.map((r) =>
               r.id === selected.id
-                ? { ...r, images: modalImages, attachments: modalAttachments }
+                ? {
+                    ...r,
+                    title: nextTitle,
+                    content: nextContent,
+                    char_count: nextCharCount,
+                    images: modalImages,
+                    attachments: modalAttachments,
+                  }
                 : r,
             )
           : prev,
       );
-      setSelected({ ...selected, images: modalImages, attachments: modalAttachments });
+      setSelected({
+        ...selected,
+        title: nextTitle,
+        content: nextContent,
+        char_count: nextCharCount,
+        images: modalImages,
+        attachments: modalAttachments,
+      });
+      setEditing(false);
     } finally {
       setSaving(false);
     }
@@ -298,6 +331,7 @@ function DraftsList() {
         return;
       }
       const imagesToSend = modalImages.length ? modalImages : row.images ?? [];
+      const contentToSend = modalContent || row.content;
       const resp = await fetch("/api/linkedin/publish", {
         method: "POST",
         headers: {
@@ -305,7 +339,7 @@ function DraftsList() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          content: row.content,
+          content: contentToSend,
           images: imagesToSend,
           attachments: modalAttachments.length ? modalAttachments : row.attachments,
         }),
@@ -320,10 +354,14 @@ function DraftsList() {
       }
       // Mark draft as published in DB and persist any pending image edits
       const attachmentsToSend = modalAttachments.length ? modalAttachments : row.attachments;
+      const titleToSend = modalTitle || row.title;
       await supabase
         .from("drafts")
         .update({
           published: true,
+          title: titleToSend,
+          content: contentToSend,
+          char_count: contentToSend.length,
           images: imagesToSend,
           attachments: attachmentsToSend as any,
         })
@@ -333,12 +371,28 @@ function DraftsList() {
         prev
           ? prev.map((r) =>
               r.id === row.id
-                ? { ...r, published: true, images: imagesToSend, attachments: attachmentsToSend }
+                ? {
+                    ...r,
+                    published: true,
+                    title: titleToSend,
+                    content: contentToSend,
+                    char_count: contentToSend.length,
+                    images: imagesToSend,
+                    attachments: attachmentsToSend,
+                  }
                 : r,
             )
           : prev,
       );
-      setSelected({ ...row, published: true, images: imagesToSend, attachments: attachmentsToSend });
+      setSelected({
+        ...row,
+        published: true,
+        title: titleToSend,
+        content: contentToSend,
+        char_count: contentToSend.length,
+        images: imagesToSend,
+        attachments: attachmentsToSend,
+      });
       setPublishMsg("Published to LinkedIn successfully.");
     } finally {
       setPublishing(false);
@@ -502,9 +556,19 @@ function DraftsList() {
           >
             <div className="flex items-start justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-border">
               <div className="min-w-0 flex-1">
-                <h2 className="font-semibold text-ink text-[16px] truncate">
-                  {selected.title || "Untitled draft"}
-                </h2>
+                {editing ? (
+                  <input
+                    type="text"
+                    value={modalTitle}
+                    onChange={(e) => setModalTitle(e.target.value)}
+                    placeholder="Untitled draft"
+                    className="w-full font-semibold text-ink text-[16px] bg-transparent border-b border-border focus:border-ink outline-none pb-1"
+                  />
+                ) : (
+                  <h2 className="font-semibold text-ink text-[16px] truncate">
+                    {modalTitle || "Untitled draft"}
+                  </h2>
+                )}
                 <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground flex-wrap">
                   <span
                     className={`px-1.5 py-0.5 rounded border ${
@@ -517,12 +581,25 @@ function DraftsList() {
                   </span>
                   <span>{selected.tone}</span>
                   <span>·</span>
-                  <span>{selected.char_count} ch</span>
+                  <span>{modalContent.length} ch</span>
                   <span>·</span>
                   <span>{new Date(selected.updated_at).toLocaleString()}</span>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setEditing((v) => !v)}
+                  title={editing ? "Done editing" : "Edit post"}
+                  aria-label={editing ? "Done editing" : "Edit post"}
+                  className={`h-8 w-8 inline-flex items-center justify-center rounded border transition-colors shrink-0 ${
+                    editing
+                      ? "bg-ink text-surface border-ink"
+                      : "bg-card text-ink border-border hover:bg-subtle"
+                  }`}
+                >
+                  <Pencil className="size-4" />
+                </button>
                 {!selected.published && (
                   <>
                     <button
@@ -559,9 +636,19 @@ function DraftsList() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5">
-              <p className="text-[14px] sm:text-[15px] text-ink leading-relaxed whitespace-pre-wrap">
-                {selected.content}
-              </p>
+              {editing ? (
+                <textarea
+                  value={modalContent}
+                  onChange={(e) => setModalContent(e.target.value)}
+                  rows={12}
+                  maxLength={3000}
+                  className="w-full text-[14px] sm:text-[15px] text-ink leading-relaxed bg-card border border-border rounded-md p-3 outline-none focus:border-ink resize-y min-h-[240px]"
+                />
+              ) : (
+                <p className="text-[14px] sm:text-[15px] text-ink leading-relaxed whitespace-pre-wrap">
+                  {modalContent}
+                </p>
+              )}
               <div className="mt-5 space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-[0.12em]">
