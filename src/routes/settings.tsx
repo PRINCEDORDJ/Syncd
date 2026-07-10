@@ -8,6 +8,7 @@ import { PLAN_LABELS, PLAN_LIMITS, type PlanTier } from "@/lib/plans";
 import { uploadAvatar as uploadAvatarFn, removeAvatar as removeAvatarFn } from "@/lib/avatar-upload";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export const Route = createFileRoute("/settings")({
