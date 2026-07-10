@@ -33,10 +33,31 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
 
   useEffect(() => {
     if (!loading && user) navigate({ to: redirectTo });
   }, [user, loading, navigate, redirectTo]);
+
+  async function handleGoogle() {
+    setError(null);
+    setInfo(null);
+    setGoogleSubmitting(true);
+    try {
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const redirectParam = encodeURIComponent(redirectTo);
+      const { error: err } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${origin}/auth?redirect=${redirectParam}`,
+        },
+      });
+      if (err) throw err;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Google sign-in failed.");
+      setGoogleSubmitting(false);
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -93,6 +114,22 @@ function LoginPage() {
           </div>
 
           <div className="border border-border rounded-xl bg-card p-6 shadow-soft">
+            <button
+              type="button"
+              onClick={handleGoogle}
+              disabled={googleSubmitting || submitting}
+              className="w-full h-10 rounded-md border border-border bg-card text-ink text-[14px] font-medium hover:bg-subtle disabled:opacity-60 transition-colors inline-flex items-center justify-center gap-2"
+            >
+              <GoogleGlyph />
+              {googleSubmitting ? "Redirecting…" : `Continue with Google`}
+            </button>
+            <div className="flex items-center gap-3 my-4">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em]">
+                or
+              </span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               {mode === "signup" && (
                 <Field
