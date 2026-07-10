@@ -8,6 +8,7 @@ import { PLAN_LABELS, PLAN_LIMITS, type PlanTier } from "@/lib/plans";
 import { uploadAvatar as uploadAvatarFn, removeAvatar as removeAvatarFn } from "@/lib/avatar-upload";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export const Route = createFileRoute("/settings")({
@@ -465,7 +466,16 @@ function SettingsPage() {
           </div>
         )}
 
-        {/* Profile */}
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="mb-6 flex w-full overflow-x-auto no-scrollbar bg-subtle/60 p-1 rounded-lg h-auto justify-start">
+            <TabsTrigger value="profile" className="text-[13px]">Profile</TabsTrigger>
+            <TabsTrigger value="linkedin" className="text-[13px]">LinkedIn</TabsTrigger>
+            <TabsTrigger value="billing" className="text-[13px]">Billing</TabsTrigger>
+            <TabsTrigger value="account" className="text-[13px]">Account</TabsTrigger>
+            <TabsTrigger value="danger" className="text-[13px] data-[state=active]:text-destructive">Danger</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile" className="mt-0">
         <Section title="Profile" subtitle="How you appear inside SocialSync.">
           <Field label="Display name">
             <input
@@ -629,8 +639,9 @@ function SettingsPage() {
             </button>
           </div>
         </Section>
+          </TabsContent>
 
-        {/* LinkedIn */}
+          <TabsContent value="linkedin" className="mt-0">
         <Section
           title="LinkedIn connection"
           subtitle="Authorize once. Publish drafts straight from the workspace."
@@ -687,8 +698,9 @@ function SettingsPage() {
             </div>
           )}
         </Section>
+          </TabsContent>
 
-        {/* Billing */}
+          <TabsContent value="billing" className="mt-0">
         <Section title="Billing & plan" subtitle="Your current subscription and usage limits.">
           {billingMsg && (
             <div className="px-3 py-2 rounded-md border border-border bg-subtle text-[13px] text-ink">
@@ -751,8 +763,9 @@ function SettingsPage() {
             );
           })()}
         </Section>
+          </TabsContent>
 
-        {/* Account */}
+          <TabsContent value="account" className="mt-0">
         <Section title="Account" subtitle="Email, password, and session.">
           <Field label="Email">
             <input
@@ -791,8 +804,9 @@ function SettingsPage() {
             </button>
           </div>
         </Section>
+          </TabsContent>
 
-        {/* Danger zone */}
+          <TabsContent value="danger" className="mt-0">
         <Section
           title="Danger zone"
           subtitle="Permanent actions. Type DELETE to confirm."
@@ -819,6 +833,8 @@ function SettingsPage() {
             to fully erase it.
           </p>
         </Section>
+          </TabsContent>
+        </Tabs>
 
         <p className="mt-12 text-[13px] text-muted-foreground">
           ←{" "}

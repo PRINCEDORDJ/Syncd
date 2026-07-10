@@ -17,6 +17,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DraftsRouteImport } from './routes/drafts'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiGenerateRouteImport } from './routes/api.generate'
@@ -66,6 +67,11 @@ const LoginRoute = LoginRouteImport.update({
 const DraftsRoute = DraftsRouteImport.update({
   id: '/drafts',
   path: '/drafts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -122,6 +128,7 @@ const ApiPublicPolarWebhookRoute = ApiPublicPolarWebhookRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
+  '/auth': typeof AuthRoute
   '/drafts': typeof DraftsRoute
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
+  '/auth': typeof AuthRoute
   '/drafts': typeof DraftsRoute
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
@@ -163,6 +171,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRoute
+  '/auth': typeof AuthRoute
   '/drafts': typeof DraftsRoute
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/auth'
     | '/drafts'
     | '/login'
     | '/methodology'
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/app'
+    | '/auth'
     | '/drafts'
     | '/login'
     | '/methodology'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/app'
+    | '/auth'
     | '/drafts'
     | '/login'
     | '/methodology'
@@ -246,6 +258,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRoute
+  AuthRoute: typeof AuthRoute
   DraftsRoute: typeof DraftsRoute
   LoginRoute: typeof LoginRoute
   MethodologyRoute: typeof MethodologyRoute
@@ -320,6 +333,13 @@ declare module '@tanstack/react-router' {
       path: '/drafts'
       fullPath: '/drafts'
       preLoaderRoute: typeof DraftsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -398,6 +418,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRoute,
+  AuthRoute: AuthRoute,
   DraftsRoute: DraftsRoute,
   LoginRoute: LoginRoute,
   MethodologyRoute: MethodologyRoute,
@@ -418,12 +439,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

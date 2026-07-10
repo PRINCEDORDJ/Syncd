@@ -1,44 +1,83 @@
-## Goal
+## 1. Destructive actions audit
 
-Make the avatar in the profile profile tab interactive to view , change or upload a picture
+Verify every delete/disconnect/sign-out path renders `ConfirmDialog`:
 
-Frontend only. Reuses the existing `avatars` storage bucket and `profiles.avatar_url` column. No schema or backend changes.
+- `drafts.tsx` — card list Trash button (`remove()` → `setDeleteId`) and modal Delete → already wired to `ConfirmDialog`. ✓
+- `settings.tsx` — Remove avatar, Disconnect LinkedIn, Sign out, Delete all data → already wired. ✓
+- `SiteNav.tsx` — desktop + mobile sign out → already wired. ✓
+- `app.tsx` — image/attachment `removeImage`/`removeAttachment` are lightweight editor state removals (staged, not persisted destructive ops); leave as-is (no confirm needed) but document decision.
 
-## Changes
+No new code needed here beyond a quick pass; if any spot is found unwired during implementation, add `ConfirmDialog`.
 
-### 1. `src/router/settings.tsx` — avatar interaction
+## 2 + 4. Google sign in via Supabase (works on any domain)
 
-- Replace the current "Avatar = single dropdown trigger" with a **two-trigger pattern**:
-  - **Click the avatar image itself** → opens a new lightweight "Avatar actions" popover (Radix Popover) with:
-    - **View photo** (only if `avatarUrl` set) — opens a Dialog showing the image full-size on a dark backdrop, with filename-free close button
-    - **Upload photo** / **Change photo** — triggers a hidden `<input type="file" accept="image/*">`
-    - **Remove photo** (only if `avatarUrl` set) — destructive style
-  - **Click a small chevron / caret** next to the avatar → opens the existing account dropdown (Workspace, Posts, Settings, Sign out). Keeps the current account-menu functionality.
-- Show an **upload spinner overlay** on the avatar while uploading (semi-transparent ring + Loader2 icon).
-- After upload/remove succeeds, update local `avatarUrl` state immediately so the navbar reflects the change without a refresh.
-- Toast feedback via `sonner` for success/error (already used in project).
+- Add a "Continue with Google" button on `src/routes/login.tsx` (both signin & signup modes), above the email form with an "or" divider.
+- Handler:
+  ```ts
+  await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + '/auth' },
+  });
+  ```
+  No `lovable.auth` / `~oauth` proxy — works on Vercel/custom domains.
+- Create `src/routes/auth.tsx` as a public callback route. It renders a "Signing you in…" state and relies on `AuthProvider`'s existing `onAuthStateChange` listener; when a session appears, `useEffect` navigates to `/app` (or a stored `redirect`). Falls through to `/login` if no session after ~4s.
+- Enable the Google provider via `supabase--configure_social_auth({ providers: ["google"] })` so the flow works out of the box.
 
-### 2. New helper `src/lib/avatar-upload.ts`
+## 3. Settings page redesign
 
-- Extract the avatar upload + remove logic currently duplicated in `settings.tsx` into a shared async helper:
-  - `uploadAvatar(userId, file): Promise<{ url: string }>` — validates type/size (image/*, ≤5MB), uploads to `avatars/{userId}/avatar-{ts}.{ext}`, upserts `profiles.avatar_url`, returns public URL.
-  - `removeAvatar(userId): Promise<void>` — sets `profiles.avatar_url` to null.
-- `src/routes/settings.tsx` is refactored to call this helper (keeps existing settings UI intact, no behavior change there).
+Restructure `src/routes/settings.tsx` into a tabbed layout while preserving all current logic (profile, voice notes, LinkedIn, billing, security, danger zone). Keep the current theme tokens (`ink`, `subtle`, `border`, mono uppercase labels, `shadow-soft`, rounded-xl cards).
 
-### 3. Image loading polish
+Layout:
 
-- Add `loading="lazy"` and a subtle fade-in (`transition-opacity` + `onLoad` to flip opacity from 0 → 100) on the navbar avatar image so swapped photos don't flash.
-- Full-size view dialog: `object-contain max-h-[80vh] max-w-[90vw]`, dark backdrop, close on Escape / backdrop click (Radix Dialog defaults).
+```
+┌──────────────────────────────────────────┐
+│ Settings header + subtitle               │
+├──────────────────────────────────────────┤
+│ [Profile] [Integrations] [Billing]       │  ← sticky tab strip
+│ [Security] [Danger]                      │
+├──────────────────────────────────────────┤
+│  Active panel — card list                │
+└──────────────────────────────────────────┘
+```
 
-## Out of scope
+- Tabs use `@/components/ui/tabs` (shadcn). Persist active tab in URL (`?tab=`) so LinkedIn/billing return links land correctly (auto-select `integrations` on `linkedin_*`, `billing` on `billing=success`).
+- Profile tab: avatar block (larger, centered on mobile), display name, voice notes (with dictation button integrated inline as icon).
+- Integrations tab: LinkedIn card only (extensible).
+- Billing tab: current plan badge + limits summary + Manage/Upgrade buttons.
+- Security tab: change password.
+- Danger tab: sign out + delete data (both keep existing `ConfirmDialog`).
+- Mobile: tabs scroll horizontally with `no-scrollbar`.
 
-- Avatar cropping / resizing UI
-- Removing or redesigning the existing Settings → Profile photo section (still fully usable; just refactored to share the helper)
-- Any change to drafts, billing, auth, or routing
+No behavior changes to any handler — only markup restructure.
+
+## 6. Video upload in the editor
+
+In `src/routes/app.tsx`:
+
+- Add `videos: string[]` state (data URLs) alongside `images`, with limits `MAX_VIDEOS=1`, `MAX_VIDEO_SIZE=50MB`, accepted MIME `video/mp4, video/quicktime, video/webm`.
+- Add `handleVideoFiles()` validator (new helper `validateVideoBatch` in `src/lib/image-validation.ts` or a new `src/lib/video-validation.ts` — new file to avoid overloading image module).
+- Toolbar: new hidden `<input type="file" accept="video/*">` and a Film-icon button next to image/attach.
+- Canvas preview: render an HTML5 `<video controls playsInline>` in the preview area when a video is present, with a remove overlay button (styled like existing image remove).
+- Autosave: include `videos` in draft upsert (add `videos jsonb` column to `drafts` table via migration; default `[]`).
+- Types regenerate after migration.
+- Publish flow: LinkedIn video posting is a separate multipart upload API. Out of scope for this pass — video is saved on the draft and shown in the composer/preview; publishing continues to send text + images. Add a small hint under the video preview: "Video is saved to your draft. LinkedIn video publishing coming soon."
+- Drafts modal (`drafts.tsx`): render the saved video read-only when present.
 
 ## Technical notes
 
-- Use existing shadcn `Popover` and `Dialog` components (already in `src/components/ui/`).
-- Hidden file input lives inside the popover content; popover closes on selection, then upload runs.
-- File size guard mirrors the current 5MB rule in `settings.tsx`.
-- No new packages.
+- New route `src/routes/auth.tsx` (public, no auth guard, no `_authenticated` placement).
+- Migration: `ALTER TABLE public.drafts ADD COLUMN videos jsonb NOT NULL DEFAULT '[]'::jsonb;`
+- `supabase--configure_social_auth` enables Google provider (managed OAuth); on custom domains the direct `supabase.auth.signInWithOAuth` uses Supabase's own callback URL, independent of the Lovable `~oauth` proxy.
+- Ensure the video upload follows the usage plan of the user.
+- No changes to `src/integrations/supabase/*` generated files.
+
+## Files touched
+
+- `src/routes/login.tsx` — add Google button + divider
+- `src/routes/auth.tsx` — new callback route
+- `src/routes/settings.tsx` — redesigned with tabs
+- `src/routes/app.tsx` — video picker + preview + state + autosave
+- `src/routes/drafts.tsx` — render saved video in modal
+- `src/lib/video-validation.ts` — new helper
+- Migration adding `drafts.videos`
+- Enable Google auth provider
