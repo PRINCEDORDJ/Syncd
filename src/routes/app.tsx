@@ -736,6 +736,33 @@ function Workspace() {
                 </div>
               )}
 
+              {/* Videos */}
+              {videos.length > 0 && (
+                <div className="mt-3 flex flex-col gap-2">
+                  {videos.map((src, i) => (
+                    <div
+                      key={`video-${i}`}
+                      className="relative group/vid rounded-md overflow-hidden border border-border bg-black"
+                    >
+                      <video
+                        src={src}
+                        controls
+                        playsInline
+                        className="w-full max-h-[360px] object-contain bg-black"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeVideo(i)}
+                        className="absolute top-2 right-2 h-7 w-7 inline-flex items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover/vid:opacity-100 transition-opacity"
+                        aria-label="Remove video"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {error && (
                 <div className="mt-4 px-3 py-2.5 rounded-md bg-destructive/5 border border-destructive/20 text-[13px] text-destructive">
                   {error}
