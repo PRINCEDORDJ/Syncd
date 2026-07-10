@@ -28,6 +28,7 @@ export type Database = {
           tone: string
           updated_at: string
           user_id: string
+          videos: Json
         }
         Insert: {
           attachments?: Json
@@ -42,6 +43,7 @@ export type Database = {
           tone?: string
           updated_at?: string
           user_id: string
+          videos?: Json
         }
         Update: {
           attachments?: Json
@@ -56,6 +58,7 @@ export type Database = {
           tone?: string
           updated_at?: string
           user_id?: string
+          videos?: Json
         }
         Relationships: []
       }
