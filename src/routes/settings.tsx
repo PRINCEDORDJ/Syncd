@@ -763,8 +763,9 @@ function SettingsPage() {
             );
           })()}
         </Section>
+          </TabsContent>
 
-        {/* Account */}
+          <TabsContent value="account" className="mt-0">
         <Section title="Account" subtitle="Email, password, and session.">
           <Field label="Email">
             <input
@@ -803,8 +804,9 @@ function SettingsPage() {
             </button>
           </div>
         </Section>
+          </TabsContent>
 
-        {/* Danger zone */}
+          <TabsContent value="danger" className="mt-0">
         <Section
           title="Danger zone"
           subtitle="Permanent actions. Type DELETE to confirm."
@@ -831,6 +833,8 @@ function SettingsPage() {
             to fully erase it.
           </p>
         </Section>
+          </TabsContent>
+        </Tabs>
 
         <p className="mt-12 text-[13px] text-muted-foreground">
           ←{" "}
