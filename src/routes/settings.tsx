@@ -639,8 +639,9 @@ function SettingsPage() {
             </button>
           </div>
         </Section>
+          </TabsContent>
 
-        {/* LinkedIn */}
+          <TabsContent value="linkedin" className="mt-0">
         <Section
           title="LinkedIn connection"
           subtitle="Authorize once. Publish drafts straight from the workspace."
@@ -697,8 +698,9 @@ function SettingsPage() {
             </div>
           )}
         </Section>
+          </TabsContent>
 
-        {/* Billing */}
+          <TabsContent value="billing" className="mt-0">
         <Section title="Billing & plan" subtitle="Your current subscription and usage limits.">
           {billingMsg && (
             <div className="px-3 py-2 rounded-md border border-border bg-subtle text-[13px] text-ink">
