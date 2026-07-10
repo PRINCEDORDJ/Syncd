@@ -466,7 +466,16 @@ function SettingsPage() {
           </div>
         )}
 
-        {/* Profile */}
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="mb-6 flex w-full overflow-x-auto no-scrollbar bg-subtle/60 p-1 rounded-lg h-auto justify-start">
+            <TabsTrigger value="profile" className="text-[13px]">Profile</TabsTrigger>
+            <TabsTrigger value="linkedin" className="text-[13px]">LinkedIn</TabsTrigger>
+            <TabsTrigger value="billing" className="text-[13px]">Billing</TabsTrigger>
+            <TabsTrigger value="account" className="text-[13px]">Account</TabsTrigger>
+            <TabsTrigger value="danger" className="text-[13px] data-[state=active]:text-destructive">Danger</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile" className="mt-0">
         <Section title="Profile" subtitle="How you appear inside SocialSync.">
           <Field label="Display name">
             <input
