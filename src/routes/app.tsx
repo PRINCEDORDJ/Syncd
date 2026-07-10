@@ -522,6 +522,16 @@ function Workspace() {
                   if (fileAttachInputRef.current) fileAttachInputRef.current.value = "";
                 }}
               />
+              <input
+                ref={fileVideoInputRef}
+                type="file"
+                accept="video/mp4,video/quicktime,video/webm"
+                className="hidden"
+                onChange={(e) => {
+                  handleVideoFiles(e.target.files);
+                  if (fileVideoInputRef.current) fileVideoInputRef.current.value = "";
+                }}
+              />
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -541,6 +551,16 @@ function Workspace() {
                 className="h-7 w-7 inline-flex items-center justify-center rounded border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
               >
                 <Paperclip className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => fileVideoInputRef.current?.click()}
+                disabled={videos.length >= MAX_VIDEOS}
+                title="Add video"
+                aria-label="Add video"
+                className="h-7 w-7 inline-flex items-center justify-center rounded border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              >
+                <Film className="size-3.5" />
               </button>
             </div>
           </div>
