@@ -15,6 +15,7 @@ import {
   Sheet,
   Presentation,
   File as FileIcon,
+  Film,
 } from "lucide-react";
 import {
   MAX_IMAGES,
@@ -23,6 +24,8 @@ import {
   formatBytes,
   validateImageBatch,
   validateAttachmentBatch,
+  validateVideoBatch,
+  MAX_VIDEOS,
   type AttachmentItem,
 } from "@/lib/image-validation";
 
@@ -92,6 +95,7 @@ function Workspace() {
   const [input, setInput] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  const [videos, setVideos] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [title, setTitle] = useState("Untitled draft");
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -106,6 +110,7 @@ function Workspace() {
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileAttachInputRef = useRef<HTMLInputElement | null>(null);
+  const fileVideoInputRef = useRef<HTMLInputElement | null>(null);
   const carouselRef = useRef<HTMLDivElement | null>(null);
 
   async function handleFiles(files: FileList | null) {
@@ -173,6 +178,30 @@ function Workspace() {
     setAttachments((prev) => prev.filter((_, i) => i !== idx));
   }
 
+  async function handleVideoFiles(files: FileList | null) {
+    if (!files || !files.length) return;
+    const { accepted, errors } = validateVideoBatch(Array.from(files), videos.length);
+    if (errors.length) setError(errors.join(" "));
+    else setError(null);
+    if (!accepted.length) return;
+    const dataUrls = await Promise.all(
+      accepted.map(
+        (f) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(f);
+          }),
+      ),
+    );
+    setVideos((prev) => [...prev, ...dataUrls].slice(0, MAX_VIDEOS));
+  }
+
+  function removeVideo(idx: number) {
+    setVideos((prev) => prev.filter((_, i) => i !== idx));
+  }
+
   async function saveDraft(asPublished = false): Promise<string | null> {
     if (!user || !draft.trim()) return null;
     setSaving(true);
@@ -186,6 +215,7 @@ function Workspace() {
         title: title.trim() || "Untitled draft",
         images,
         attachments: attachments as unknown as Json,
+        videos: videos as unknown as Json,
         ...(asPublished ? { published: true } : {}),
       };
       if (draftId) {
@@ -248,7 +278,7 @@ function Workspace() {
     }, 1200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft, title, images, attachments, user, generating]);
+  }, [draft, title, images, attachments, videos, user, generating]);
 
   async function generate() {
     if (!input.trim() || generating) return;
