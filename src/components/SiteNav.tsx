@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { BrandMark } from "@/components/BrandMark";
 import { useEffect, useState } from "react";
@@ -12,13 +12,12 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, Settings as SettingsIcon, LayoutGrid, FileText, Menu, Moon, Sun } from "lucide-react";
+import { LogOut, Settings as SettingsIcon, LayoutGrid, FileText, Menu, Moon, Sun, BookOpen } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useTheme } from "@/lib/theme";
 
 export function SiteNav() {
   const { user, signOut } = useAuth();
-  const { pathname } = useLocation();
   const { theme, toggle: toggleTheme } = useTheme();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -62,26 +61,6 @@ export function SiteNav() {
           <span className="font-semibold tracking-tight text-[15px] text-ink">SocialSync</span>
         </Link>
 
-        {/* Center nav links */}
-        <div className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
-          <NavLink to="/methodology" current={pathname}>
-            Methodology
-          </NavLink>
-          <NavLink to="/pricing" current={pathname}>
-            Pricing
-          </NavLink>
-          {user && (
-            <NavLink to="/drafts" current={pathname}>
-              Posts
-            </NavLink>
-          )}
-          {user && (
-            <NavLink to="/app" current={pathname}>
-              Workspace
-            </NavLink>
-          )}
-        </div>
-
         <div className="flex items-center gap-2">
           {user ? (
             <DropdownMenu>
@@ -118,6 +97,12 @@ export function SiteNav() {
                   <Link to="/drafts" className="cursor-pointer">
                     <FileText className="h-4 w-4" />
                     Posts
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/methodology" className="cursor-pointer">
+                    <BookOpen className="h-4 w-4" />
+                    Methodology
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -177,22 +162,28 @@ export function SiteNav() {
               <Menu className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
-                <Link to="/methodology">Methodology</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
-                <Link to="/pricing">Pricing</Link>
-              </DropdownMenuItem>
+              {!user && (
+                <>
+                  <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
+                    <Link to="/methodology">Methodology</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
+                    <Link to="/pricing">Pricing</Link>
+                  </DropdownMenuItem>
+                </>
+              )}
               {user && (
                 <>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
                     <Link to="/app">Workspace</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
                     <Link to="/drafts">Posts</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
+                  <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
+                    <Link to="/methodology">Methodology</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
                     <Link to="/settings" className="cursor-pointer">
                       Settings
                     </Link>
@@ -240,26 +231,4 @@ export function SiteNav() {
   );
 }
 
-function NavLink({
-  to,
-  current,
-  children,
-}: {
-  to: "/methodology" | "/pricing" | "/settings" | "/app" | "/drafts";
-  current: string;
-  children: React.ReactNode;
-}) {
-  const active = current === to;
-  return (
-    <Link
-      to={to}
-      className={`text-[13px] px-3 h-8 inline-flex items-center rounded-md transition-colors ${
-        active
-          ? "text-ink bg-subtle"
-          : "text-muted-foreground hover:text-ink hover:bg-subtle"
-      }`}
-    >
-      {children}
-    </Link>
-  );
-}
+
