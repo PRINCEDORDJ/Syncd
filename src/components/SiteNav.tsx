@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { BrandMark } from "@/components/BrandMark";
 import { useEffect, useState } from "react";
@@ -18,7 +18,6 @@ import { useTheme } from "@/lib/theme";
 
 export function SiteNav() {
   const { user, signOut } = useAuth();
-  const { pathname } = useLocation();
   const { theme, toggle: toggleTheme } = useTheme();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -232,26 +231,4 @@ export function SiteNav() {
   );
 }
 
-function NavLink({
-  to,
-  current,
-  children,
-}: {
-  to: "/methodology" | "/pricing" | "/settings" | "/app" | "/drafts";
-  current: string;
-  children: React.ReactNode;
-}) {
-  const active = current === to;
-  return (
-    <Link
-      to={to}
-      className={`text-[13px] px-3 h-8 inline-flex items-center rounded-md transition-colors ${
-        active
-          ? "text-ink bg-subtle"
-          : "text-muted-foreground hover:text-ink hover:bg-subtle"
-      }`}
-    >
-      {children}
-    </Link>
-  );
-}
+
