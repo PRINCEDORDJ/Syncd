@@ -12,12 +12,14 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, Settings as SettingsIcon, LayoutGrid, FileText, Menu } from "lucide-react";
+import { LogOut, Settings as SettingsIcon, LayoutGrid, FileText, Menu, Moon, Sun } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useTheme } from "@/lib/theme";
 
 export function SiteNav() {
   const { user, signOut } = useAuth();
   const { pathname } = useLocation();
+  const { theme, toggle: toggleTheme } = useTheme();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -126,6 +128,17 @@ export function SiteNav() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    toggleTheme();
+                  }}
+                  className="cursor-pointer"
+                >
+                  {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                  {theme === "dark" ? "Light mode" : "Dark mode"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
                   onClick={(e) => {
                     e.preventDefault();
                     setConfirmSignOut(true);
@@ -185,6 +198,16 @@ export function SiteNav() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      toggleTheme();
+                    }}
+                    className="cursor-pointer"
+                  >
+                    {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    {theme === "dark" ? "Light mode" : "Dark mode"}
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={(e) => {
                       e.preventDefault();
