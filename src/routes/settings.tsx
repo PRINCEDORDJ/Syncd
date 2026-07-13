@@ -776,18 +776,19 @@ function SettingsPage() {
                     >
                       {openingPortal ? "Opening…" : "Manage billing"}
                     </button>
-                  ) : (
-                    <Link
-                      to="/pricing"
-                      className="h-9 px-3 inline-flex items-center justify-center rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 w-full sm:w-auto"
-                    >
-                      Upgrade →
-                    </Link>
-                  )}
+                  ) : null}
                 </div>
               </div>
             );
           })()}
+
+          <PlanTiers
+            currentPlan={isAdmin ? "teams" : (sub?.plan ?? "trial")}
+            isAdmin={isAdmin}
+            loadingPlan={checkoutPlan}
+            error={checkoutError}
+            onSelect={startCheckout}
+          />
         </Section>
           </TabsContent>
 
