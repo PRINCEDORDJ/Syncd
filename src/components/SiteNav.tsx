@@ -201,6 +201,16 @@ export function SiteNav() {
                   <DropdownMenuItem
                     onSelect={(e) => {
                       e.preventDefault();
+                      toggleTheme();
+                    }}
+                    className="cursor-pointer"
+                  >
+                    {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    {theme === "dark" ? "Light mode" : "Dark mode"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
                       setMobileOpen(false);
                       setConfirmSignOut(true);
                     }}
