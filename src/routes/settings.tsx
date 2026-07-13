@@ -969,3 +969,175 @@ function Field({
     </label>
   );
 }
+
+const TIERS: Array<{
+  id: "trial" | "studio" | "teams";
+  name: string;
+  price: string;
+  cadence: string;
+  description: string;
+  features: string[];
+  highlighted: boolean;
+}> = [
+  {
+    id: "trial",
+    name: "Trial",
+    price: "Free",
+    cadence: "for 7 days",
+    description: "Test the full workspace. No credit card required.",
+    features: ["5 generated drafts", "1 LinkedIn account", "Email support"],
+    highlighted: false,
+  },
+  {
+    id: "studio",
+    name: "Studio",
+    price: "$24",
+    cadence: "per month",
+    description: "Everything you need to ship a serious cadence.",
+    features: [
+      "Unlimited drafts",
+      "1 LinkedIn account",
+      "Full voice mapping",
+      "Tone dial & inline rewrites",
+      "Priority support",
+    ],
+    highlighted: true,
+  },
+  {
+    id: "teams",
+    name: "Teams",
+    price: "$60",
+    cadence: "per seat / mo",
+    description: "Shared voice profiles for execs and ghost-writers.",
+    features: [
+      "Everything in Studio",
+      "Up to 10 LinkedIn accounts",
+      "Shared brand guidelines",
+      "Approval workflow",
+    ],
+    highlighted: false,
+  },
+];
+
+function PlanTiers({
+  currentPlan,
+  isAdmin,
+  loadingPlan,
+  error,
+  onSelect,
+}: {
+  currentPlan: PlanTier;
+  isAdmin: boolean;
+  loadingPlan: "studio" | "teams" | null;
+  error: string | null;
+  onSelect: (plan: "studio" | "teams") => void;
+}) {
+  return (
+    <div className="mt-6">
+      <div className="mb-3 flex items-baseline justify-between">
+        <h3 className="text-[13px] font-semibold text-ink">Change plan</h3>
+        <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.12em]">
+          7-day refund · cancel anytime
+        </span>
+      </div>
+      {error && (
+        <div className="mb-3 px-3 py-2 rounded-md bg-destructive/5 border border-destructive/20 text-destructive text-[12px]">
+          {error}
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {TIERS.map((t) => {
+          const isCurrent = currentPlan === t.id;
+          const adminOwned = isAdmin && t.id === "teams";
+          const active = isCurrent || adminOwned;
+          return (
+            <div
+              key={t.id}
+              className={`relative flex flex-col gap-4 p-4 rounded-lg border ${
+                t.highlighted
+                  ? "bg-ink text-surface border-ink"
+                  : "bg-card text-ink border-border"
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[14px] font-semibold">{t.name}</h4>
+                  {active && (
+                    <span
+                      className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                        t.highlighted
+                          ? "bg-surface/10 border-surface/20 text-surface"
+                          : "bg-subtle border-border text-muted-foreground"
+                      }`}
+                    >
+                      {adminOwned ? "Admin" : "Current"}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2 flex items-baseline gap-1.5">
+                  <span className="text-2xl font-semibold tracking-[-0.02em] tabular-nums">
+                    {t.price}
+                  </span>
+                  <span
+                    className={`text-[12px] ${
+                      t.highlighted ? "text-surface/60" : "text-muted-foreground"
+                    }`}
+                  >
+                    {t.cadence}
+                  </span>
+                </div>
+                <p
+                  className={`mt-2 text-[12px] ${
+                    t.highlighted ? "text-surface/70" : "text-muted-foreground"
+                  }`}
+                >
+                  {t.description}
+                </p>
+              </div>
+              <ul className="space-y-1.5 text-[12px]">
+                {t.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2">
+                    <span
+                      className={`mt-1.5 size-1 rounded-full shrink-0 ${
+                        t.highlighted ? "bg-surface/60" : "bg-ink/40"
+                      }`}
+                    />
+                    <span className={t.highlighted ? "text-surface/85" : "text-ink/80"}>{f}</span>
+                  </li>
+                ))}
+              </ul>
+              {t.id === "trial" ? (
+                <div
+                  className={`mt-auto text-center text-[12px] ${
+                    t.highlighted ? "text-surface/60" : "text-muted-foreground"
+                  }`}
+                >
+                  {active ? "You're on the trial" : "Included by default"}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onSelect(t.id as "studio" | "teams")}
+                  disabled={loadingPlan !== null || active}
+                  className={`mt-auto h-9 px-3 rounded-md text-[13px] font-medium transition-colors disabled:opacity-50 ${
+                    t.highlighted
+                      ? "bg-surface text-ink hover:bg-surface/90"
+                      : "bg-ink text-surface hover:bg-ink/90"
+                  }`}
+                >
+                  {loadingPlan === t.id
+                    ? "Redirecting…"
+                    : active
+                      ? adminOwned
+                        ? "Included"
+                        : "Current plan"
+                      : "Choose plan"}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
