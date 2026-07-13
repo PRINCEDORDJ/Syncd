@@ -110,6 +110,8 @@ function SettingsPage() {
   // LinkedIn flow
   const [connectingLinkedIn, setConnectingLinkedIn] = useState(false);
   const [disconnectingLinkedIn, setDisconnectingLinkedIn] = useState(false);
+  const [checkoutPlan, setCheckoutPlan] = useState<"studio" | "teams" | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [linkedInBanner, setLinkedInBanner] = useState<{
     type: "success" | "error";
     text: string;
@@ -312,6 +314,30 @@ function SettingsPage() {
     if (!resp.ok || !data.url) {
       setBillingMsg(data.error ?? "Failed to open billing portal.");
       setOpeningPortal(false);
+      return;
+    }
+    window.location.href = data.url;
+  }
+
+  async function startCheckout(plan: "studio" | "teams") {
+    setCheckoutError(null);
+    setCheckoutPlan(plan);
+    const { data: sess } = await supabase.auth.getSession();
+    const token = sess.session?.access_token;
+    if (!token) {
+      setCheckoutError("Session expired — please sign in again.");
+      setCheckoutPlan(null);
+      return;
+    }
+    const resp = await fetch("/api/polar/checkout", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ plan }),
+    });
+    const data = (await resp.json().catch(() => ({}))) as { url?: string; error?: string };
+    if (!resp.ok || !data.url) {
+      setCheckoutError(data.error ?? "Failed to start checkout.");
+      setCheckoutPlan(null);
       return;
     }
     window.location.href = data.url;
