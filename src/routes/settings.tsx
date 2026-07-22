@@ -1000,9 +1000,6 @@ function SettingsPage() {
           </TabsContent>
 
           <TabsContent value="account" className="mt-0">
-            {/* placeholder - real content below */}
-          </TabsContent>
-
           <TabsContent value="team" className="mt-0">
             <Section
               title="Team"
@@ -1078,7 +1075,7 @@ function SettingsPage() {
             </Section>
           </TabsContent>
 
-          <TabsContent value="account-real" className="mt-0">
+          <TabsContent value="account" className="mt-0">
         <Section title="Account" subtitle="Email, password, and session.">
           <Field label="Email">
             <input
