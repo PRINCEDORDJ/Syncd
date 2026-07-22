@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { SiteNav } from "@/components/SiteNav";
-import { PLAN_LABELS, PLAN_LIMITS, type PlanTier } from "@/lib/plans";
+import {
+  PLAN_LABELS,
+  PLAN_LIMITS,
+  TOPUP_PACKS,
+  type CheckoutPlan,
+  type PlanTier,
+} from "@/lib/plans";
 import { uploadAvatar as uploadAvatarFn, removeAvatar as removeAvatarFn } from "@/lib/avatar-upload";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -112,6 +118,22 @@ function SettingsPage() {
   const [disconnectingLinkedIn, setDisconnectingLinkedIn] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<"studio" | "teams" | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [checkoutBusy, setCheckoutBusy] = useState<CheckoutPlan | null>(null);
+  const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
+  const [credits, setCredits] = useState<{
+    subscription: number;
+    topup: number;
+    dailyUsed: number;
+  } | null>(null);
+
+  // Team state
+  const [team, setTeam] = useState<{ id: string; name: string; owner_id: string } | null>(null);
+  const [teamMembers, setTeamMembers] = useState<
+    Array<{ id: string; email: string; role: string; accepted_at: string | null; user_id: string | null }>
+  >([]);
+  const [teamMsg, setTeamMsg] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
   const [linkedInBanner, setLinkedInBanner] = useState<{
     type: "success" | "error";
     text: string;
@@ -181,6 +203,110 @@ function SettingsPage() {
       cancelled = true;
     };
   }, [user]);
+
+  // Load credits
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await supabase
+        .from("user_credits")
+        .select("subscription_credits, topup_credits, daily_credits_used")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      setCredits({
+        subscription: data?.subscription_credits ?? 0,
+        topup: data?.topup_credits ?? 0,
+        dailyUsed: data?.daily_credits_used ?? 0,
+      });
+    };
+    void load();
+    const channel = supabase
+      .channel(`credits-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_credits", filter: `user_id=eq.${user.id}` },
+        () => void load(),
+      )
+      .subscribe();
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Load team + members
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { data: ownedTeams } = await supabase
+        .from("teams")
+        .select("id, name, owner_id")
+        .eq("owner_id", user.id)
+        .limit(1);
+      if (cancelled) return;
+      const t = ownedTeams?.[0] ?? null;
+      setTeam(t);
+      if (t) {
+        const { data: mems } = await supabase
+          .from("team_members")
+          .select("id, email, role, accepted_at, user_id")
+          .eq("team_id", t.id);
+        if (!cancelled) setTeamMembers(mems ?? []);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  async function createTeam() {
+    if (!user) return;
+    setTeamMsg(null);
+    const { data, error } = await supabase
+      .from("teams")
+      .insert({ owner_id: user.id, name: "My team" })
+      .select("id, name, owner_id")
+      .single();
+    if (error) {
+      setTeamMsg(error.message);
+      return;
+    }
+    setTeam(data);
+    setTeamMembers([]);
+  }
+
+  async function inviteMember() {
+    if (!user || !team) return;
+    const email = inviteEmail.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setTeamMsg("Enter a valid email address.");
+      return;
+    }
+    setInviting(true);
+    setTeamMsg(null);
+    const { data, error } = await supabase
+      .from("team_members")
+      .insert({ team_id: team.id, email, role: "editor" })
+      .select("id, email, role, accepted_at, user_id")
+      .single();
+    setInviting(false);
+    if (error) {
+      setTeamMsg(error.message);
+      return;
+    }
+    setTeamMembers((prev) => [...prev, data]);
+    setInviteEmail("");
+    setTeamMsg(`Invited ${email}. They'll join automatically when they sign in.`);
+  }
+
+  async function removeMember(id: string) {
+    if (!team) return;
+    await supabase.from("team_members").delete().eq("id", id);
+    setTeamMembers((prev) => prev.filter((m) => m.id !== id));
+  }
 
   // Live-refresh subscription on focus + realtime updates so the plan
   // panel reflects the latest billing state without a manual reload.
@@ -322,22 +448,56 @@ function SettingsPage() {
   async function startCheckout(plan: "studio" | "teams") {
     setCheckoutError(null);
     setCheckoutPlan(plan);
+    const key = (plan === "studio"
+      ? billingInterval === "year"
+        ? "studio_annual"
+        : "studio_monthly"
+      : billingInterval === "year"
+        ? "teams_annual"
+        : "teams_monthly") as CheckoutPlan;
+    setCheckoutBusy(key);
     const { data: sess } = await supabase.auth.getSession();
     const token = sess.session?.access_token;
     if (!token) {
       setCheckoutError("Session expired — please sign in again.");
       setCheckoutPlan(null);
+      setCheckoutBusy(null);
       return;
     }
     const resp = await fetch("/api/polar/checkout", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ plan: key }),
     });
     const data = (await resp.json().catch(() => ({}))) as { url?: string; error?: string };
     if (!resp.ok || !data.url) {
       setCheckoutError(data.error ?? "Failed to start checkout.");
       setCheckoutPlan(null);
+      setCheckoutBusy(null);
+      return;
+    }
+    window.location.href = data.url;
+  }
+
+  async function buyTopup(key: CheckoutPlan) {
+    setCheckoutError(null);
+    setCheckoutBusy(key);
+    const { data: sess } = await supabase.auth.getSession();
+    const token = sess.session?.access_token;
+    if (!token) {
+      setCheckoutError("Session expired — please sign in again.");
+      setCheckoutBusy(null);
+      return;
+    }
+    const resp = await fetch("/api/polar/checkout", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ plan: key }),
+    });
+    const data = (await resp.json().catch(() => ({}))) as { url?: string; error?: string };
+    if (!resp.ok || !data.url) {
+      setCheckoutError(data.error ?? "Failed to start checkout.");
+      setCheckoutBusy(null);
       return;
     }
     window.location.href = data.url;
