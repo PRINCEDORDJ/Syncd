@@ -657,6 +657,7 @@ function SettingsPage() {
             <TabsTrigger value="profile" className="text-[13px]">Profile</TabsTrigger>
             <TabsTrigger value="linkedin" className="text-[13px]">LinkedIn</TabsTrigger>
             <TabsTrigger value="billing" className="text-[13px]">Billing</TabsTrigger>
+            <TabsTrigger value="team" className="text-[13px]">Team</TabsTrigger>
             <TabsTrigger value="account" className="text-[13px]">Account</TabsTrigger>
             <TabsTrigger value="danger" className="text-[13px] data-[state=active]:text-destructive">Danger</TabsTrigger>
           </TabsList>
@@ -999,6 +1000,85 @@ function SettingsPage() {
           </TabsContent>
 
           <TabsContent value="account" className="mt-0">
+            {/* placeholder - real content below */}
+          </TabsContent>
+
+          <TabsContent value="team" className="mt-0">
+            <Section
+              title="Team"
+              subtitle="Invite up to 5 teammates to share this workspace's drafts."
+            >
+              {!team ? (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border border-border rounded-md bg-subtle/40">
+                  <div>
+                    <div className="text-[14px] font-medium text-ink">No team yet</div>
+                    <div className="text-[12px] text-muted-foreground mt-0.5">
+                      Create a team to invite others. Requires the Teams plan for full access.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={createTeam}
+                    className="h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90"
+                  >
+                    Create team
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="teammate@company.com"
+                      className="h-10 flex-1 px-3 rounded-md border border-border bg-card text-[14px] focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+                    />
+                    <button
+                      type="button"
+                      onClick={inviteMember}
+                      disabled={inviting || !inviteEmail.trim()}
+                      className="h-10 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-50"
+                    >
+                      {inviting ? "Inviting…" : "Invite"}
+                    </button>
+                  </div>
+                  {teamMsg && (
+                    <div className="text-[12px] text-muted-foreground">{teamMsg}</div>
+                  )}
+                  <ul className="divide-y divide-border border border-border rounded-md bg-card">
+                    <li className="px-3 py-2 flex items-center justify-between text-[13px]">
+                      <div>
+                        <span className="font-medium text-ink">{user?.email}</span>
+                        <span className="ml-2 text-[11px] font-mono uppercase text-muted-foreground">
+                          Owner
+                        </span>
+                      </div>
+                    </li>
+                    {teamMembers.map((m) => (
+                      <li key={m.id} className="px-3 py-2 flex items-center justify-between text-[13px]">
+                        <div className="min-w-0">
+                          <span className="text-ink truncate">{m.email}</span>
+                          <span className="ml-2 text-[11px] font-mono uppercase text-muted-foreground">
+                            {m.accepted_at ? m.role : "invited"}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeMember(m.id)}
+                          className="text-[12px] text-destructive hover:underline"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </Section>
+          </TabsContent>
+
+          <TabsContent value="account-real" className="mt-0">
         <Section title="Account" subtitle="Email, password, and session.">
           <Field label="Email">
             <input
