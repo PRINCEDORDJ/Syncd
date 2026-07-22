@@ -1179,32 +1179,44 @@ function Field({
 const TIERS: Array<{
   id: "trial" | "studio" | "teams";
   name: string;
-  price: string;
-  cadence: string;
+  priceMonthly: string;
+  priceAnnual: string;
+  cadenceMonthly: string;
+  cadenceAnnual: string;
   description: string;
   features: string[];
   highlighted: boolean;
 }> = [
   {
     id: "trial",
-    name: "Trial",
-    price: "Free",
-    cadence: "for 7 days",
-    description: "Test the full workspace. No credit card required.",
-    features: ["5 generated drafts", "1 LinkedIn account", "Email support"],
+    name: "Free",
+    priceMonthly: "$0",
+    priceAnnual: "$0",
+    cadenceMonthly: "forever",
+    cadenceAnnual: "forever",
+    description: "Get a feel for the workspace. No credit card.",
+    features: [
+      "30 credits per month",
+      "5 generations per day",
+      "1 LinkedIn account",
+      "Email support",
+    ],
     highlighted: false,
   },
   {
     id: "studio",
     name: "Studio",
-    price: "$24",
-    cadence: "per month",
-    description: "Everything you need to ship a serious cadence.",
+    priceMonthly: "$9",
+    priceAnnual: "$90",
+    cadenceMonthly: "per month",
+    cadenceAnnual: "per year",
+    description: "For solo creators shipping a real cadence.",
     features: [
-      "Unlimited drafts",
+      "100 credits per month",
       "1 LinkedIn account",
+      "Post scheduling",
+      "Credit top-ups when you need more",
       "Full voice mapping",
-      "Tone dial & inline rewrites",
       "Priority support",
     ],
     highlighted: true,
@@ -1212,14 +1224,17 @@ const TIERS: Array<{
   {
     id: "teams",
     name: "Teams",
-    price: "$60",
-    cadence: "per seat / mo",
-    description: "Shared voice profiles for execs and ghost-writers.",
+    priceMonthly: "$29",
+    priceAnnual: "$290",
+    cadenceMonthly: "per month",
+    cadenceAnnual: "per year",
+    description: "Shared workspace for execs and ghost-writers.",
     features: [
       "Everything in Studio",
+      "350 credits per month",
+      "Up to 5 team seats",
       "Up to 10 LinkedIn accounts",
-      "Shared brand guidelines",
-      "Approval workflow",
+      "Shared drafts & voice profiles",
     ],
     highlighted: false,
   },
@@ -1231,20 +1246,35 @@ function PlanTiers({
   loadingPlan,
   error,
   onSelect,
+  billingInterval,
+  onIntervalChange,
 }: {
   currentPlan: PlanTier;
   isAdmin: boolean;
   loadingPlan: "studio" | "teams" | null;
   error: string | null;
   onSelect: (plan: "studio" | "teams") => void;
+  billingInterval: "month" | "year";
+  onIntervalChange: (i: "month" | "year") => void;
 }) {
   return (
     <div className="mt-6">
       <div className="mb-3 flex items-baseline justify-between">
         <h3 className="text-[13px] font-semibold text-ink">Change plan</h3>
-        <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.12em]">
-          7-day refund · cancel anytime
-        </span>
+        <div className="inline-flex items-center gap-0 rounded-md border border-border p-0.5 bg-card">
+          {(["month", "year"] as const).map((i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onIntervalChange(i)}
+              className={`h-6 px-2 rounded text-[11px] font-medium transition-colors ${
+                billingInterval === i ? "bg-ink text-surface" : "text-muted-foreground"
+              }`}
+            >
+              {i === "month" ? "Monthly" : "Yearly · save 17%"}
+            </button>
+          ))}
+        </div>
       </div>
       {error && (
         <div className="mb-3 px-3 py-2 rounded-md bg-destructive/5 border border-destructive/20 text-destructive text-[12px]">
@@ -1256,6 +1286,8 @@ function PlanTiers({
           const isCurrent = currentPlan === t.id;
           const adminOwned = isAdmin && t.id === "teams";
           const active = isCurrent || adminOwned;
+          const price = billingInterval === "year" ? t.priceAnnual : t.priceMonthly;
+          const cadence = billingInterval === "year" ? t.cadenceAnnual : t.cadenceMonthly;
           return (
             <div
               key={t.id}
@@ -1282,14 +1314,14 @@ function PlanTiers({
                 </div>
                 <div className="mt-2 flex items-baseline gap-1.5">
                   <span className="text-2xl font-semibold tracking-[-0.02em] tabular-nums">
-                    {t.price}
+                    {price}
                   </span>
                   <span
                     className={`text-[12px] ${
                       t.highlighted ? "text-surface/60" : "text-muted-foreground"
                     }`}
                   >
-                    {t.cadence}
+                    {cadence}
                   </span>
                 </div>
                 <p
