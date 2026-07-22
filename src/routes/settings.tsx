@@ -999,7 +999,6 @@ function SettingsPage() {
         </Section>
           </TabsContent>
 
-          <TabsContent value="account" className="mt-0">
           <TabsContent value="team" className="mt-0">
             <Section
               title="Team"
