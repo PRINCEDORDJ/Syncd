@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      credit_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       drafts: {
         Row: {
           attachments: Json
@@ -24,6 +51,10 @@ export type Database = {
           images: string[]
           published: boolean
           raw_input: string
+          schedule_error: string | null
+          schedule_status: string
+          scheduled_at: string | null
+          team_id: string | null
           title: string
           tone: string
           updated_at: string
@@ -39,6 +70,10 @@ export type Database = {
           images?: string[]
           published?: boolean
           raw_input?: string
+          schedule_error?: string | null
+          schedule_status?: string
+          scheduled_at?: string | null
+          team_id?: string | null
           title?: string
           tone?: string
           updated_at?: string
@@ -54,13 +89,25 @@ export type Database = {
           images?: string[]
           published?: boolean
           raw_input?: string
+          schedule_error?: string | null
+          schedule_status?: string
+          scheduled_at?: string | null
+          team_id?: string | null
           title?: string
           tone?: string
           updated_at?: string
           user_id?: string
           videos?: Json
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "drafts_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       linkedin_connections: {
         Row: {
@@ -200,6 +247,98 @@ export type Database = {
         }
         Relationships: []
       }
+      team_members: {
+        Row: {
+          accepted_at: string | null
+          email: string
+          id: string
+          invited_at: string
+          role: Database["public"]["Enums"]["team_role"]
+          team_id: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          email: string
+          id?: string
+          invited_at?: string
+          role?: Database["public"]["Enums"]["team_role"]
+          team_id: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          email?: string
+          id?: string
+          invited_at?: string
+          role?: Database["public"]["Enums"]["team_role"]
+          team_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_credits: {
+        Row: {
+          daily_credits_used: number
+          last_daily_reset: string
+          last_monthly_reset: string
+          subscription_credits: number
+          topup_credits: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          daily_credits_used?: number
+          last_daily_reset?: string
+          last_monthly_reset?: string
+          subscription_credits?: number
+          topup_credits?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          daily_credits_used?: number
+          last_daily_reset?: string
+          last_monthly_reset?: string
+          subscription_credits?: number
+          topup_credits?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -227,15 +366,35 @@ export type Database = {
     }
     Functions: {
       cleanup_linkedin_oauth_states: { Args: never; Returns: undefined }
+      consume_credit: {
+        Args: { _is_free: boolean; _user_id: string }
+        Returns: Json
+      }
+      get_team_role: {
+        Args: { _team_id: string; _user_id: string }
+        Returns: Database["public"]["Enums"]["team_role"]
+      }
       get_user_plan: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["plan_tier"]
+      }
+      grant_subscription_credits: {
+        Args: { _amount: number; _reason: string; _user_id: string }
+        Returns: undefined
+      }
+      grant_topup_credits: {
+        Args: { _amount: number; _user_id: string }
+        Returns: undefined
       }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_team_member: {
+        Args: { _team_id: string; _user_id: string }
         Returns: boolean
       }
     }
@@ -248,6 +407,7 @@ export type Database = {
         | "past_due"
         | "expired"
         | "trialing"
+      team_role: "owner" | "editor" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -384,6 +544,7 @@ export const Constants = {
         "expired",
         "trialing",
       ],
+      team_role: ["owner", "editor", "viewer"],
     },
   },
 } as const
