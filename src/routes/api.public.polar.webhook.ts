@@ -2,12 +2,31 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Webhook } from "standardwebhooks";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { PlanTier } from "@/lib/plans";
+import { PLAN_LIMITS } from "@/lib/plans";
 
 function planFromProductId(productId: string | undefined | null): PlanTier {
   if (!productId) return "trial";
-  if (productId === process.env.POLAR_TEAMS_PRODUCT_ID) return "teams";
-  if (productId === process.env.POLAR_STUDIO_PRODUCT_ID) return "studio";
+  if (
+    productId === process.env.POLAR_TEAMS_MONTHLY_ID ||
+    productId === process.env.POLAR_TEAMS_ANNUAL_ID ||
+    productId === process.env.POLAR_TEAMS_PRODUCT_ID
+  )
+    return "teams";
+  if (
+    productId === process.env.POLAR_STUDIO_MONTHLY_ID ||
+    productId === process.env.POLAR_STUDIO_ANNUAL_ID ||
+    productId === process.env.POLAR_STUDIO_PRODUCT_ID
+  )
+    return "studio";
   return "trial";
+}
+
+function topupCreditsFromProductId(productId: string | null | undefined): number {
+  if (!productId) return 0;
+  if (productId === process.env.POLAR_TOPUP_50_ID) return 50;
+  if (productId === process.env.POLAR_TOPUP_150_ID) return 150;
+  if (productId === process.env.POLAR_TOPUP_500_ID) return 500;
+  return 0;
 }
 
 type SubStatus = "active" | "canceled" | "past_due" | "expired" | "trialing";
@@ -127,6 +146,32 @@ async function handleEvent(event: {
         },
         { onConflict: "user_id" },
       );
+
+    // Grant/refresh monthly credits when subscription becomes active
+    if ((status === "active" || status === "trialing") && plan !== "trial") {
+      const amount = PLAN_LIMITS[plan].monthlyCredits;
+      await supabaseAdmin.rpc("grant_subscription_credits", {
+        _user_id: userId,
+        _amount: amount,
+        _reason: `${plan} plan (${type})`,
+      });
+    }
+    return;
+  }
+
+  if (type === "order.paid" || type === "order.created") {
+    // One-time top-up purchase (subscriptions also emit order.paid — skip those)
+    const productId =
+      (data.product_id as string | undefined) ??
+      (data.product as Record<string, unknown> | undefined)?.id?.toString() ??
+      null;
+    const credits = topupCreditsFromProductId(productId);
+    if (credits > 0) {
+      await supabaseAdmin.rpc("grant_topup_credits", {
+        _user_id: userId,
+        _amount: credits,
+      });
+    }
     return;
   }
 
