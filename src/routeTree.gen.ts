@@ -21,6 +21,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiGenerateRouteImport } from './routes/api.generate'
+import { Route as ApiPublicSchedulerRouteImport } from './routes/api.public.scheduler'
 import { Route as ApiPolarPortalRouteImport } from './routes/api.polar.portal'
 import { Route as ApiPolarCheckoutRouteImport } from './routes/api.polar.checkout'
 import { Route as ApiLinkedinStartRouteImport } from './routes/api.linkedin.start'
@@ -89,6 +90,11 @@ const ApiGenerateRoute = ApiGenerateRouteImport.update({
   path: '/api/generate',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSchedulerRoute = ApiPublicSchedulerRouteImport.update({
+  id: '/api/public/scheduler',
+  path: '/api/public/scheduler',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPolarPortalRoute = ApiPolarPortalRouteImport.update({
   id: '/api/polar/portal',
   path: '/api/polar/portal',
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/api/linkedin/start': typeof ApiLinkedinStartRoute
   '/api/polar/checkout': typeof ApiPolarCheckoutRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
+  '/api/public/scheduler': typeof ApiPublicSchedulerRoute
   '/api/public/polar/webhook': typeof ApiPublicPolarWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/api/linkedin/start': typeof ApiLinkedinStartRoute
   '/api/polar/checkout': typeof ApiPolarCheckoutRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
+  '/api/public/scheduler': typeof ApiPublicSchedulerRoute
   '/api/public/polar/webhook': typeof ApiPublicPolarWebhookRoute
 }
 export interface FileRoutesById {
@@ -187,6 +195,7 @@ export interface FileRoutesById {
   '/api/linkedin/start': typeof ApiLinkedinStartRoute
   '/api/polar/checkout': typeof ApiPolarCheckoutRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
+  '/api/public/scheduler': typeof ApiPublicSchedulerRoute
   '/api/public/polar/webhook': typeof ApiPublicPolarWebhookRoute
 }
 export interface FileRouteTypes {
@@ -210,6 +219,7 @@ export interface FileRouteTypes {
     | '/api/linkedin/start'
     | '/api/polar/checkout'
     | '/api/polar/portal'
+    | '/api/public/scheduler'
     | '/api/public/polar/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
     | '/api/linkedin/start'
     | '/api/polar/checkout'
     | '/api/polar/portal'
+    | '/api/public/scheduler'
     | '/api/public/polar/webhook'
   id:
     | '__root__'
@@ -252,6 +263,7 @@ export interface FileRouteTypes {
     | '/api/linkedin/start'
     | '/api/polar/checkout'
     | '/api/polar/portal'
+    | '/api/public/scheduler'
     | '/api/public/polar/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -274,6 +286,7 @@ export interface RootRouteChildren {
   ApiLinkedinStartRoute: typeof ApiLinkedinStartRoute
   ApiPolarCheckoutRoute: typeof ApiPolarCheckoutRoute
   ApiPolarPortalRoute: typeof ApiPolarPortalRoute
+  ApiPublicSchedulerRoute: typeof ApiPublicSchedulerRoute
   ApiPublicPolarWebhookRoute: typeof ApiPublicPolarWebhookRoute
 }
 
@@ -363,6 +376,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGenerateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/scheduler': {
+      id: '/api/public/scheduler'
+      path: '/api/public/scheduler'
+      fullPath: '/api/public/scheduler'
+      preLoaderRoute: typeof ApiPublicSchedulerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/polar/portal': {
       id: '/api/polar/portal'
       path: '/api/polar/portal'
@@ -434,6 +454,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLinkedinStartRoute: ApiLinkedinStartRoute,
   ApiPolarCheckoutRoute: ApiPolarCheckoutRoute,
   ApiPolarPortalRoute: ApiPolarPortalRoute,
+  ApiPublicSchedulerRoute: ApiPublicSchedulerRoute,
   ApiPublicPolarWebhookRoute: ApiPublicPolarWebhookRoute,
 }
 export const routeTree = rootRouteImport
