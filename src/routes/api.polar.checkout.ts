@@ -39,16 +39,24 @@ export const Route = createFileRoute("/api/polar/checkout")({
         }
 
         const plan = body.plan;
-        let productId: string | undefined;
-        if (plan === "studio") {
-          productId = process.env.POLAR_STUDIO_PRODUCT_ID;
-        } else if (plan === "teams") {
-          productId = process.env.POLAR_TEAMS_PRODUCT_ID;
-        } else {
+        const productMap: Record<string, string | undefined> = {
+          studio_monthly: process.env.POLAR_STUDIO_MONTHLY_ID,
+          studio_annual: process.env.POLAR_STUDIO_ANNUAL_ID,
+          teams_monthly: process.env.POLAR_TEAMS_MONTHLY_ID,
+          teams_annual: process.env.POLAR_TEAMS_ANNUAL_ID,
+          topup_50: process.env.POLAR_TOPUP_50_ID,
+          topup_150: process.env.POLAR_TOPUP_150_ID,
+          topup_500: process.env.POLAR_TOPUP_500_ID,
+          // legacy aliases
+          studio: process.env.POLAR_STUDIO_MONTHLY_ID ?? process.env.POLAR_STUDIO_PRODUCT_ID,
+          teams: process.env.POLAR_TEAMS_MONTHLY_ID ?? process.env.POLAR_TEAMS_PRODUCT_ID,
+        };
+        if (typeof plan !== "string" || !(plan in productMap)) {
           return json({ error: "Invalid plan." }, 400);
         }
+        const productId = productMap[plan];
         if (!productId) {
-          return json({ error: `Product for plan "${plan}" is not configured.` }, 500);
+          return json({ error: `Product for "${plan}" is not configured.` }, 500);
         }
 
         const url = new URL(request.url);

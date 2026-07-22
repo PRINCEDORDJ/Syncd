@@ -57,6 +57,6 @@ export const getMySubscription = createServerFn({ method: "GET" })
       cancel_at_period_end: sub?.cancel_at_period_end ?? false,
       has_billing_account: Boolean(sub?.polar_customer_id),
       drafts_used: count ?? 0,
-      drafts_limit: PLAN_LIMITS[plan].maxDrafts,
+      drafts_limit: PLAN_LIMITS[plan].monthlyCredits,
     };
   });

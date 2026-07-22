@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { SiteNav } from "@/components/SiteNav";
-import { PLAN_LABELS, PLAN_LIMITS, type PlanTier } from "@/lib/plans";
+import {
+  PLAN_LABELS,
+  PLAN_LIMITS,
+  TOPUP_PACKS,
+  type CheckoutPlan,
+  type PlanTier,
+} from "@/lib/plans";
 import { uploadAvatar as uploadAvatarFn, removeAvatar as removeAvatarFn } from "@/lib/avatar-upload";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -112,6 +118,22 @@ function SettingsPage() {
   const [disconnectingLinkedIn, setDisconnectingLinkedIn] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<"studio" | "teams" | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [checkoutBusy, setCheckoutBusy] = useState<CheckoutPlan | null>(null);
+  const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
+  const [credits, setCredits] = useState<{
+    subscription: number;
+    topup: number;
+    dailyUsed: number;
+  } | null>(null);
+
+  // Team state
+  const [team, setTeam] = useState<{ id: string; name: string; owner_id: string } | null>(null);
+  const [teamMembers, setTeamMembers] = useState<
+    Array<{ id: string; email: string; role: string; accepted_at: string | null; user_id: string | null }>
+  >([]);
+  const [teamMsg, setTeamMsg] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
   const [linkedInBanner, setLinkedInBanner] = useState<{
     type: "success" | "error";
     text: string;
@@ -181,6 +203,110 @@ function SettingsPage() {
       cancelled = true;
     };
   }, [user]);
+
+  // Load credits
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await supabase
+        .from("user_credits")
+        .select("subscription_credits, topup_credits, daily_credits_used")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      setCredits({
+        subscription: data?.subscription_credits ?? 0,
+        topup: data?.topup_credits ?? 0,
+        dailyUsed: data?.daily_credits_used ?? 0,
+      });
+    };
+    void load();
+    const channel = supabase
+      .channel(`credits-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_credits", filter: `user_id=eq.${user.id}` },
+        () => void load(),
+      )
+      .subscribe();
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Load team + members
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { data: ownedTeams } = await supabase
+        .from("teams")
+        .select("id, name, owner_id")
+        .eq("owner_id", user.id)
+        .limit(1);
+      if (cancelled) return;
+      const t = ownedTeams?.[0] ?? null;
+      setTeam(t);
+      if (t) {
+        const { data: mems } = await supabase
+          .from("team_members")
+          .select("id, email, role, accepted_at, user_id")
+          .eq("team_id", t.id);
+        if (!cancelled) setTeamMembers(mems ?? []);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  async function createTeam() {
+    if (!user) return;
+    setTeamMsg(null);
+    const { data, error } = await supabase
+      .from("teams")
+      .insert({ owner_id: user.id, name: "My team" })
+      .select("id, name, owner_id")
+      .single();
+    if (error) {
+      setTeamMsg(error.message);
+      return;
+    }
+    setTeam(data);
+    setTeamMembers([]);
+  }
+
+  async function inviteMember() {
+    if (!user || !team) return;
+    const email = inviteEmail.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setTeamMsg("Enter a valid email address.");
+      return;
+    }
+    setInviting(true);
+    setTeamMsg(null);
+    const { data, error } = await supabase
+      .from("team_members")
+      .insert({ team_id: team.id, email, role: "editor" })
+      .select("id, email, role, accepted_at, user_id")
+      .single();
+    setInviting(false);
+    if (error) {
+      setTeamMsg(error.message);
+      return;
+    }
+    setTeamMembers((prev) => [...prev, data]);
+    setInviteEmail("");
+    setTeamMsg(`Invited ${email}. They'll join automatically when they sign in.`);
+  }
+
+  async function removeMember(id: string) {
+    if (!team) return;
+    await supabase.from("team_members").delete().eq("id", id);
+    setTeamMembers((prev) => prev.filter((m) => m.id !== id));
+  }
 
   // Live-refresh subscription on focus + realtime updates so the plan
   // panel reflects the latest billing state without a manual reload.
@@ -322,22 +448,56 @@ function SettingsPage() {
   async function startCheckout(plan: "studio" | "teams") {
     setCheckoutError(null);
     setCheckoutPlan(plan);
+    const key = (plan === "studio"
+      ? billingInterval === "year"
+        ? "studio_annual"
+        : "studio_monthly"
+      : billingInterval === "year"
+        ? "teams_annual"
+        : "teams_monthly") as CheckoutPlan;
+    setCheckoutBusy(key);
     const { data: sess } = await supabase.auth.getSession();
     const token = sess.session?.access_token;
     if (!token) {
       setCheckoutError("Session expired — please sign in again.");
       setCheckoutPlan(null);
+      setCheckoutBusy(null);
       return;
     }
     const resp = await fetch("/api/polar/checkout", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ plan: key }),
     });
     const data = (await resp.json().catch(() => ({}))) as { url?: string; error?: string };
     if (!resp.ok || !data.url) {
       setCheckoutError(data.error ?? "Failed to start checkout.");
       setCheckoutPlan(null);
+      setCheckoutBusy(null);
+      return;
+    }
+    window.location.href = data.url;
+  }
+
+  async function buyTopup(key: CheckoutPlan) {
+    setCheckoutError(null);
+    setCheckoutBusy(key);
+    const { data: sess } = await supabase.auth.getSession();
+    const token = sess.session?.access_token;
+    if (!token) {
+      setCheckoutError("Session expired — please sign in again.");
+      setCheckoutBusy(null);
+      return;
+    }
+    const resp = await fetch("/api/polar/checkout", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ plan: key }),
+    });
+    const data = (await resp.json().catch(() => ({}))) as { url?: string; error?: string };
+    if (!resp.ok || !data.url) {
+      setCheckoutError(data.error ?? "Failed to start checkout.");
+      setCheckoutBusy(null);
       return;
     }
     window.location.href = data.url;
@@ -497,6 +657,7 @@ function SettingsPage() {
             <TabsTrigger value="profile" className="text-[13px]">Profile</TabsTrigger>
             <TabsTrigger value="linkedin" className="text-[13px]">LinkedIn</TabsTrigger>
             <TabsTrigger value="billing" className="text-[13px]">Billing</TabsTrigger>
+            <TabsTrigger value="team" className="text-[13px]">Team</TabsTrigger>
             <TabsTrigger value="account" className="text-[13px]">Account</TabsTrigger>
             <TabsTrigger value="danger" className="text-[13px] data-[state=active]:text-destructive">Danger</TabsTrigger>
           </TabsList>
@@ -736,9 +897,14 @@ function SettingsPage() {
           {(() => {
             const effectivePlan: PlanTier = isAdmin ? "teams" : (sub?.plan ?? "trial");
             const effectiveStatus = isAdmin ? "admin" : (sub?.status ?? "trialing");
-            const limit = PLAN_LIMITS[effectivePlan].maxDrafts;
+            const monthlyLimit = PLAN_LIMITS[effectivePlan].monthlyCredits;
             const linkedInMax = PLAN_LIMITS[effectivePlan].maxLinkedInAccounts;
-            const draftStr = limit === null ? "Unlimited drafts" : `${limit} drafts / period`;
+            const subCredits = isAdmin ? Infinity : (credits?.subscription ?? 0);
+            const topupCredits = credits?.topup ?? 0;
+            const draftStr = isAdmin
+              ? "Unlimited credits"
+              : `${subCredits} of ${monthlyLimit} monthly credits`;
+            const dailyCap = PLAN_LIMITS[effectivePlan].dailyCap;
             return (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 border border-border rounded-md bg-subtle/40">
                 <div className="min-w-0">
@@ -749,7 +915,10 @@ function SettingsPage() {
                     </span>
                   </div>
                   <div className="text-[12px] text-muted-foreground mt-1">
-                    {draftStr} · {linkedInMax} LinkedIn account{linkedInMax > 1 ? "s" : ""}
+                    {draftStr}
+                    {topupCredits > 0 && !isAdmin ? ` · +${topupCredits} top-up` : ""}
+                    {" · "}{linkedInMax} LinkedIn account{linkedInMax > 1 ? "s" : ""}
+                    {dailyCap > 0 && !isAdmin ? ` · ${dailyCap}/day cap` : ""}
                   </div>
                   {isAdmin ? (
                     <div className="text-[12px] text-muted-foreground mt-0.5">
@@ -786,10 +955,123 @@ function SettingsPage() {
             currentPlan={isAdmin ? "teams" : (sub?.plan ?? "trial")}
             isAdmin={isAdmin}
             loadingPlan={checkoutPlan}
+            billingInterval={billingInterval}
+            onIntervalChange={setBillingInterval}
             error={checkoutError}
             onSelect={startCheckout}
           />
+
+          {!isAdmin && (sub?.plan === "studio" || sub?.plan === "teams") && (
+            <div className="mt-6">
+              <div className="mb-3 flex items-baseline justify-between">
+                <h3 className="text-[13px] font-semibold text-ink">Credit top-ups</h3>
+                <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.12em]">
+                  Never expire
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {TOPUP_PACKS.map((p) => (
+                  <div
+                    key={p.key}
+                    className="border border-border rounded-lg p-4 bg-card flex flex-col gap-3"
+                  >
+                    <div>
+                      <div className="text-[15px] font-semibold text-ink tabular-nums">
+                        {p.credits} credits
+                      </div>
+                      <div className="text-[12px] text-muted-foreground">
+                        ${p.priceUsd} — {(p.priceUsd / p.credits * 100).toFixed(1)}¢ per credit
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => buyTopup(p.key)}
+                      disabled={checkoutBusy !== null}
+                      className="mt-auto h-9 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-50"
+                    >
+                      {checkoutBusy === p.key ? "Redirecting…" : "Buy"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </Section>
+          </TabsContent>
+
+          <TabsContent value="team" className="mt-0">
+            <Section
+              title="Team"
+              subtitle="Invite up to 5 teammates to share this workspace's drafts."
+            >
+              {!team ? (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border border-border rounded-md bg-subtle/40">
+                  <div>
+                    <div className="text-[14px] font-medium text-ink">No team yet</div>
+                    <div className="text-[12px] text-muted-foreground mt-0.5">
+                      Create a team to invite others. Requires the Teams plan for full access.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={createTeam}
+                    className="h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90"
+                  >
+                    Create team
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="teammate@company.com"
+                      className="h-10 flex-1 px-3 rounded-md border border-border bg-card text-[14px] focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+                    />
+                    <button
+                      type="button"
+                      onClick={inviteMember}
+                      disabled={inviting || !inviteEmail.trim()}
+                      className="h-10 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-50"
+                    >
+                      {inviting ? "Inviting…" : "Invite"}
+                    </button>
+                  </div>
+                  {teamMsg && (
+                    <div className="text-[12px] text-muted-foreground">{teamMsg}</div>
+                  )}
+                  <ul className="divide-y divide-border border border-border rounded-md bg-card">
+                    <li className="px-3 py-2 flex items-center justify-between text-[13px]">
+                      <div>
+                        <span className="font-medium text-ink">{user?.email}</span>
+                        <span className="ml-2 text-[11px] font-mono uppercase text-muted-foreground">
+                          Owner
+                        </span>
+                      </div>
+                    </li>
+                    {teamMembers.map((m) => (
+                      <li key={m.id} className="px-3 py-2 flex items-center justify-between text-[13px]">
+                        <div className="min-w-0">
+                          <span className="text-ink truncate">{m.email}</span>
+                          <span className="ml-2 text-[11px] font-mono uppercase text-muted-foreground">
+                            {m.accepted_at ? m.role : "invited"}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeMember(m.id)}
+                          className="text-[12px] text-destructive hover:underline"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </Section>
           </TabsContent>
 
           <TabsContent value="account" className="mt-0">
@@ -973,32 +1255,44 @@ function Field({
 const TIERS: Array<{
   id: "trial" | "studio" | "teams";
   name: string;
-  price: string;
-  cadence: string;
+  priceMonthly: string;
+  priceAnnual: string;
+  cadenceMonthly: string;
+  cadenceAnnual: string;
   description: string;
   features: string[];
   highlighted: boolean;
 }> = [
   {
     id: "trial",
-    name: "Trial",
-    price: "Free",
-    cadence: "for 7 days",
-    description: "Test the full workspace. No credit card required.",
-    features: ["5 generated drafts", "1 LinkedIn account", "Email support"],
+    name: "Free",
+    priceMonthly: "$0",
+    priceAnnual: "$0",
+    cadenceMonthly: "forever",
+    cadenceAnnual: "forever",
+    description: "Get a feel for the workspace. No credit card.",
+    features: [
+      "30 credits per month",
+      "5 generations per day",
+      "1 LinkedIn account",
+      "Email support",
+    ],
     highlighted: false,
   },
   {
     id: "studio",
     name: "Studio",
-    price: "$24",
-    cadence: "per month",
-    description: "Everything you need to ship a serious cadence.",
+    priceMonthly: "$9",
+    priceAnnual: "$90",
+    cadenceMonthly: "per month",
+    cadenceAnnual: "per year",
+    description: "For solo creators shipping a real cadence.",
     features: [
-      "Unlimited drafts",
+      "100 credits per month",
       "1 LinkedIn account",
+      "Post scheduling",
+      "Credit top-ups when you need more",
       "Full voice mapping",
-      "Tone dial & inline rewrites",
       "Priority support",
     ],
     highlighted: true,
@@ -1006,14 +1300,17 @@ const TIERS: Array<{
   {
     id: "teams",
     name: "Teams",
-    price: "$60",
-    cadence: "per seat / mo",
-    description: "Shared voice profiles for execs and ghost-writers.",
+    priceMonthly: "$29",
+    priceAnnual: "$290",
+    cadenceMonthly: "per month",
+    cadenceAnnual: "per year",
+    description: "Shared workspace for execs and ghost-writers.",
     features: [
       "Everything in Studio",
+      "350 credits per month",
+      "Up to 5 team seats",
       "Up to 10 LinkedIn accounts",
-      "Shared brand guidelines",
-      "Approval workflow",
+      "Shared drafts & voice profiles",
     ],
     highlighted: false,
   },
@@ -1025,20 +1322,35 @@ function PlanTiers({
   loadingPlan,
   error,
   onSelect,
+  billingInterval,
+  onIntervalChange,
 }: {
   currentPlan: PlanTier;
   isAdmin: boolean;
   loadingPlan: "studio" | "teams" | null;
   error: string | null;
   onSelect: (plan: "studio" | "teams") => void;
+  billingInterval: "month" | "year";
+  onIntervalChange: (i: "month" | "year") => void;
 }) {
   return (
     <div className="mt-6">
       <div className="mb-3 flex items-baseline justify-between">
         <h3 className="text-[13px] font-semibold text-ink">Change plan</h3>
-        <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.12em]">
-          7-day refund · cancel anytime
-        </span>
+        <div className="inline-flex items-center gap-0 rounded-md border border-border p-0.5 bg-card">
+          {(["month", "year"] as const).map((i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onIntervalChange(i)}
+              className={`h-6 px-2 rounded text-[11px] font-medium transition-colors ${
+                billingInterval === i ? "bg-ink text-surface" : "text-muted-foreground"
+              }`}
+            >
+              {i === "month" ? "Monthly" : "Yearly · save 17%"}
+            </button>
+          ))}
+        </div>
       </div>
       {error && (
         <div className="mb-3 px-3 py-2 rounded-md bg-destructive/5 border border-destructive/20 text-destructive text-[12px]">
@@ -1050,6 +1362,8 @@ function PlanTiers({
           const isCurrent = currentPlan === t.id;
           const adminOwned = isAdmin && t.id === "teams";
           const active = isCurrent || adminOwned;
+          const price = billingInterval === "year" ? t.priceAnnual : t.priceMonthly;
+          const cadence = billingInterval === "year" ? t.cadenceAnnual : t.cadenceMonthly;
           return (
             <div
               key={t.id}
@@ -1076,14 +1390,14 @@ function PlanTiers({
                 </div>
                 <div className="mt-2 flex items-baseline gap-1.5">
                   <span className="text-2xl font-semibold tracking-[-0.02em] tabular-nums">
-                    {t.price}
+                    {price}
                   </span>
                   <span
                     className={`text-[12px] ${
                       t.highlighted ? "text-surface/60" : "text-muted-foreground"
                     }`}
                   >
-                    {t.cadence}
+                    {cadence}
                   </span>
                 </div>
                 <p

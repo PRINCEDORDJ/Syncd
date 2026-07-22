@@ -69,27 +69,37 @@ export const Route = createFileRoute("/api/generate")({
           .maybeSingle();
         const voiceNotes = (prof?.voice_notes ?? "").trim();
 
-        // Enforce plan limits server-side
+        // Credit accounting: server-side deduction via RPC
         {
           const { data: planRow } = await supabaseAdmin.rpc("get_user_plan", {
             _user_id: userId,
           });
           const plan = (planRow as "trial" | "studio" | "teams" | null) ?? "trial";
-          if (plan === "trial") {
-            const { count } = await supabaseAdmin
-              .from("drafts")
-              .select("id", { count: "exact", head: true })
-              .eq("user_id", userId);
-            if ((count ?? 0) >= 5) {
-              return new Response(
-                JSON.stringify({
-                  error:
-                    "You've used your 5 free trial drafts. Upgrade to Studio for unlimited generations.",
-                  code: "PLAN_LIMIT",
-                }),
-                { status: 402, headers: { "Content-Type": "application/json" } },
-              );
-            }
+          const isFree = plan === "trial";
+          const { data: creditRes, error: creditErr } = await supabaseAdmin.rpc(
+            "consume_credit",
+            { _user_id: userId, _is_free: isFree },
+          );
+          if (creditErr) {
+            console.error("[generate] consume_credit failed", creditErr);
+            return new Response(
+              JSON.stringify({ error: "Could not verify your credit balance." }),
+              { status: 500, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          const res = creditRes as { success?: boolean; reason?: string } | null;
+          if (!res?.success) {
+            const reason = res?.reason;
+            const message =
+              reason === "daily_limit_reached"
+                ? "You've hit today's 5-generation cap on the Free plan. Come back tomorrow or upgrade to Studio."
+                : reason === "no_credits"
+                  ? "You're out of credits. Upgrade or buy a top-up pack to keep generating."
+                  : "You don't have enough credits for this generation.";
+            return new Response(
+              JSON.stringify({ error: message, code: "NO_CREDITS" }),
+              { status: 402, headers: { "Content-Type": "application/json" } },
+            );
           }
         }
 
