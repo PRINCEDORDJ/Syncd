@@ -896,9 +896,14 @@ function SettingsPage() {
           {(() => {
             const effectivePlan: PlanTier = isAdmin ? "teams" : (sub?.plan ?? "trial");
             const effectiveStatus = isAdmin ? "admin" : (sub?.status ?? "trialing");
-            const limit = PLAN_LIMITS[effectivePlan].maxDrafts;
+            const monthlyLimit = PLAN_LIMITS[effectivePlan].monthlyCredits;
             const linkedInMax = PLAN_LIMITS[effectivePlan].maxLinkedInAccounts;
-            const draftStr = limit === null ? "Unlimited drafts" : `${limit} drafts / period`;
+            const subCredits = isAdmin ? Infinity : (credits?.subscription ?? 0);
+            const topupCredits = credits?.topup ?? 0;
+            const draftStr = isAdmin
+              ? "Unlimited credits"
+              : `${subCredits} of ${monthlyLimit} monthly credits`;
+            const dailyCap = PLAN_LIMITS[effectivePlan].dailyCap;
             return (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 border border-border rounded-md bg-subtle/40">
                 <div className="min-w-0">
@@ -909,7 +914,10 @@ function SettingsPage() {
                     </span>
                   </div>
                   <div className="text-[12px] text-muted-foreground mt-1">
-                    {draftStr} · {linkedInMax} LinkedIn account{linkedInMax > 1 ? "s" : ""}
+                    {draftStr}
+                    {topupCredits > 0 && !isAdmin ? ` · +${topupCredits} top-up` : ""}
+                    {" · "}{linkedInMax} LinkedIn account{linkedInMax > 1 ? "s" : ""}
+                    {dailyCap > 0 && !isAdmin ? ` · ${dailyCap}/day cap` : ""}
                   </div>
                   {isAdmin ? (
                     <div className="text-[12px] text-muted-foreground mt-0.5">
@@ -946,9 +954,47 @@ function SettingsPage() {
             currentPlan={isAdmin ? "teams" : (sub?.plan ?? "trial")}
             isAdmin={isAdmin}
             loadingPlan={checkoutPlan}
+            billingInterval={billingInterval}
+            onIntervalChange={setBillingInterval}
             error={checkoutError}
             onSelect={startCheckout}
           />
+
+          {!isAdmin && (sub?.plan === "studio" || sub?.plan === "teams") && (
+            <div className="mt-6">
+              <div className="mb-3 flex items-baseline justify-between">
+                <h3 className="text-[13px] font-semibold text-ink">Credit top-ups</h3>
+                <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.12em]">
+                  Never expire
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {TOPUP_PACKS.map((p) => (
+                  <div
+                    key={p.key}
+                    className="border border-border rounded-lg p-4 bg-card flex flex-col gap-3"
+                  >
+                    <div>
+                      <div className="text-[15px] font-semibold text-ink tabular-nums">
+                        {p.credits} credits
+                      </div>
+                      <div className="text-[12px] text-muted-foreground">
+                        ${p.priceUsd} — {(p.priceUsd / p.credits * 100).toFixed(1)}¢ per credit
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => buyTopup(p.key)}
+                      disabled={checkoutBusy !== null}
+                      className="mt-auto h-9 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-50"
+                    >
+                      {checkoutBusy === p.key ? "Redirecting…" : "Buy"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </Section>
           </TabsContent>
 
