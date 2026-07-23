@@ -28,6 +28,7 @@ import {
   MAX_VIDEOS,
   type AttachmentItem,
 } from "@/lib/image-validation";
+import { CreditBanner, useIsGenerationBlocked } from "@/components/CreditBanner";
 
 export const Route = createFileRoute("/app")({
   head: () => ({
@@ -102,6 +103,7 @@ function Workspace() {
   const [titleEdited, setTitleEdited] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const isBlocked = useIsGenerationBlocked();
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -216,6 +218,10 @@ function Workspace() {
         images,
         attachments: attachments as unknown as Json,
         videos: videos as unknown as Json,
+        media_bytes:
+          images.reduce((s, u) => s + dataUrlByteSize(u), 0) +
+          videos.reduce((s, u) => s + dataUrlByteSize(u), 0) +
+          attachments.reduce((s, a) => s + (a.size || dataUrlByteSize(a.dataUrl)), 0),
         ...(asPublished ? { published: true } : {}),
       };
       if (draftId) {
@@ -588,10 +594,11 @@ function Workspace() {
                 className="flex-1 resize-none p-3 bg-card rounded-md text-[14px] text-ink border border-border leading-relaxed focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink min-h-[200px]"
               />
 
+              <CreditBanner />
               <button
                 type="button"
                 onClick={generate}
-                disabled={generating || !input.trim()}
+                disabled={generating || !input.trim() || isBlocked}
                 className="h-10 rounded-md bg-ink text-surface text-[14px] font-medium hover:bg-ink/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
               >
                 {generating

@@ -4,7 +4,7 @@ import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { type PlanTier } from "@/lib/plans";
+import { type PlanTier, TOPUP_PACKS, type BillingInterval } from "@/lib/plans";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -26,27 +26,29 @@ export const Route = createFileRoute("/pricing")({
 
 type TierId = "trial" | "studio" | "teams";
 
-const tiers: Array<{
+interface TierDef {
   id: TierId;
   name: string;
-  price: string;
-  cadence: string;
+  monthly: number | null;
+  annual: number | null;
   description: string;
   features: string[];
   cta: string;
   highlighted: boolean;
-}> = [
+}
+
+const tiers: TierDef[] = [
   {
     id: "trial",
-    name: "Trial",
-    price: "Free",
-    cadence: "for 7 days",
-    description: "Test the full workspace. No credit card required.",
+    name: "Free",
+    monthly: 0,
+    annual: 0,
+    description: "Test the workspace with a monthly credit allowance.",
     features: [
-      "5 generated drafts",
-      "1 connected LinkedIn account",
-      "Voice notes (limited)",
-      "Email support",
+      "30 credits / month",
+      "5 generations / day cap",
+      "1 LinkedIn account",
+      "200 MB media storage",
     ],
     cta: "Start free",
     highlighted: false,
@@ -54,34 +56,35 @@ const tiers: Array<{
   {
     id: "studio",
     name: "Studio",
-    price: "$24",
-    cadence: "per month",
-    description: "Everything you need to ship a serious cadence.",
+    monthly: 9,
+    annual: 90,
+    description: "For solo writers shipping a serious cadence.",
     features: [
-      "Unlimited drafts",
-      "1 connected LinkedIn account",
-      "Full voice mapping",
-      "Tone dial & inline rewrites",
-      "Publish history",
-      "Priority support",
+      "100 credits / month",
+      "No daily cap",
+      "Voice mapping & tone dial",
+      "Scheduling",
+      "Top-up packs",
+      "5 GB media storage",
     ],
-    cta: "Subscribe",
+    cta: "Choose Studio",
     highlighted: true,
   },
   {
     id: "teams",
     name: "Teams",
-    price: "$60",
-    cadence: "per seat / month",
-    description: "Shared voice profiles for execs and ghost-writers.",
+    monthly: 29,
+    annual: 290,
+    description: "Shared workspaces for founders, execs & ghost-writers.",
     features: [
-      "Everything in Studio",
+      "350 credits / month",
+      "Up to 5 seats",
       "Up to 10 LinkedIn accounts",
-      "Shared brand guidelines",
-      "Approval workflow",
-      "SSO & audit log",
+      "Team drafts & scheduling",
+      "Top-up packs",
+      "20 GB media storage",
     ],
-    cta: "Subscribe",
+    cta: "Choose Teams",
     highlighted: false,
   },
 ];
@@ -90,9 +93,10 @@ function PricingPage() {
   const { user } = useAuth();
   const [subPlan, setSubPlan] = useState<PlanTier | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [loadingPlan, setLoadingPlan] = useState<TierId | null>(null);
+  const [, setInitialLoading] = useState(true);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [interval, setInterval] = useState<BillingInterval>("month");
 
   useEffect(() => {
     if (!user) {
@@ -128,13 +132,13 @@ function PricingPage() {
     };
   }, [user]);
 
-  async function startCheckout(plan: "studio" | "teams") {
+  async function startCheckout(planKey: string) {
     setError(null);
     if (!user) {
       window.location.href = `/login?redirect=/pricing`;
       return;
     }
-    setLoadingPlan(plan);
+    setLoadingPlan(planKey);
     const { data: sess } = await supabase.auth.getSession();
     const token = sess.session?.access_token;
     if (!token) {
@@ -148,7 +152,7 @@ function PricingPage() {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ plan: planKey }),
     });
     const data = (await resp.json().catch(() => ({}))) as {
       url?: string;
@@ -175,8 +179,30 @@ function PricingPage() {
             One honest price for serious writers.
           </h1>
           <p className="mt-4 text-[16px] text-muted-foreground">
-            No usage meters. No prompt budgets. No surprises.
+            Credit-based generations. Top up anytime. Cancel anytime.
           </p>
+
+          <div className="mt-6 inline-flex items-center gap-1 p-1 rounded-full border border-border bg-card text-[12px] font-mono">
+            <button
+              type="button"
+              onClick={() => setInterval("month")}
+              className={`px-3 h-7 rounded-full transition-colors ${
+                interval === "month" ? "bg-ink text-surface" : "text-muted-foreground"
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              onClick={() => setInterval("year")}
+              className={`px-3 h-7 rounded-full transition-colors ${
+                interval === "year" ? "bg-ink text-surface" : "text-muted-foreground"
+              }`}
+            >
+              Yearly <span className="opacity-60">· save ~17%</span>
+            </button>
+          </div>
+
           {error && (
             <div className="mt-4 inline-block px-3 py-1.5 rounded-md bg-destructive/5 border border-destructive/20 text-destructive text-[13px]">
               {error}
@@ -189,6 +215,29 @@ function PricingPage() {
             const isCurrentPlan = subPlan === t.id;
             const showAdminAccess = isAdmin && t.id === "teams";
             const isActive = isCurrentPlan || showAdminAccess;
+            const priceNum = interval === "year" ? t.annual : t.monthly;
+            const priceLabel =
+              t.id === "trial"
+                ? "Free"
+                : priceNum == null
+                  ? "—"
+                  : `$${priceNum}`;
+            const cadence =
+              t.id === "trial"
+                ? "forever"
+                : interval === "year"
+                  ? "per year"
+                  : "per month";
+            const planKey =
+              t.id === "studio"
+                ? interval === "year"
+                  ? "studio_annual"
+                  : "studio_monthly"
+                : t.id === "teams"
+                  ? interval === "year"
+                    ? "teams_annual"
+                    : "teams_monthly"
+                  : "";
 
             return (
               <div
@@ -221,14 +270,14 @@ function PricingPage() {
                   </div>
                   <div className="mt-3 flex items-baseline gap-1.5">
                     <span className="text-4xl font-semibold tracking-[-0.03em] tabular-nums">
-                      {t.price}
+                      {priceLabel}
                     </span>
                     <span
                       className={`text-[13px] ${
                         t.highlighted ? "text-surface/60" : "text-muted-foreground"
                       }`}
                     >
-                      {t.cadence}
+                      {cadence}
                     </span>
                   </div>
                   <p
@@ -273,7 +322,7 @@ function PricingPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => startCheckout(t.id as "studio" | "teams")}
+                    onClick={() => startCheckout(planKey)}
                     disabled={loadingPlan !== null || isActive || (isAdmin && t.id !== "teams")}
                     className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors disabled:opacity-50 ${
                       t.highlighted
@@ -281,7 +330,7 @@ function PricingPage() {
                         : "bg-ink text-surface hover:bg-ink/90"
                     }`}
                   >
-                    {loadingPlan === t.id
+                    {loadingPlan === planKey
                       ? "Redirecting…"
                       : isActive
                         ? "Already active"
@@ -296,8 +345,43 @@ function PricingPage() {
           })}
         </div>
 
-        <p className="mt-10 text-center text-[12px] font-mono text-muted-foreground">
-          7-day refund window · Cancel anytime
+        <section className="mt-16">
+          <div className="text-center max-w-xl mx-auto">
+            <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-2">
+              Top-ups
+            </p>
+            <h2 className="text-2xl md:text-3xl font-semibold tracking-[-0.02em]">
+              Need more credits this month?
+            </h2>
+            <p className="mt-2 text-[14px] text-muted-foreground">
+              Add non-expiring credits to any paid plan. One-time purchase.
+            </p>
+          </div>
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl mx-auto">
+            {TOPUP_PACKS.map((pack) => (
+              <button
+                key={pack.key}
+                type="button"
+                disabled={loadingPlan !== null || !user}
+                onClick={() => startCheckout(pack.key)}
+                className="flex flex-col items-start gap-2 p-5 rounded-xl border border-border bg-card hover:border-ink/30 transition-colors text-left disabled:opacity-50"
+              >
+                <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-muted-foreground">
+                  {pack.credits} credits
+                </span>
+                <span className="text-2xl font-semibold tracking-[-0.02em]">
+                  ${pack.priceUsd}
+                </span>
+                <span className="text-[12px] text-muted-foreground">
+                  {loadingPlan === pack.key ? "Redirecting…" : "Buy pack →"}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <p className="mt-12 text-center text-[12px] font-mono text-muted-foreground">
+          Cancel anytime · Top-up credits never expire
         </p>
       </main>
 

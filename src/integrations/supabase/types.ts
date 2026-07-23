@@ -49,6 +49,7 @@ export type Database = {
           created_at: string
           id: string
           images: string[]
+          media_bytes: number
           published: boolean
           raw_input: string
           schedule_error: string | null
@@ -68,6 +69,7 @@ export type Database = {
           created_at?: string
           id?: string
           images?: string[]
+          media_bytes?: number
           published?: boolean
           raw_input?: string
           schedule_error?: string | null
@@ -87,6 +89,7 @@ export type Database = {
           created_at?: string
           id?: string
           images?: string[]
+          media_bytes?: number
           published?: boolean
           raw_input?: string
           schedule_error?: string | null
@@ -360,16 +363,31 @@ export type Database = {
         }
         Relationships: []
       }
+      user_storage: {
+        Row: {
+          bytes_used: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bytes_used?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bytes_used?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       cleanup_linkedin_oauth_states: { Args: never; Returns: undefined }
-      consume_credit: {
-        Args: { _is_free: boolean; _user_id: string }
-        Returns: Json
-      }
+      consume_credit: { Args: { _user_id: string }; Returns: Json }
       get_team_role: {
         Args: { _team_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["team_role"]
@@ -386,6 +404,14 @@ export type Database = {
         Args: { _amount: number; _user_id: string }
         Returns: undefined
       }
+      handle_plan_change: {
+        Args: {
+          _new_plan: Database["public"]["Enums"]["plan_tier"]
+          _old_plan: Database["public"]["Enums"]["plan_tier"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -396,6 +422,10 @@ export type Database = {
       is_team_member: {
         Args: { _team_id: string; _user_id: string }
         Returns: boolean
+      }
+      refund_credit: {
+        Args: { _reason?: string; _user_id: string }
+        Returns: undefined
       }
     }
     Enums: {

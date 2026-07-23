@@ -14,8 +14,11 @@ import {
   Presentation,
   File as FileIcon,
   Pencil,
+  Clock,
+  CalendarClock,
 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { SchedulePicker } from "@/components/SchedulePicker";
 import {
   MAX_IMAGES,
   MAX_ATTACHMENTS,
@@ -64,6 +67,8 @@ type DraftRow = {
   updated_at: string;
   images: string[];
   attachments: DraftAttachment[];
+  scheduled_at: string | null;
+  schedule_status: string | null;
 };
 
 function DraftsGate() {
@@ -95,6 +100,8 @@ function DraftsList() {
   const [selected, setSelected] = useState<DraftRow | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [publishMsg, setPublishMsg] = useState<string | null>(null);
+  const [showScheduler, setShowScheduler] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
   const [modalImages, setModalImages] = useState<string[]>([]);
   const [modalAttachments, setModalAttachments] = useState<DraftAttachment[]>([]);
   const [modalTitle, setModalTitle] = useState("");
@@ -272,7 +279,7 @@ function DraftsList() {
       const { data, error: err } = await supabase
         .from("drafts")
         .select(
-          "id, title, content, tone, char_count, published, updated_at, images, attachments",
+          "id, title, content, tone, char_count, published, updated_at, images, attachments, scheduled_at, schedule_status",
         )
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false });
@@ -288,6 +295,9 @@ function DraftsList() {
             attachments: Array.isArray(r.attachments)
               ? (r.attachments as unknown as DraftAttachment[])
               : [],
+            scheduled_at: (r as { scheduled_at?: string | null }).scheduled_at ?? null,
+            schedule_status:
+              (r as { schedule_status?: string | null }).schedule_status ?? null,
           })),
         );
       }
@@ -400,6 +410,69 @@ function DraftsList() {
     }
   }
 
+  async function scheduleDraft(row: DraftRow, iso: string) {
+    if (!user) return;
+    setScheduling(true);
+    setPublishMsg(null);
+    try {
+      const { error: err } = await supabase
+        .from("drafts")
+        .update({
+          scheduled_at: iso,
+          schedule_status: "pending",
+          title: modalTitle.trim() || row.title,
+          content: modalContent,
+          char_count: modalContent.length,
+          images: modalImages,
+          attachments: modalAttachments as unknown as never,
+        })
+        .eq("id", row.id)
+        .eq("user_id", user.id);
+      if (err) {
+        setPublishMsg(err.message);
+        return;
+      }
+      setRows((prev) =>
+        prev
+          ? prev.map((r) =>
+              r.id === row.id
+                ? { ...r, scheduled_at: iso, schedule_status: "pending" }
+                : r,
+            )
+          : prev,
+      );
+      setShowScheduler(false);
+      closeModal();
+    } finally {
+      setScheduling(false);
+    }
+  }
+
+  async function cancelSchedule(row: DraftRow) {
+    if (!user) return;
+    const { error: err } = await supabase
+      .from("drafts")
+      .update({ scheduled_at: null, schedule_status: "draft" })
+      .eq("id", row.id)
+      .eq("user_id", user.id);
+    if (err) {
+      setPublishMsg(err.message);
+      return;
+    }
+    setRows((prev) =>
+      prev
+        ? prev.map((r) =>
+            r.id === row.id
+              ? { ...r, scheduled_at: null, schedule_status: "draft" }
+              : r,
+          )
+        : prev,
+    );
+    if (selected?.id === row.id) {
+      setSelected({ ...row, scheduled_at: null, schedule_status: "draft" });
+    }
+  }
+
   const filtered =
     rows?.filter((r) =>
       filter === "all" ? true : filter === "published" ? r.published : !r.published,
@@ -473,7 +546,13 @@ function DraftsList() {
                       {r.title || "Untitled draft"}
                     </h2>
                     <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground flex-wrap">
-                      <span
+                      {r.scheduled_at && r.schedule_status === "pending" ? (
+                        <span className="px-1.5 py-0.5 rounded border bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 inline-flex items-center gap-1">
+                          <Clock className="size-3" />
+                          Scheduled
+                        </span>
+                      ) : (
+                        <span
                         className={`px-1.5 py-0.5 rounded border ${
                           r.published
                             ? "bg-ink text-surface border-ink"
@@ -481,12 +560,34 @@ function DraftsList() {
                         }`}
                       >
                         {r.published ? "Published" : "Draft"}
-                      </span>
+                        </span>
+                      )}
                       <span>{r.tone.split(" ")[0]}</span>
                       <span>·</span>
                       <span>{r.char_count} ch</span>
                       <span>·</span>
-                      <span>{new Date(r.updated_at).toLocaleDateString()}</span>
+                      <span>
+                        {r.scheduled_at && r.schedule_status === "pending"
+                          ? new Date(r.scheduled_at).toLocaleString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })
+                          : new Date(r.updated_at).toLocaleDateString()}
+                      </span>
+                      {r.scheduled_at && r.schedule_status === "pending" && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void cancelSchedule(r);
+                          }}
+                          className="underline hover:text-ink"
+                        >
+                          Cancel
+                        </button>
+                      )}
                     </div>
                   </div>
                   <button
@@ -794,7 +895,38 @@ function DraftsList() {
                   {publishing ? "Publishing…" : "Publish to LinkedIn"}
                 </button>
               )}
+              {!selected.published && !selected.scheduled_at && (
+                <button
+                  type="button"
+                  onClick={() => setShowScheduler((v) => !v)}
+                  className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md text-[13px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors w-full sm:w-auto"
+                >
+                  <CalendarClock className="size-3.5" />
+                  {showScheduler ? "Hide scheduler" : "Schedule"}
+                </button>
+              )}
+              {selected.scheduled_at && selected.schedule_status === "pending" && (
+                <button
+                  type="button"
+                  onClick={() => cancelSchedule(selected)}
+                  className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md text-[13px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors w-full sm:w-auto"
+                >
+                  <Clock className="size-3.5" />
+                  Cancel schedule
+                </button>
+              )}
             </div>
+            {showScheduler && !selected.published && !selected.scheduled_at && (
+              <div className="mt-4 p-4 rounded-lg border border-border bg-subtle/40">
+                <p className="text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground mb-3">
+                  Schedule post
+                </p>
+                <SchedulePicker
+                  submitting={scheduling}
+                  onSchedule={(iso) => scheduleDraft(selected, iso)}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
