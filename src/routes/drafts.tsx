@@ -452,7 +452,7 @@ function DraftsList() {
     if (!user) return;
     const { error: err } = await supabase
       .from("drafts")
-      .update({ scheduled_at: null, schedule_status: null })
+      .update({ scheduled_at: null, schedule_status: "draft" })
       .eq("id", row.id)
       .eq("user_id", user.id);
     if (err) {
@@ -463,13 +463,13 @@ function DraftsList() {
       prev
         ? prev.map((r) =>
             r.id === row.id
-              ? { ...r, scheduled_at: null, schedule_status: null }
+              ? { ...r, scheduled_at: null, schedule_status: "draft" }
               : r,
           )
         : prev,
     );
     if (selected?.id === row.id) {
-      setSelected({ ...row, scheduled_at: null, schedule_status: null });
+      setSelected({ ...row, scheduled_at: null, schedule_status: "draft" });
     }
   }
 
