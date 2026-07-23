@@ -16,6 +16,10 @@ export interface PlanLimits {
   scheduling: boolean;
   /** Whether the plan supports credit top-ups. */
   topUps: boolean;
+  /** Cumulative storage quota in bytes. */
+  storageBytes: number;
+  /** Max single-file upload size in bytes. */
+  maxFileSizeBytes: number;
 }
 
 export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
@@ -27,6 +31,8 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     voiceMapping: false,
     scheduling: false,
     topUps: false,
+    storageBytes: 209_715_200, // 200 MB
+    maxFileSizeBytes: 10_485_760, // 10 MB
   },
   studio: {
     monthlyCredits: 100,
@@ -36,6 +42,8 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     voiceMapping: true,
     scheduling: true,
     topUps: true,
+    storageBytes: 5_368_709_120, // 5 GB
+    maxFileSizeBytes: 26_214_400, // 25 MB
   },
   teams: {
     monthlyCredits: 350,
@@ -45,6 +53,8 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     voiceMapping: true,
     scheduling: true,
     topUps: true,
+    storageBytes: 21_474_836_480, // 20 GB
+    maxFileSizeBytes: 52_428_800, // 50 MB
   },
 };
 
