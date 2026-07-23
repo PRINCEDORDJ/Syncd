@@ -895,7 +895,38 @@ function DraftsList() {
                   {publishing ? "Publishing…" : "Publish to LinkedIn"}
                 </button>
               )}
+              {!selected.published && !selected.scheduled_at && (
+                <button
+                  type="button"
+                  onClick={() => setShowScheduler((v) => !v)}
+                  className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md text-[13px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors w-full sm:w-auto"
+                >
+                  <CalendarClock className="size-3.5" />
+                  {showScheduler ? "Hide scheduler" : "Schedule"}
+                </button>
+              )}
+              {selected.scheduled_at && selected.schedule_status === "pending" && (
+                <button
+                  type="button"
+                  onClick={() => cancelSchedule(selected)}
+                  className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md text-[13px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors w-full sm:w-auto"
+                >
+                  <Clock className="size-3.5" />
+                  Cancel schedule
+                </button>
+              )}
             </div>
+            {showScheduler && !selected.published && !selected.scheduled_at && (
+              <div className="mt-4 p-4 rounded-lg border border-border bg-subtle/40">
+                <p className="text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground mb-3">
+                  Schedule post
+                </p>
+                <SchedulePicker
+                  submitting={scheduling}
+                  onSchedule={(iso) => scheduleDraft(selected, iso)}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
