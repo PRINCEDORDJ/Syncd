@@ -216,6 +216,13 @@ function Workspace() {
         images,
         attachments: attachments as unknown as Json,
         videos: videos as unknown as Json,
+        media_bytes:
+          images.reduce((s, u) => s + dataUrlByteSize(u), 0) +
+          videos.reduce((s, u) => s + dataUrlByteSize(u), 0) +
+          attachments.reduce(
+            (s, a) => s + dataUrlByteSize(a.data as unknown as string),
+            0,
+          ),
         ...(asPublished ? { published: true } : {}),
       };
       if (draftId) {
