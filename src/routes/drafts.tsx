@@ -14,8 +14,11 @@ import {
   Presentation,
   File as FileIcon,
   Pencil,
+  Clock,
+  CalendarClock,
 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { SchedulePicker } from "@/components/SchedulePicker";
 import {
   MAX_IMAGES,
   MAX_ATTACHMENTS,
@@ -64,6 +67,8 @@ type DraftRow = {
   updated_at: string;
   images: string[];
   attachments: DraftAttachment[];
+  scheduled_at: string | null;
+  schedule_status: string | null;
 };
 
 function DraftsGate() {
@@ -95,6 +100,8 @@ function DraftsList() {
   const [selected, setSelected] = useState<DraftRow | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [publishMsg, setPublishMsg] = useState<string | null>(null);
+  const [showScheduler, setShowScheduler] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
   const [modalImages, setModalImages] = useState<string[]>([]);
   const [modalAttachments, setModalAttachments] = useState<DraftAttachment[]>([]);
   const [modalTitle, setModalTitle] = useState("");
@@ -272,7 +279,7 @@ function DraftsList() {
       const { data, error: err } = await supabase
         .from("drafts")
         .select(
-          "id, title, content, tone, char_count, published, updated_at, images, attachments",
+          "id, title, content, tone, char_count, published, updated_at, images, attachments, scheduled_at, schedule_status",
         )
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false });
@@ -288,6 +295,9 @@ function DraftsList() {
             attachments: Array.isArray(r.attachments)
               ? (r.attachments as unknown as DraftAttachment[])
               : [],
+            scheduled_at: (r as { scheduled_at?: string | null }).scheduled_at ?? null,
+            schedule_status:
+              (r as { schedule_status?: string | null }).schedule_status ?? null,
           })),
         );
       }
