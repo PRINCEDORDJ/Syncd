@@ -28,6 +28,7 @@ import {
   MAX_VIDEOS,
   type AttachmentItem,
 } from "@/lib/image-validation";
+import { CreditBanner, useIsGenerationBlocked } from "@/components/CreditBanner";
 
 export const Route = createFileRoute("/app")({
   head: () => ({
