@@ -15,6 +15,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { LogOut, Settings as SettingsIcon, LayoutGrid, FileText, Menu, Moon, Sun, BookOpen } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useTheme } from "@/lib/theme";
+import { CreditIndicator } from "@/components/CreditIndicator";
 
 export function SiteNav() {
   const { user, signOut } = useAuth();
@@ -63,6 +64,10 @@ export function SiteNav() {
 
         <div className="flex items-center gap-2">
           {user ? (
+            <>
+            <div className="hidden sm:flex">
+              <CreditIndicator />
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger
                 className="hidden md:flex items-center gap-2 rounded-full p-0.5 hover:bg-subtle transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -135,6 +140,7 @@ export function SiteNav() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </>
           ) : (
             <>
               <Link
