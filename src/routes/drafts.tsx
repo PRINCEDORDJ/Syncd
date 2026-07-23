@@ -410,6 +410,69 @@ function DraftsList() {
     }
   }
 
+  async function scheduleDraft(row: DraftRow, iso: string) {
+    if (!user) return;
+    setScheduling(true);
+    setPublishMsg(null);
+    try {
+      const { error: err } = await supabase
+        .from("drafts")
+        .update({
+          scheduled_at: iso,
+          schedule_status: "pending",
+          title: modalTitle.trim() || row.title,
+          content: modalContent,
+          char_count: modalContent.length,
+          images: modalImages,
+          attachments: modalAttachments as unknown as never,
+        })
+        .eq("id", row.id)
+        .eq("user_id", user.id);
+      if (err) {
+        setPublishMsg(err.message);
+        return;
+      }
+      setRows((prev) =>
+        prev
+          ? prev.map((r) =>
+              r.id === row.id
+                ? { ...r, scheduled_at: iso, schedule_status: "pending" }
+                : r,
+            )
+          : prev,
+      );
+      setShowScheduler(false);
+      closeModal();
+    } finally {
+      setScheduling(false);
+    }
+  }
+
+  async function cancelSchedule(row: DraftRow) {
+    if (!user) return;
+    const { error: err } = await supabase
+      .from("drafts")
+      .update({ scheduled_at: null, schedule_status: null })
+      .eq("id", row.id)
+      .eq("user_id", user.id);
+    if (err) {
+      setPublishMsg(err.message);
+      return;
+    }
+    setRows((prev) =>
+      prev
+        ? prev.map((r) =>
+            r.id === row.id
+              ? { ...r, scheduled_at: null, schedule_status: null }
+              : r,
+          )
+        : prev,
+    );
+    if (selected?.id === row.id) {
+      setSelected({ ...row, scheduled_at: null, schedule_status: null });
+    }
+  }
+
   const filtered =
     rows?.filter((r) =>
       filter === "all" ? true : filter === "published" ? r.published : !r.published,
