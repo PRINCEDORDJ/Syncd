@@ -131,6 +131,14 @@ async function handleEvent(event: {
     const subscriptionId = (data.id as string | undefined) ?? null;
     const cancelAtPeriodEnd = Boolean(data.cancel_at_period_end);
 
+    // Detect plan changes so we can apply grants/caps atomically.
+    const { data: existing } = await supabaseAdmin
+      .from("subscriptions")
+      .select("plan")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const oldPlan = (existing?.plan as PlanTier | null) ?? "trial";
+
     await supabaseAdmin
       .from("subscriptions")
       .upsert(
@@ -147,8 +155,15 @@ async function handleEvent(event: {
         { onConflict: "user_id" },
       );
 
-    // Grant/refresh monthly credits when subscription becomes active
-    if ((status === "active" || status === "trialing") && plan !== "trial") {
+    // On plan change: apply upgrade grant or downgrade cap in one RPC.
+    if (plan !== oldPlan) {
+      await supabaseAdmin.rpc("handle_plan_change", {
+        _user_id: userId,
+        _new_plan: plan,
+        _old_plan: oldPlan,
+      });
+    } else if ((status === "active" || status === "trialing") && plan !== "trial") {
+      // Same plan, active renewal — refresh monthly allocation
       const amount = PLAN_LIMITS[plan].monthlyCredits;
       await supabaseAdmin.rpc("grant_subscription_credits", {
         _user_id: userId,
