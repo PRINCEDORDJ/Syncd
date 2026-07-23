@@ -71,14 +71,9 @@ export const Route = createFileRoute("/api/generate")({
 
         // Credit accounting: server-side deduction via RPC
         {
-          const { data: planRow } = await supabaseAdmin.rpc("get_user_plan", {
-            _user_id: userId,
-          });
-          const plan = (planRow as "trial" | "studio" | "teams" | null) ?? "trial";
-          const isFree = plan === "trial";
           const { data: creditRes, error: creditErr } = await supabaseAdmin.rpc(
             "consume_credit",
-            { _user_id: userId, _is_free: isFree },
+            { _user_id: userId },
           );
           if (creditErr) {
             console.error("[generate] consume_credit failed", creditErr);
@@ -173,26 +168,46 @@ Write the LinkedIn post now.`;
           userContent.push({ type: "image_url", image_url: { url } });
         }
 
-        const response = await fetch(
-          "https://ai.gateway.lovable.dev/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "Content-Type": "application/json",
+        let response: Response;
+        try {
+          response = await fetch(
+            "https://ai.gateway.lovable.dev/v1/chat/completions",
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: "google/gemini-2.5-flash",
+                stream: true,
+                messages: [
+                  { role: "system", content: SYSTEM_PROMPT },
+                  { role: "user", content: userContent },
+                ],
+              }),
             },
-            body: JSON.stringify({
-              model: "google/gemini-2.5-flash",
-              stream: true,
-              messages: [
-                { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: userContent },
-              ],
-            }),
-          },
-        );
+          );
+        } catch (fetchErr) {
+          console.error("[generate] gateway fetch failed", fetchErr);
+          await supabaseAdmin
+            .rpc("refund_credit", { _user_id: userId, _reason: "ai_provider_error" })
+            .then(({ error }) => {
+              if (error) console.error("[generate] refund_credit failed", error);
+            });
+          return new Response(
+            JSON.stringify({ error: "The AI gateway is unreachable. Please try again." }),
+            { status: 502, headers: { "Content-Type": "application/json" } },
+          );
+        }
 
         if (!response.ok) {
+          // Refund the credit — provider failed, not the user's fault.
+          await supabaseAdmin
+            .rpc("refund_credit", { _user_id: userId, _reason: "ai_provider_error" })
+            .then(({ error }) => {
+              if (error) console.error("[generate] refund_credit failed", error);
+            });
           if (response.status === 429) {
             return new Response(
               JSON.stringify({
