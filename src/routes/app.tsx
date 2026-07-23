@@ -592,10 +592,11 @@ function Workspace() {
                 className="flex-1 resize-none p-3 bg-card rounded-md text-[14px] text-ink border border-border leading-relaxed focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink min-h-[200px]"
               />
 
+              <CreditBanner />
               <button
                 type="button"
                 onClick={generate}
-                disabled={generating || !input.trim()}
+                disabled={generating || !input.trim() || isBlocked}
                 className="h-10 rounded-md bg-ink text-surface text-[14px] font-medium hover:bg-ink/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
               >
                 {generating
