@@ -546,7 +546,13 @@ function DraftsList() {
                       {r.title || "Untitled draft"}
                     </h2>
                     <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground flex-wrap">
-                      <span
+                      {r.scheduled_at && r.schedule_status === "pending" ? (
+                        <span className="px-1.5 py-0.5 rounded border bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 inline-flex items-center gap-1">
+                          <Clock className="size-3" />
+                          Scheduled
+                        </span>
+                      ) : (
+                        <span
                         className={`px-1.5 py-0.5 rounded border ${
                           r.published
                             ? "bg-ink text-surface border-ink"
@@ -554,12 +560,34 @@ function DraftsList() {
                         }`}
                       >
                         {r.published ? "Published" : "Draft"}
-                      </span>
+                        </span>
+                      )}
                       <span>{r.tone.split(" ")[0]}</span>
                       <span>·</span>
                       <span>{r.char_count} ch</span>
                       <span>·</span>
-                      <span>{new Date(r.updated_at).toLocaleDateString()}</span>
+                      <span>
+                        {r.scheduled_at && r.schedule_status === "pending"
+                          ? new Date(r.scheduled_at).toLocaleString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })
+                          : new Date(r.updated_at).toLocaleDateString()}
+                      </span>
+                      {r.scheduled_at && r.schedule_status === "pending" && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void cancelSchedule(r);
+                          }}
+                          className="underline hover:text-ink"
+                        >
+                          Cancel
+                        </button>
+                      )}
                     </div>
                   </div>
                   <button
