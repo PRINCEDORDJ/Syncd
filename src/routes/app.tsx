@@ -103,6 +103,7 @@ function Workspace() {
   const [titleEdited, setTitleEdited] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const isBlocked = useIsGenerationBlocked();
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
