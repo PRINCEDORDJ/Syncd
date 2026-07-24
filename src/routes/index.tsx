@@ -198,13 +198,13 @@ function LandingPage() {
           />
           <PlanCard
             name="Studio"
-            price="$12"
+            price="$9"
             highlights={["100 credits / month", "5 GB media storage", "Scheduling", "Priority generation"]}
             featured
           />
           <PlanCard
             name="Teams"
-            price="$32"
+            price="$29"
             highlights={["350 credits / month", "20 GB media storage", "Up to 5 seats", "Shared draft library"]}
           />
         </div>
