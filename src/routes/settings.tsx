@@ -34,6 +34,8 @@ export const Route = createFileRoute("/settings")({
   component: SettingsGate,
 });
 
+import { SettingsSkeleton } from "@/components/skeletons/SettingsSkeleton";
+
 function SettingsGate() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -43,13 +45,7 @@ function SettingsGate() {
   }, [user, loading, navigate]);
 
   if (loading || !user) {
-    return (
-      <div className="min-h-dvh bg-background text-ink flex items-center justify-center">
-        <span className="text-[13px] font-mono text-muted-foreground">
-          Loading…
-        </span>
-      </div>
-    );
+    return <SettingsSkeleton />;
   }
   return <SettingsPage />;
 }
@@ -664,16 +660,7 @@ function SettingsPage() {
   }
 
   if (loading || !profile) {
-    return (
-      <div className="min-h-dvh bg-background text-ink flex flex-col">
-        <SiteNav />
-        <div className="flex-1 flex items-center justify-center">
-          <span className="text-[13px] font-mono text-muted-foreground">
-            Loading settings…
-          </span>
-        </div>
-      </div>
-    );
+    return <SettingsSkeleton />;
   }
 
   return (

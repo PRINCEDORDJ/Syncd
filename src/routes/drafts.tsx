@@ -71,6 +71,8 @@ type DraftRow = {
   schedule_status: string | null;
 };
 
+import { DraftsSkeleton, DraftItemSkeleton } from "@/components/skeletons/DraftsSkeleton";
+
 function DraftsGate() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -82,11 +84,7 @@ function DraftsGate() {
   }, [user, loading, navigate]);
 
   if (loading || !user) {
-    return (
-      <div className="min-h-dvh bg-background text-ink flex items-center justify-center">
-        <span className="text-[13px] font-mono text-muted-foreground">Loading…</span>
-      </div>
-    );
+    return <DraftsSkeleton />;
   }
 
   return <DraftsList />;
@@ -521,7 +519,11 @@ function DraftsList() {
         )}
 
         {filtered === null ? (
-          <p className="text-[13px] font-mono text-muted-foreground">Loading…</p>
+          <ul className="space-y-3">
+            <DraftItemSkeleton />
+            <DraftItemSkeleton />
+            <DraftItemSkeleton />
+          </ul>
         ) : filtered.length === 0 ? (
           <div className="border border-dashed border-border rounded-xl p-10 text-center">
             <p className="text-[14px] text-muted-foreground mb-4">

@@ -4,6 +4,8 @@ import { z } from "zod";
 import { useAuth } from "@/lib/auth";
 import { BrandMark } from "@/components/BrandMark";
 
+import { Skeleton } from "@/components/ui/skeleton";
+
 export const Route = createFileRoute("/auth")({
   validateSearch: z.object({
     redirect: z.string().optional(),
@@ -43,6 +45,7 @@ function AuthCallback() {
   return (
     <div className="min-h-dvh bg-background text-ink flex flex-col items-center justify-center gap-4 px-6">
       <BrandMark size={28} />
+      <Skeleton className="h-1.5 w-32 rounded-full" />
       <p className="text-[13px] font-mono text-muted-foreground">
         {timedOut ? "Redirecting…" : "Signing you in…"}
       </p>

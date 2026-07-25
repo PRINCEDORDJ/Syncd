@@ -30,6 +30,8 @@ import {
 } from "@/lib/image-validation";
 import { CreditBanner, useIsGenerationBlocked } from "@/components/CreditBanner";
 
+import { WorkspaceSkeleton } from "@/components/skeletons/WorkspaceSkeleton";
+
 export const Route = createFileRoute("/app")({
   head: () => ({
     meta: [
@@ -54,11 +56,7 @@ function WorkspaceGate() {
   }, [user, loading, navigate]);
 
   if (loading || !user) {
-    return (
-      <div className="min-h-dvh bg-background text-ink flex items-center justify-center">
-        <span className="text-[13px] font-mono text-muted-foreground">Loading…</span>
-      </div>
-    );
+    return <WorkspaceSkeleton />;
   }
 
   return <Workspace />;

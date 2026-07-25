@@ -17,8 +17,10 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useTheme } from "@/lib/theme";
 import { CreditIndicator } from "@/components/CreditIndicator";
 
+import { Skeleton } from "@/components/ui/skeleton";
+
 export function SiteNav() {
-  const { user, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -63,7 +65,12 @@ export function SiteNav() {
         </Link>
 
         <div className="flex items-center gap-2">
-          {user ? (
+          {loading ? (
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-7 w-28 rounded-md hidden sm:block" />
+              <Skeleton className="h-8 w-8 rounded-full" />
+            </div>
+          ) : user ? (
             <>
             <div className="hidden sm:flex">
               <CreditIndicator />
