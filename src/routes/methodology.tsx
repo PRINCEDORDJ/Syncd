@@ -5,16 +5,16 @@ import { SiteFooter } from "@/components/SiteFooter";
 export const Route = createFileRoute("/methodology")({
   head: () => ({
     meta: [
-      { title: "Methodology — SocialSync" },
+      { title: "Methodology — Syncd" },
       {
         name: "description",
         content:
-          "Voice mapping, structural calibration, and direct publishing — the principles behind SocialSync.",
+          "Voice mapping, structural calibration, and direct publishing — the principles behind Syncd.",
       },
-      { property: "og:title", content: "Methodology — SocialSync" },
+      { property: "og:title", content: "Methodology — Syncd" },
       {
         property: "og:description",
-        content: "How SocialSync turns raw thoughts into LinkedIn-native posts.",
+        content: "How Syncd turns raw thoughts into LinkedIn-native posts.",
       },
     ],
   }),
@@ -57,7 +57,7 @@ function MethodologyPage() {
           A small set of opinionated defaults.
         </h1>
         <p className="mt-5 text-[17px] text-muted-foreground max-w-[58ch] leading-relaxed">
-          SocialSync is not a generic writing assistant. It is a narrow tool tuned for one
+          Syncd is not a generic writing assistant. It is a narrow tool tuned for one
           surface and one outcome: a LinkedIn post that earns attention without sounding
           synthetic.
         </p>

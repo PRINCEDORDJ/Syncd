@@ -10,8 +10,8 @@ export const Route = createFileRoute("/auth")({
   }),
   head: () => ({
     meta: [
-      { title: "Signing you in — SocialSync" },
-      { name: "description", content: "Completing sign-in to SocialSync." },
+      { title: "Signing you in — Syncd" },
+      { name: "description", content: "Completing sign-in to Syncd." },
     ],
   }),
   component: AuthCallback,

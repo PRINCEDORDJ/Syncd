@@ -5,13 +5,13 @@ import { SiteFooter } from "@/components/SiteFooter";
 export const Route = createFileRoute("/terms")({
   head: () => ({
     meta: [
-      { title: "Terms of Service — SocialSync" },
+      { title: "Terms of Service — Syncd" },
       {
         name: "description",
-        content: "The terms and conditions for using the SocialSync platform.",
+        content: "The terms and conditions for using the Syncd platform.",
       },
-      { property: "og:site_name", content: "SocialSync" },
-      { property: "og:title", content: "Terms of Service — SocialSync" },
+      { property: "og:site_name", content: "Syncd" },
+      { property: "og:title", content: "Terms of Service — Syncd" },
     ],
   }),
   component: TermsPage,
@@ -39,7 +39,7 @@ function TermsPage() {
               1. Acceptance of Terms
             </h2>
             <p className="mt-4 text-[16px] text-muted-foreground leading-relaxed">
-              By accessing or using SocialSync ("Service"), you agree to be bound by
+              By accessing or using Syncd ("Service"), you agree to be bound by
               these Terms of Service. If you do not agree to these terms, you may not
               use the Service.
             </p>
@@ -50,7 +50,7 @@ function TermsPage() {
               2. Use of Service
             </h2>
             <p className="mt-4 text-[16px] text-muted-foreground leading-relaxed">
-              SocialSync is a tool designed to help you draft and publish content to
+              Syncd is a tool designed to help you draft and publish content to
               LinkedIn. You are responsible for maintaining the security of your
               account and for all activities that occur under your account.
             </p>
@@ -58,7 +58,7 @@ function TermsPage() {
               <p className="text-[16px] text-muted-foreground leading-relaxed">
                 <strong className="text-ink">LinkedIn Compliance:</strong> You must
                 comply with LinkedIn's User Agreement and Professional Community
-                Policies. SocialSync is not affiliated with or endorsed by LinkedIn.
+                Policies. Syncd is not affiliated with or endorsed by LinkedIn.
               </p>
               <p className="text-[16px] text-muted-foreground leading-relaxed">
                 <strong className="text-ink">Content Responsibility:</strong> You are
@@ -73,7 +73,7 @@ function TermsPage() {
               3. AI-Generated Content
             </h2>
             <p className="mt-4 text-[16px] text-muted-foreground leading-relaxed">
-              SocialSync uses artificial intelligence to generate drafts. You
+              Syncd uses artificial intelligence to generate drafts. You
               acknowledge that AI-generated content may be inaccurate, incomplete, or
               inappropriate. You must review and edit all drafts before publishing.
               We are not responsible for any consequences resulting from the
@@ -102,7 +102,7 @@ function TermsPage() {
             </h2>
             <p className="mt-4 text-[16px] text-muted-foreground leading-relaxed">
               You retain all ownership rights to the content you create and publish.
-              SocialSync owns all rights, title, and interest in and to the Service,
+              Syncd owns all rights, title, and interest in and to the Service,
               including its code, design, and branding.
             </p>
           </section>
@@ -112,7 +112,7 @@ function TermsPage() {
               6. Limitation of Liability
             </h2>
             <p className="mt-4 text-[16px] text-muted-foreground leading-relaxed">
-              To the maximum extent permitted by law, SocialSync shall not be liable
+              To the maximum extent permitted by law, Syncd shall not be liable
               for any indirect, incidental, special, consequential, or punitive
               damages, or any loss of profits or revenues, whether incurred directly
               or indirectly.
@@ -125,7 +125,7 @@ function TermsPage() {
             </h2>
             <p className="mt-2 text-[16px] text-muted-foreground">
               If you have any questions about these Terms, please contact us
-              at <a href="mailto:support@socialsync.app" className="text-ink underline underline-offset-4">support@socialsync.app</a>.
+              at <a href="mailto:support@syncd.app" className="text-ink underline underline-offset-4">support@syncd.app</a>.
             </p>
           </section>
         </div>

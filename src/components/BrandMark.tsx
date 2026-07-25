@@ -10,7 +10,7 @@ export function BrandMark({
   return (
     <img
       src={brandIcon}
-      alt="SocialSync"
+      alt="Syncd"
       width={size}
       height={size}
       className={`rounded-full object-cover ${className}`}

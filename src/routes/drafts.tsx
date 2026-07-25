@@ -50,7 +50,7 @@ function attachmentIcon(name: string, type: string) {
 export const Route = createFileRoute("/drafts")({
   head: () => ({
     meta: [
-      { title: "Saved posts — SocialSync" },
+      { title: "Saved posts — Syncd" },
       { name: "description", content: "Your drafts and published LinkedIn posts." },
     ],
   }),
@@ -358,9 +358,14 @@ function DraftsList() {
       const data = (await resp.json().catch(() => ({}))) as {
         success?: boolean;
         error?: string;
+        code?: string;
       };
       if (!resp.ok || !data.success) {
-        setPublishMsg(data.error ?? "Failed to publish.");
+        if (data.code === "LINKEDIN_TOKEN_EXPIRED") {
+          setPublishMsg("LinkedIn connection expired. Please reconnect in Settings.");
+        } else {
+          setPublishMsg(data.error ?? "Failed to publish.");
+        }
         return;
       }
       // Mark draft as published in DB and persist any pending image edits

@@ -70,6 +70,7 @@ export const Route = createFileRoute("/api/linkedin/publish")({
             {
               error:
                 "Your LinkedIn connection has expired. Please reconnect in Settings.",
+              code: "LINKEDIN_TOKEN_EXPIRED",
             },
             400,
           );
@@ -197,6 +198,7 @@ export const Route = createFileRoute("/api/linkedin/publish")({
               {
                 error:
                   "LinkedIn rejected your token. Please reconnect in Settings.",
+                code: "LINKEDIN_TOKEN_EXPIRED",
               },
               401,
             );

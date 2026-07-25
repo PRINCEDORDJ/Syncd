@@ -9,12 +9,12 @@ import { type PlanTier, TOPUP_PACKS, type BillingInterval } from "@/lib/plans";
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "Pricing — SocialSync" },
+      { title: "Pricing — Syncd" },
       {
         name: "description",
         content: "Simple pricing. One free trial week, unlimited drafts on Studio.",
       },
-      { property: "og:title", content: "Pricing — SocialSync" },
+      { property: "og:title", content: "Pricing — Syncd" },
       {
         property: "og:description",
         content: "One plan, one price, unlimited LinkedIn drafts.",

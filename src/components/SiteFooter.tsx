@@ -8,7 +8,7 @@ export function SiteFooter() {
         <div className="flex items-center gap-2">
           <BrandMark size={22} />
           <span className="font-semibold tracking-tight text-ink text-[15px]">
-            SocialSync
+            Syncd
           </span>
           <span className="text-muted-foreground text-[13px] ml-3 font-mono">
             © {new Date().getFullYear()}
@@ -27,7 +27,7 @@ export function SiteFooter() {
           <Link to="/terms" className="hover:text-ink transition-colors">
             Terms
           </Link>
-          <a href="mailto:hello@socialsync.app" className="hover:text-ink transition-colors">
+          <a href="mailto:hello@syncd.app" className="hover:text-ink transition-colors">
             Contact
           </a>
         </div>

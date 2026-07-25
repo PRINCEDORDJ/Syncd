@@ -15,13 +15,13 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "SocialSync — AI LinkedIn posts, scheduling & team drafts" },
+      { title: "Syncd — AI LinkedIn posts, scheduling & team drafts" },
       {
         name: "description",
         content:
           "Voice-matched AI drafts, native scheduling, shared team libraries, and one-click LinkedIn publishing. 30 free credits every month.",
       },
-      { property: "og:title", content: "SocialSync — AI LinkedIn posts, scheduling & team drafts" },
+      { property: "og:title", content: "Syncd — AI LinkedIn posts, scheduling & team drafts" },
       {
         property: "og:description",
         content: "Voice-matched AI drafts, scheduling, team libraries, and one-click LinkedIn publishing.",
@@ -29,7 +29,7 @@ export const Route = createFileRoute("/")({
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://sociosync.lovable.app/" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "SocialSync — AI LinkedIn posts, scheduling & team drafts" },
+      { name: "twitter:title", content: "Syncd — AI LinkedIn posts, scheduling & team drafts" },
       {
         name: "twitter:description",
         content: "Voice-matched AI drafts, scheduling, team libraries, and one-click LinkedIn publishing.",
@@ -64,7 +64,7 @@ function LandingPage() {
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-[56ch] text-pretty leading-relaxed">
-            Dump a half-formed thought. SocialSync drafts it in your voice, attaches your
+            Dump a half-formed thought. Syncd drafts it in your voice, attaches your
             media, and publishes — now, or on a schedule — straight to LinkedIn.
           </p>
 
@@ -156,7 +156,7 @@ function LandingPage() {
           <FeatureCard
             n="01"
             title="Connect LinkedIn"
-            body="Authorize SocialSync once via official OAuth. We never see your password — just a scoped token to publish on your behalf."
+            body="Authorize Syncd once via official OAuth. We never see your password — just a scoped token to publish on your behalf."
           />
           <FeatureCard
             n="02"

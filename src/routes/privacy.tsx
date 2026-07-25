@@ -5,13 +5,13 @@ import { SiteFooter } from "@/components/SiteFooter";
 export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
-      { title: "Privacy Policy — SocialSync" },
+      { title: "Privacy Policy — Syncd" },
       {
         name: "description",
-        content: "How we handle your data and protect your privacy at SocialSync.",
+        content: "How we handle your data and protect your privacy at Syncd.",
       },
-      { property: "og:site_name", content: "SocialSync" },
-      { property: "og:title", content: "Privacy Policy — SocialSync" },
+      { property: "og:site_name", content: "Syncd" },
+      { property: "og:title", content: "Privacy Policy — Syncd" },
     ],
   }),
   component: PrivacyPage,
@@ -39,7 +39,7 @@ function PrivacyPage() {
               1. Overview
             </h2>
             <p className="mt-4 text-[16px] text-muted-foreground leading-relaxed">
-              SocialSync ("we," "us," or "our") is committed to protecting your privacy.
+              Syncd ("we," "us," or "our") is committed to protecting your privacy.
               This Privacy Policy explains how we collect, use, and safeguard your
               information when you use our platform to draft and publish LinkedIn
               content.
@@ -60,7 +60,7 @@ function PrivacyPage() {
               </p>
               <p className="text-[16px] text-muted-foreground leading-relaxed">
                 <strong className="text-ink">Content Data:</strong> We store the raw
-                thoughts, transcripts, and drafts you create within SocialSync so you
+                thoughts, transcripts, and drafts you create within Syncd so you
                 can access them later.
               </p>
               <p className="text-[16px] text-muted-foreground leading-relaxed">
@@ -123,7 +123,7 @@ function PrivacyPage() {
             </h2>
             <p className="mt-2 text-[16px] text-muted-foreground">
               If you have any questions about this Privacy Policy, please contact us
-              at <a href="mailto:privacy@socialsync.app" className="text-ink underline underline-offset-4">privacy@socialsync.app</a>.
+              at <a href="mailto:privacy@syncd.app" className="text-ink underline underline-offset-4">privacy@syncd.app</a>.
             </p>
           </section>
         </div>

@@ -28,7 +28,7 @@ Rewrite `src/routes/index.tsx` to showcase everything that shipped since the ori
 
 Update the route `head()`:
 
-- Title: `SocialSync — AI LinkedIn posts, scheduling & team drafts`
+- Title: `Syncd — AI LinkedIn posts, scheduling & team drafts`
 - Description: mention voice-matched AI drafts, scheduling, teams, one-click publishing (< 160 chars)
 - og:title / og:description mirrored
 - Keep `og:type: website`, add `twitter:card: summary_large_image`
@@ -39,5 +39,9 @@ Update the route `head()`:
 - No hardcoded colors; must look correct in dark mode (already themed via tokens).
 - Mobile-first: bento grid stacks, plans strip stacks, hero text scales down.
 - Only edits `src/routes/index.tsx`. No backend, no other route changes.
+
+## Brand Rename (2026-07-25)
+
+Renamed the product from **SocialSync** to **Syncd** across all UI text, page meta tags, AI system prompt, and documentation. Contact emails updated to `@syncd.app` domain. Deployment URLs (`sociosync.lovable.app`) left unchanged.
 
 &nbsp;

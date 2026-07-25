@@ -13,6 +13,9 @@ export const Route = createFileRoute("/api/public/scheduler")({
           return new Response("Unauthorized", { status: 401 });
         }
 
+        // Cleanup any expired LinkedIn connections (triggers Realtime DELETE events)
+        await supabaseAdmin.rpc("expire_linkedin_connections" as any);
+
         const nowIso = new Date().toISOString();
         const { data: due, error } = await supabaseAdmin
           .from("drafts")
@@ -24,7 +27,7 @@ export const Route = createFileRoute("/api/public/scheduler")({
         if (error) {
           return Response.json({ error: error.message }, { status: 500 });
         }
-        if (!due?.length) return Response.json({ processed: 0 });
+        if (!due?.length) return Response.json({ processed: 0, expiredCleaned: true });
 
         let ok = 0;
         let failed = 0;

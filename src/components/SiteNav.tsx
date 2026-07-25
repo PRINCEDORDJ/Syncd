@@ -59,7 +59,7 @@ export function SiteNav() {
       <div className="flex items-center justify-between px-4 sm:px-6 md:px-8 h-14 w-full max-w-7xl mx-auto gap-3">
         <Link to={user ? "/app" : "/"} className="flex items-center gap-2 group">
           <BrandMark size={22} />
-          <span className="font-semibold tracking-tight text-[15px] text-ink">SocialSync</span>
+          <span className="font-semibold tracking-tight text-[15px] text-ink">Syncd</span>
         </Link>
 
         <div className="flex items-center gap-2">

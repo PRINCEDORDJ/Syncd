@@ -1,6 +1,6 @@
-# SocioSync (Social Sync Connect)
+# Syncd (Social Sync Connect)
 
-SocioSync is an AI-powered social media management and content orchestration platform. It streamlines the workflow for creators and social media managers by providing a centralized workspace to generate, draft, schedule, and publish content across platforms, with a focus on high-quality AI assistance and direct integrations.
+Syncd is an AI-powered social media management and content orchestration platform. It streamlines the workflow for creators and social media managers by providing a centralized workspace to generate, draft, schedule, and publish content across platforms, with a focus on high-quality AI assistance and direct integrations.
 
 ## Key Features
 - **AI-Powered Generation**: Integrated AI tools to generate post ideas and full drafts from raw input.
@@ -124,3 +124,6 @@ social-sync-connect/
 - **Persistence**: Updated draft saving and LinkedIn publishing logic to support both images and file attachments in the drafts library.
 - **Legal Infrastructure**: Added dedicated `Privacy Policy` and `Terms of Service` pages to the landing page and footer to ensure transparency and compliance for LinkedIn OAuth and data handling.
 - **Dynamic Pricing**: Updated the pricing page (`/pricing`) to dynamically reflect the user's current subscription status and admin privileges, highlighting active plans and granting full access to admin users.
+
+## 2026-07-25
+- **Brand Rename**: Renamed the product from **SocialSync** to **Syncd** across all UI components, page `<title>` and SEO meta tags, the AI system prompt (`api.generate.ts`), and planning documentation. Contact emails updated to the `@syncd.app` domain. Deployment URLs (`sociosync.lovable.app`) left unchanged.

@@ -33,7 +33,7 @@ import { CreditBanner, useIsGenerationBlocked } from "@/components/CreditBanner"
 export const Route = createFileRoute("/app")({
   head: () => ({
     meta: [
-      { title: "Workspace — SocialSync" },
+      { title: "Workspace — Syncd" },
       {
         name: "description",
         content: "Draft, refine, and publish your next LinkedIn post.",
@@ -257,11 +257,11 @@ function Workspace() {
     [draft],
   );
 
-  // Check LinkedIn connection status
+  // Check LinkedIn connection status and subscribe to realtime changes
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    (async () => {
+    const checkConn = async () => {
       const { data } = await supabase
         .from("linkedin_connections")
         .select("user_id, expires_at")
@@ -270,9 +270,27 @@ function Workspace() {
       if (cancelled) return;
       const valid = !!data && new Date(data.expires_at).getTime() > Date.now();
       setLinkedinConnected(valid);
-    })();
+    };
+
+    void checkConn();
+
+    const channel = supabase
+      .channel(`linkedin-app-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "linkedin_connections",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => void checkConn(),
+      )
+      .subscribe();
+
     return () => {
       cancelled = true;
+      supabase.removeChannel(channel);
     };
   }, [user]);
 
@@ -394,6 +412,7 @@ function Workspace() {
     const data = (await resp.json().catch(() => ({}))) as {
       success?: boolean;
       error?: string;
+      code?: string;
     };
     setPublishing(false);
     if (resp.ok && data.success) {
@@ -403,6 +422,9 @@ function Workspace() {
         await saveDraft(true);
       }
     } else {
+      if (data.code === "LINKEDIN_TOKEN_EXPIRED") {
+        setLinkedinConnected(false);
+      }
       setError(data.error ?? "Failed to publish.");
     }
   }

@@ -27,7 +27,7 @@ export const Route = createFileRoute("/settings")({
   }),
   head: () => ({
     meta: [
-      { title: "Settings — SocialSync" },
+      { title: "Settings — Syncd" },
       { name: "description", content: "Manage your profile, voice, and LinkedIn connection." },
     ],
   }),
@@ -194,13 +194,63 @@ function SettingsPage() {
       setDisplayName(p.display_name ?? "");
       setAvatarUrl(p.avatar_url ?? "");
       setVoiceNotes(p.voice_notes ?? "");
-      setConn(linkedin ?? null);
+      const isExpired = linkedin && new Date(linkedin.expires_at).getTime() <= Date.now();
+      if (isExpired) {
+        setConn(null);
+        setLinkedInBanner({
+          type: "error",
+          text: "Your LinkedIn connection expired. Please reconnect.",
+        });
+      } else {
+        setConn(linkedin ?? null);
+      }
       setSub(subRow as SubscriptionRow | null);
       setIsAdmin(!!roles?.some((r) => r.role === "admin"));
       setLoading(false);
     })();
     return () => {
       cancelled = true;
+    };
+  }, [user]);
+
+  // Realtime subscription for LinkedIn connection status and auto-disconnect on expiry
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`linkedin-conn-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "linkedin_connections",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            setConn(null);
+            setLinkedInBanner({
+              type: "error",
+              text: "LinkedIn connection disconnected.",
+            });
+          } else if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
+            const row = payload.new as LinkedInConnection;
+            if (new Date(row.expires_at).getTime() <= Date.now()) {
+              setConn(null);
+              setLinkedInBanner({
+                type: "error",
+                text: "LinkedIn connection expired. Please reconnect.",
+              });
+            } else {
+              setConn(row);
+            }
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
   }, [user]);
 
@@ -663,7 +713,7 @@ function SettingsPage() {
           </TabsList>
 
           <TabsContent value="profile" className="mt-0">
-        <Section title="Profile" subtitle="How you appear inside SocialSync.">
+        <Section title="Profile" subtitle="How you appear inside Syncd.">
           <Field label="Display name">
             <input
               value={displayName}
@@ -833,44 +883,67 @@ function SettingsPage() {
           title="LinkedIn connection"
           subtitle="Authorize once. Publish drafts straight from the workspace."
         >
-          {conn ? (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 border border-border rounded-md bg-subtle/40">
-              <div className="flex items-center gap-3 min-w-0">
-                {!!conn.linkedin_picture_url ? (
-                  <img
-                    src={conn.linkedin_picture_url}
-                    alt={conn.linkedin_name ?? "LinkedIn profile"}
-                    className="size-10 rounded-full border border-border"
-                  />
-                ) : (
-                  <div className="size-10 rounded-full bg-ink text-surface flex items-center justify-center text-sm font-semibold">
-                    {conn.linkedin_name?.[0] ?? "?"}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <div className="text-[14px] font-medium text-ink truncate">
-                    {conn.linkedin_name ?? "LinkedIn member"}
-                  </div>
-                  <div className="text-[11px] font-mono text-muted-foreground truncate">
-                    Token expires {new Date(conn.expires_at).toLocaleDateString()}
+          {conn ? (() => {
+            const expiresAt = new Date(conn.expires_at);
+            const daysUntilExpiry = Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000);
+            const isExpiringSoon = daysUntilExpiry <= 7;
+            return (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 border border-border rounded-md bg-subtle/40">
+                <div className="flex items-center gap-3 min-w-0">
+                  {!!conn.linkedin_picture_url ? (
+                    <img
+                      src={conn.linkedin_picture_url}
+                      alt={conn.linkedin_name ?? "LinkedIn profile"}
+                      className="size-10 rounded-full border border-border"
+                    />
+                  ) : (
+                    <div className="size-10 rounded-full bg-ink text-surface flex items-center justify-center text-sm font-semibold">
+                      {conn.linkedin_name?.[0] ?? "?"}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <div className="text-[14px] font-medium text-ink truncate">
+                      {conn.linkedin_name ?? "LinkedIn member"}
+                    </div>
+                    {isExpiringSoon ? (
+                      <div className="text-[11px] font-mono text-amber-600 dark:text-amber-400 font-semibold truncate">
+                        ⚠ Expires in {daysUntilExpiry}d — reconnect soon
+                      </div>
+                    ) : (
+                      <div className="text-[11px] font-mono text-muted-foreground truncate">
+                        Token expires {expiresAt.toLocaleDateString()}
+                      </div>
+                    )}
                   </div>
                 </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  {isExpiringSoon && (
+                    <button
+                      type="button"
+                      onClick={connectLinkedIn}
+                      disabled={connectingLinkedIn}
+                      className="h-9 px-3 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-60 flex-1 sm:flex-none"
+                    >
+                      {connectingLinkedIn ? "Redirecting…" : "Reconnect"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDisconnectLI(true)}
+                    disabled={disconnectingLinkedIn}
+                    className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle flex-1 sm:flex-none disabled:opacity-60"
+                  >
+                    {disconnectingLinkedIn ? "Disconnecting…" : "Disconnect"}
+                  </button>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setConfirmDisconnectLI(true)}
-                disabled={disconnectingLinkedIn}
-                className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle w-full sm:w-auto disabled:opacity-60"
-              >
-                {disconnectingLinkedIn ? "Disconnecting…" : "Disconnect"}
-              </button>
-            </div>
-          ) : (
+            );
+          })() : (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 border border-border rounded-md">
               <div className="min-w-0">
                 <div className="text-[14px] text-ink font-medium">Not connected</div>
                 <div className="text-[12px] text-muted-foreground mt-0.5">
-                  Required to publish posts directly from SocialSync.
+                  Required to publish posts directly from Syncd.
                 </div>
               </div>
               <button

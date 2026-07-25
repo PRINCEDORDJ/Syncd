@@ -11,8 +11,8 @@ export const Route = createFileRoute("/login")({
   }),
   head: () => ({
     meta: [
-      { title: "Sign in — SocialSync" },
-      { name: "description", content: "Sign in to your SocialSync workspace." },
+      { title: "Sign in — Syncd" },
+      { name: "description", content: "Sign in to your Syncd workspace." },
     ],
   }),
   component: LoginPage,
@@ -96,7 +96,7 @@ function LoginPage() {
           <Link to="/" className="inline-flex items-center gap-2 group">
             <BrandMark size={20} />
             <span className="font-semibold tracking-tight text-[15px] text-ink">
-              SocialSync
+              Syncd
             </span>
           </Link>
         </div>
@@ -109,7 +109,7 @@ function LoginPage() {
               {mode === "signin" ? "Welcome back" : "Create account"}
             </p>
             <h1 className="text-3xl tracking-[-0.02em] font-semibold leading-tight">
-              {mode === "signin" ? "Sign in to SocialSync" : "Start drafting"}
+              {mode === "signin" ? "Sign in to Syncd" : "Start drafting"}
             </h1>
           </div>
 

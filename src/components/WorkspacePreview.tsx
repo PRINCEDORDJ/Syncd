@@ -13,7 +13,7 @@ export function WorkspacePreview() {
               <div className="size-2.5 rounded-full bg-border" />
             </div>
             <div className="ml-3 text-[11px] font-mono text-muted-foreground">
-              socialsync.app/app
+              syncd.app/app
             </div>
           </div>
           <div className="text-[11px] font-mono text-muted-foreground">
