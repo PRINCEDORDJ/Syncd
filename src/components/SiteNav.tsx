@@ -118,7 +118,7 @@ export function SiteNav() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/settings" className="cursor-pointer">
+                  <Link to="/settings" search={{}} className="cursor-pointer">
                     <SettingsIcon className="h-4 w-4" />
                     Settings
                   </Link>
@@ -197,7 +197,7 @@ export function SiteNav() {
                     <Link to="/methodology">Methodology</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
-                    <Link to="/settings" className="cursor-pointer">
+                    <Link to="/settings" search={{}} className="cursor-pointer">
                       Settings
                     </Link>
                   </DropdownMenuItem>
