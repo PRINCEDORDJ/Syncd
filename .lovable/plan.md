@@ -1,47 +1,36 @@
-# Landing Page Refresh
+# Portable Backend Export
 
-Rewrite `src/routes/index.tsx` to showcase everything that shipped since the original landing page (teams, scheduling, credits, storage, multi-media publishing, dark mode). Keep the current typographic system, tokens, and `SiteNav` / `SiteFooter` / `WorkspacePreview` — this is a content and composition refresh, not a redesign.
+Goal: own a complete, restorable copy of this project's backend — schema plus all data — that can be loaded into any Supabase project you control.
 
-## New page composition (top → bottom)
+Important constraint up front: Lovable Cloud cannot be detached from this project. This plan does not move the app off Cloud; it produces a portable bundle so your data and schema are never locked in. The live app keeps running on Cloud unchanged.
 
-1. **Hero** — Sharper headline + subhead. Update the pill to reflect current state (e.g. "v1.2 · Teams, scheduling & credits"). Keep dual CTAs (workspace/login + methodology). Adjust proof line to mention "30 free credits every month · No credit card".
-2. **Workspace preview** — Keep `<WorkspacePreview />` as-is.
-3. **"Everything you need to ship on LinkedIn" — feature bento**
-  A 6-tile bento grid (2×3 desktop, stacked mobile) with icons from `lucide-react`. Same visual language as existing bordered card grid:
-  - **Generate in your voice** — AI drafts from raw input, tone controls
-  - **Rich media posts** — Up to 4 images, 1 video, or PDF/Doc attachments
-  - **Schedule anything** — Pick a date & time, cron worker publishes on the minute
-  - **Team workspaces** — Invite up to 5 seats, share a draft library
-  - **Credit-based, no surprises** — Monthly credits + daily cap on free, refunds on failed generations
-  - **Direct LinkedIn publishing** — Official OAuth, formatting preserved, one click
-4. **"Three steps. No fluff." — keep existing 3-step section** (Connect → Generate → Publish). Slightly refresh copy so step 3 mentions scheduling as an alternative to instant publish.
-5. **Plans strip** — Compact 3-column pricing summary linking to `/settings` (billing tab) and `/pricing`:
-  - Free — 30 credits / mo · 5 daily cap · 200 MB
-  - Studio — 100 credits / mo · 5 GB · Scheduling
-  - Teams — 350 credits / mo · 20 GB · 5 seats · Shared library
-   Each card has a "See full pricing →" link to `/pricing`.
-6. **Final CTA** — Keep existing centered CTA block, update copy to reference credits/scheduling.
-7. **Footer** — unchanged.
-8. Fix any security issues that are available
+## What gets produced
 
-## SEO / head
+A folder of files you can download, checked into the repo under `db-export/`:
 
-Update the route `head()`:
+1. **`schema.sql`** — a single consolidated schema script assembled from the 17 existing migration files, in order: extensions, enums, tables, grants, RLS policies, functions, triggers, cron jobs, storage bucket definitions.
+2. **`data/<table>.csv`** — one CSV per public table with every row (drafts, subscriptions, credits, storage usage, teams, team members, user roles, profiles, LinkedIn accounts, etc.).
+3. **`restore.md`** — step-by-step instructions: create a Supabase project, run `schema.sql`, then load each CSV with `\copy` in the stated order so foreign keys resolve.
 
-- Title: `Syncd — AI LinkedIn posts, scheduling & team drafts`
-- Description: mention voice-matched AI drafts, scheduling, teams, one-click publishing (< 160 chars)
-- og:title / og:description mirrored
-- Keep `og:type: website`, add `twitter:card: summary_large_image`
+## Two things the export cannot include
 
-## Constraints
+- **Auth users.** `auth.users` is Supabase-managed and not exportable from here. The CSVs keep the original user UUIDs, so on restore you either recreate users with matching IDs via the Auth Admin API, or have people re-sign-up and remap. `restore.md` will cover both paths.
+- **Storage objects (avatars, uploaded media).** Only the database rows referencing them are exported. Re-uploading the files themselves is a separate manual step, documented in `restore.md`.
 
-- No new dependencies; use existing `lucide-react` icons and design tokens (`bg-card`, `border-border`, `text-ink`, `text-muted-foreground`, `bg-subtle`, `shadow-cta`, `font-mono`).
-- No hardcoded colors; must look correct in dark mode (already themed via tokens).
-- Mobile-first: bento grid stacks, plans strip stacks, hero text scales down.
-- Only edits `src/routes/index.tsx`. No backend, no other route changes.
+For a byte-exact database dump including auth, use **Cloud → Advanced settings → Export data** in Lovable. This plan complements that with human-readable, re-runnable SQL.
 
-## Brand Rename (2026-07-25)
+## Secrets to re-provision on any restore
 
-Renamed the product from **SocialSync** to **Syncd** across all UI text, page meta tags, AI system prompt, and documentation. Contact emails updated to `@syncd.app` domain. Deployment URLs (`sociosync.lovable.app`) left unchanged.
+Not exported (they're secrets, not data): LinkedIn client ID/secret, Polar access token, Polar product IDs, Polar webhook secret, Lovable API key. `restore.md` will list them by name so nothing is missed.
 
-&nbsp;
+## Technical notes
+
+- `schema.sql` is generated by concatenating `supabase/migrations/*.sql` in filename order and de-duplicating later `CREATE OR REPLACE` overrides, so the final state matches production rather than replaying history.
+- CSVs are produced with `COPY (SELECT * FROM <table>) TO STDOUT WITH CSV HEADER` per table — no `pg_dump`.
+- `jsonb` columns (draft `images`, `attachments`) round-trip through CSV correctly with standard quoting.
+- Load order in `restore.md`: profiles → user_roles → teams → team_members → subscriptions → user_credits → user_storage → linkedin_accounts → drafts.
+- Nothing in the running app changes; no migrations are applied.
+
+## Optional follow-up
+
+If you later want a repeatable snapshot rather than a one-off, I can add a small script (`scripts/export-db.sh`) you re-run any time to refresh `db-export/`.
