@@ -24,20 +24,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Subscribe FIRST, then fetch existing session.
+    let active = true;
+
+    // Subscribe FIRST, then fetch and validate the existing session. After a
+    // Supabase project migration, localStorage can still contain a JWT issued
+    // by the old project. getSession() only reads that cached value; getUser()
+    // verifies it against the currently configured Supabase project.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-      setLoading(false);
+      if (active) {
+        setSession(newSession);
+        setLoading(false);
+      }
     });
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      const cachedSession = data.session;
 
-    return () => subscription.unsubscribe();
+      if (!cachedSession) {
+        if (active) setLoading(false);
+        return;
+      }
+
+      const { error } = await supabase.auth.getUser(cachedSession.access_token);
+      if (error) {
+        // Clear only this browser's cached session. The token may belong to a
+        // project that no longer exists, so a remote sign-out is unnecessary.
+        await supabase.auth.signOut({ scope: "local" });
+        if (active) setSession(null);
+      } else if (active) {
+        setSession(cachedSession);
+      }
+      if (active) setLoading(false);
+    })();
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = useCallback(async () => {
