@@ -14,9 +14,10 @@ export interface SubscriptionSummary {
 }
 
 export const getMySubscription = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }): Promise<SubscriptionSummary> => {
     const { userId } = context;
+    const { supabaseAdmin } = await import("@/lib/supabase-admin.server");
 
     const { data: sub } = await supabaseAdmin
       .from("subscriptions")
