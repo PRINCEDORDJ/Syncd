@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireAuth } from "@/lib/require-auth";
 import { PLAN_LIMITS, type PlanTier } from "@/lib/plans";
 
 export interface SubscriptionSummary {
@@ -15,9 +14,10 @@ export interface SubscriptionSummary {
 }
 
 export const getMySubscription = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }): Promise<SubscriptionSummary> => {
     const { userId } = context;
+    const { supabaseAdmin } = await import("@/lib/supabase-admin.server");
 
     const { data: sub } = await supabaseAdmin
       .from("subscriptions")

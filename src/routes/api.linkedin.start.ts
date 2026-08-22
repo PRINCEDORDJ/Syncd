@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { supabaseAdmin } from "@/lib/supabase-admin.server";
 import { getBearerToken } from "@/lib/request-auth.server";
 
 const REDIRECT_URI_PATH = "/api/linkedin/callback";

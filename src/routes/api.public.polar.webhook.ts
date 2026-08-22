@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Webhook } from "standardwebhooks";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { supabaseAdmin } from "@/lib/supabase-admin.server";
 import type { PlanTier } from "@/lib/plans";
 import { PLAN_LIMITS } from "@/lib/plans";
 

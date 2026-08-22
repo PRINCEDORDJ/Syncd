@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { supabaseAdmin } from "@/lib/supabase-admin.server";
 
 export type PublishResult =
   | { ok: true; postId: string }

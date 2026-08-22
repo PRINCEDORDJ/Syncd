@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { supabaseAdmin } from "@/lib/supabase-admin.server";
 import { getRequestHeader } from "@tanstack/react-start/server";
 
 function json(body: unknown, status = 200) {

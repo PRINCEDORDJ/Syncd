@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { supabaseAdmin } from "@/lib/supabase-admin.server";
 import { publishToLinkedIn } from "@/lib/linkedin-publish.server";
 
 export const Route = createFileRoute("/api/public/scheduler")({
@@ -8,7 +8,13 @@ export const Route = createFileRoute("/api/public/scheduler")({
       POST: async ({ request }) => {
         // Simple shared-secret check (uses Supabase anon key from apikey header)
         const providedKey = request.headers.get("apikey") ?? "";
-        const expected = process.env.SUPABASE_PUBLISHABLE_KEY ?? "";
+        const { getSupabasePublishableKey } = await import("@/lib/supabase-env.server");
+        let expected = "";
+        try {
+          expected = getSupabasePublishableKey();
+        } catch {
+          expected = "";
+        }
         if (!expected || providedKey !== expected) {
           return new Response("Unauthorized", { status: 401 });
         }
