@@ -1,4 +1,5 @@
-import OpenAI from "openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { streamText } from "ai";
 import { GoogleGenAI } from "@google/genai";
 
 export type AiImageInput = {
@@ -29,7 +30,13 @@ function readEnv(name: string): string | undefined {
   return value || undefined;
 }
 
-function getProviderConfig(): { provider: AiProvider; model: string; apiKey: string } {
+function getProviderConfig(): {
+  provider: AiProvider;
+  model: string;
+  apiKey: string;
+  baseURL?: string;
+  providerName?: string;
+} {
   const provider = (readEnv("AI_PROVIDER") ?? "openai").toLowerCase();
   if (provider !== "openai" && provider !== "gemini") {
     throw new AiConfigurationError(
@@ -50,6 +57,12 @@ function getProviderConfig(): { provider: AiProvider; model: string; apiKey: str
     model:
       readEnv(provider === "openai" ? "OPENAI_MODEL" : "GEMINI_MODEL") ??
       (provider === "openai" ? "gpt-5.6" : "gemini-2.5-flash"),
+    ...(provider === "openai"
+      ? {
+          baseURL: readEnv("OPENAI_BASE_URL") ?? "https://api.openai.com/v1",
+          providerName: readEnv("OPENAI_PROVIDER_NAME") ?? "openai-compatible",
+        }
+      : {}),
   };
 }
 
@@ -63,30 +76,33 @@ function toGeminiParts(input: AiGenerationInput) {
 }
 
 async function createOpenAiStream(
-  config: { apiKey: string; model: string },
+  config: {
+    apiKey: string;
+    model: string;
+    baseURL?: string;
+    providerName?: string;
+  },
   input: AiGenerationInput,
 ): Promise<AsyncIterable<string>> {
-  const client = new OpenAI({ apiKey: config.apiKey });
   const content = [
-    { type: "input_text", text: input.userPrompt },
+    { type: "text" as const, text: input.userPrompt },
     ...input.images.map((image) => ({
-      type: "input_image",
-      image_url: image.dataUrl,
-      detail: "auto",
+      type: "image" as const,
+      image: image.dataUrl,
     })),
   ];
-  const stream = await client.responses.create({
-    model: config.model,
-    instructions: input.systemPrompt,
-    input: [{ role: "user", content }],
-    stream: true,
+  const provider = createOpenAICompatible({
+    baseURL: config.baseURL ?? "https://api.openai.com/v1",
+    name: config.providerName ?? "openai-compatible",
+    apiKey: config.apiKey,
+  });
+  const stream = streamText({
+    model: provider.chatModel(config.model),
+    system: input.systemPrompt,
+    messages: [{ role: "user", content }],
   });
 
-  return (async function* () {
-    for await (const event of stream) {
-      if (event.type === "response.output_text.delta" && event.delta) yield event.delta;
-    }
-  })();
+  return stream.textStream;
 }
 
 async function createGeminiStream(
