@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 
-const BASE_URL = "https://sociosync.lovable.app";
+const BASE_URL = process.env.APP_URL || "http://localhost:8080";
 
 interface SitemapEntry {
   path: string;
