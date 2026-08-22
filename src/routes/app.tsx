@@ -359,6 +359,7 @@ function Workspace() {
           }
           try {
             const parsed = JSON.parse(json);
+            if (typeof parsed.error === "string") throw new Error(parsed.error);
             const content: string | undefined = parsed.choices?.[0]?.delta?.content;
             if (content) setDraft((prev) => prev + content);
           } catch {
