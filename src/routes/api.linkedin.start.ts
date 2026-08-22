@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabaseAdmin } from "@/lib/supabase-admin.server";
-import { getBearerToken } from "@/lib/request-auth.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getRequestHeader } from "@tanstack/react-start/server";
 
 const REDIRECT_URI_PATH = "/api/linkedin/callback";
 
@@ -25,10 +25,12 @@ export const Route = createFileRoute("/api/linkedin/start")({
           return jsonResponse({ error: "LinkedIn is not configured." }, 500);
         }
 
-        const accessToken = getBearerToken(request);
-        if (!accessToken) {
+        const authHeader =
+          getRequestHeader("authorization") ?? getRequestHeader("Authorization");
+        if (!authHeader?.startsWith("Bearer ")) {
           return jsonResponse({ error: "Not authenticated." }, 401);
         }
+        const accessToken = authHeader.slice(7);
         const { data: userData, error: userErr } =
           await supabaseAdmin.auth.getUser(accessToken);
         if (userErr || !userData.user) {

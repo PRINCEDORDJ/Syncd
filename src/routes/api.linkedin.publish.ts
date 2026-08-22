@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabaseAdmin } from "@/lib/supabase-admin.server";
-import { getBearerToken } from "@/lib/request-auth.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getRequestHeader } from "@tanstack/react-start/server";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -9,11 +9,13 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-async function authenticate(request: Request): Promise<{ userId: string } | { error: Response }> {
-  const accessToken = getBearerToken(request);
-  if (!accessToken) {
+async function authenticate(): Promise<{ userId: string } | { error: Response }> {
+  const authHeader =
+    getRequestHeader("authorization") ?? getRequestHeader("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
     return { error: jsonResponse({ error: "Not authenticated." }, 401) };
   }
+  const accessToken = authHeader.slice(7);
   const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
   if (error || !data.user) {
     return { error: jsonResponse({ error: "Not authenticated." }, 401) };
@@ -25,7 +27,7 @@ export const Route = createFileRoute("/api/linkedin/publish")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const auth = await authenticate(request);
+        const auth = await authenticate();
         if ("error" in auth) return auth.error;
 
         let body: { content?: unknown; images?: unknown };
