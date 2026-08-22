@@ -72,7 +72,7 @@ export function SiteNav() {
             </div>
           ) : user ? (
             <>
-            <div className="hidden sm:flex">
+            <div className="hidden max-lg:flex sm:flex">
               <CreditIndicator />
             </div>
             <DropdownMenu>
