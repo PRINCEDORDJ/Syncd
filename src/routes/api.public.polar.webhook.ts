@@ -31,6 +31,19 @@ function topupCreditsFromProductId(productId: string | null | undefined): number
 
 type SubStatus = "active" | "canceled" | "past_due" | "expired" | "trialing";
 
+type PolarWebhookEvent = {
+  id?: string;
+  type: string;
+  data: Record<string, unknown>;
+};
+
+type PolarWebhookResult = {
+  eventId: string | null;
+  outcome: "handled" | "ignored";
+  reason?: string;
+  userId: string | null;
+};
+
 function mapStatus(status: string | undefined): SubStatus {
   switch (status) {
     case "active":
@@ -50,6 +63,12 @@ function mapStatus(status: string | undefined): SubStatus {
   }
 }
 
+function polarWebhookSecret(secret: string) {
+  const trimmed = secret.trim();
+  if (trimmed.startsWith("whsec_")) return trimmed;
+  return Buffer.from(trimmed, "utf-8").toString("base64");
+}
+
 export const Route = createFileRoute("/api/public/polar/webhook")({
   server: {
     handlers: {
@@ -65,25 +84,31 @@ export const Route = createFileRoute("/api/public/polar/webhook")({
           headers[key] = value;
         });
 
-        // Polar provides the secret as plain text — base64 encode for Standard Webhooks
-        const base64Secret = Buffer.from(secret, "utf-8").toString("base64");
-        const wh = new Webhook(base64Secret);
+        const wh = new Webhook(polarWebhookSecret(secret));
 
-        let event: { type: string; data: Record<string, unknown> };
+        let event: PolarWebhookEvent;
         try {
-          event = wh.verify(rawBody, headers) as {
-            type: string;
-            data: Record<string, unknown>;
-          };
+          event = wh.verify(rawBody, headers) as PolarWebhookEvent;
         } catch (err) {
           console.error("[polar webhook] signature verification failed", err);
           return new Response("Invalid signature", { status: 401 });
         }
 
         try {
-          await handleEvent(event);
+          const result = await handleEvent(event);
+          console.info("[polar webhook] delivery", {
+            type: event.type,
+            eventId: result.eventId,
+            userId: result.userId,
+            outcome: result.outcome,
+            reason: result.reason,
+          });
         } catch (err) {
-          console.error("[polar webhook] handler error", err);
+          console.error("[polar webhook] handler error", {
+            type: event.type,
+            eventId: resolveEventId(event),
+            err,
+          });
           return new Response("Handler error", { status: 500 });
         }
 
@@ -93,13 +118,20 @@ export const Route = createFileRoute("/api/public/polar/webhook")({
   },
 });
 
-async function handleEvent(event: {
-  type: string;
-  data: Record<string, unknown>;
-}) {
-  const { type, data } = event;
+function resolveEventId(event: PolarWebhookEvent) {
+  return (
+    event.id ??
+    (event.data.id as string | undefined) ??
+    (event.data.checkout_id as string | undefined) ??
+    null
+  );
+}
 
-  // Resolve user_id from external_customer_id (set when checkout was created)
+async function handleEvent(event: PolarWebhookEvent): Promise<PolarWebhookResult> {
+  const { type, data } = event;
+  const eventId = resolveEventId(event);
+
+  // Resolve user_id from external_customer_id (set when checkout was created).
   // Most subscription/order events expose customer with external_id.
   const userId =
     (data.metadata as Record<string, unknown> | undefined)?.user_id?.toString() ??
@@ -108,8 +140,7 @@ async function handleEvent(event: {
     null;
 
   if (!userId) {
-    console.warn("[polar webhook] no user_id resolved for event", type);
-    return;
+    return { eventId, outcome: "ignored", reason: "no_user_id", userId };
   }
 
   if (
@@ -122,8 +153,7 @@ async function handleEvent(event: {
     const productId = (data.product_id as string | undefined) ?? null;
     const plan = planFromProductId(productId);
     const status = mapStatus(data.status as string | undefined);
-    const currentPeriodEnd =
-      (data.current_period_end as string | undefined) ?? null;
+    const currentPeriodEnd = (data.current_period_end as string | undefined) ?? null;
     const customerId =
       (data.customer_id as string | undefined) ??
       (data.customer as Record<string, unknown> | undefined)?.id?.toString() ??
@@ -139,21 +169,19 @@ async function handleEvent(event: {
       .maybeSingle();
     const oldPlan = (existing?.plan as PlanTier | null) ?? "trial";
 
-    await supabaseAdmin
-      .from("subscriptions")
-      .upsert(
-        {
-          user_id: userId,
-          plan,
-          status,
-          polar_customer_id: customerId,
-          polar_subscription_id: subscriptionId,
-          polar_product_id: productId,
-          current_period_end: currentPeriodEnd,
-          cancel_at_period_end: cancelAtPeriodEnd,
-        },
-        { onConflict: "user_id" },
-      );
+    await supabaseAdmin.from("subscriptions").upsert(
+      {
+        user_id: userId,
+        plan,
+        status,
+        polar_customer_id: customerId,
+        polar_subscription_id: subscriptionId,
+        polar_product_id: productId,
+        current_period_end: currentPeriodEnd,
+        cancel_at_period_end: cancelAtPeriodEnd,
+      },
+      { onConflict: "user_id" },
+    );
 
     // On plan change: apply upgrade grant or downgrade cap in one RPC.
     if (plan !== oldPlan) {
@@ -163,7 +191,7 @@ async function handleEvent(event: {
         _old_plan: oldPlan,
       });
     } else if ((status === "active" || status === "trialing") && plan !== "trial") {
-      // Same plan, active renewal — refresh monthly allocation
+      // Same plan, active renewal: refresh monthly allocation.
       const amount = PLAN_LIMITS[plan].monthlyCredits;
       await supabaseAdmin.rpc("grant_subscription_credits", {
         _user_id: userId,
@@ -171,11 +199,11 @@ async function handleEvent(event: {
         _reason: `${plan} plan (${type})`,
       });
     }
-    return;
+    return { eventId, outcome: "handled", userId };
   }
 
   if (type === "order.paid" || type === "order.created") {
-    // One-time top-up purchase (subscriptions also emit order.paid — skip those)
+    // One-time top-up purchase. Subscription products may also emit order events.
     const productId =
       (data.product_id as string | undefined) ??
       (data.product as Record<string, unknown> | undefined)?.id?.toString() ??
@@ -187,7 +215,12 @@ async function handleEvent(event: {
         _amount: credits,
       });
     }
-    return;
+    return {
+      eventId,
+      outcome: credits > 0 ? "handled" : "ignored",
+      reason: credits > 0 ? undefined : "not_topup_product",
+      userId,
+    };
   }
 
   if (type === "subscription.canceled") {
@@ -198,7 +231,7 @@ async function handleEvent(event: {
         cancel_at_period_end: true,
       })
       .eq("user_id", userId);
-    return;
+    return { eventId, outcome: "handled", userId };
   }
 
   if (type === "subscription.revoked") {
@@ -211,11 +244,11 @@ async function handleEvent(event: {
         current_period_end: null,
       })
       .eq("user_id", userId);
-    return;
+    return { eventId, outcome: "handled", userId };
   }
 
   if (type === "checkout.updated" || type === "checkout.created") {
-    // Capture customer id early so portal works even before subscription event lands
+    // Capture customer id early so portal works even before subscription event lands.
     const customerId =
       (data.customer_id as string | undefined) ??
       (data.customer as Record<string, unknown> | undefined)?.id?.toString() ??
@@ -226,6 +259,13 @@ async function handleEvent(event: {
         .update({ polar_customer_id: customerId })
         .eq("user_id", userId);
     }
-    return;
+    return {
+      eventId,
+      outcome: customerId ? "handled" : "ignored",
+      reason: customerId ? undefined : "no_customer_id",
+      userId,
+    };
   }
+
+  return { eventId, outcome: "ignored", reason: "unhandled_event_type", userId };
 }
