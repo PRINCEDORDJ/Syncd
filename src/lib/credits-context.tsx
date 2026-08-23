@@ -56,9 +56,8 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         if (creditsRes.error) throw creditsRes.error;
         const plan = (sub?.plan ?? "trial") as PlanTier;
-        // Admin bypass — subscriptions RPC promotes admins to "teams"; treat
-        // teams with no billing account as admin so unlimited displays correctly.
-        const isAdmin = plan === "teams" && !sub?.has_billing_account;
+        // Admin flag comes straight from user_roles via getMySubscription.
+        const isAdmin = sub?.isAdmin ?? false;
         const limits = PLAN_LIMITS[plan];
         const row = creditsRes.data;
         const subscriptionCredits = row?.subscription_credits ?? limits.monthlyCredits;

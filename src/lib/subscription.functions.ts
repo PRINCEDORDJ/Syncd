@@ -11,6 +11,7 @@ export interface SubscriptionSummary {
   has_billing_account: boolean;
   drafts_used: number;
   drafts_limit: number | null;
+  isAdmin: boolean;
 }
 
 export const getMySubscription = createServerFn({ method: "GET" })
@@ -18,6 +19,12 @@ export const getMySubscription = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<SubscriptionSummary> => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/lib/supabase-admin.server");
+
+    const { data: roleRows } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    const isAdmin = roleRows?.some((r) => r.role === "admin") ?? false;
 
     const { data: sub } = await supabaseAdmin
       .from("subscriptions")
@@ -30,7 +37,7 @@ export const getMySubscription = createServerFn({ method: "GET" })
     const { data: planRow } = await supabaseAdmin.rpc("get_user_plan", {
       _user_id: userId,
     });
-    const plan: PlanTier = (planRow as PlanTier | null) ?? "trial";
+    const plan: PlanTier = isAdmin ? "teams" : ((planRow as PlanTier | null) ?? "trial");
 
     // Count drafts created in the current period (or trial)
     const periodStart =
@@ -51,12 +58,13 @@ export const getMySubscription = createServerFn({ method: "GET" })
 
     return {
       plan,
-      status: sub?.status ?? "trialing",
+      status: isAdmin ? "active" : (sub?.status ?? "trialing"),
       trial_end: sub?.trial_end ?? null,
       current_period_end: sub?.current_period_end ?? null,
       cancel_at_period_end: sub?.cancel_at_period_end ?? false,
       has_billing_account: Boolean(sub?.polar_customer_id),
       drafts_used: count ?? 0,
-      drafts_limit: PLAN_LIMITS[plan].monthlyCredits,
+      drafts_limit: isAdmin ? null : PLAN_LIMITS[plan].monthlyCredits,
+      isAdmin,
     };
   });
