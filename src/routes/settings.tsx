@@ -956,7 +956,7 @@ function SettingsPage() {
           )}
           {(() => {
             const effectivePlan: PlanTier = isAdmin ? "teams" : (sub?.plan ?? "trial");
-            const effectiveStatus = isAdmin ? "admin" : (sub?.status ?? "trialing");
+            const effectiveStatus = isAdmin ? "active" : (sub?.status ?? "trialing");
             const monthlyLimit = PLAN_LIMITS[effectivePlan].monthlyCredits;
             const linkedInMax = PLAN_LIMITS[effectivePlan].maxLinkedInAccounts;
             const subCredits = isAdmin ? Infinity : (credits?.subscription ?? 0);
