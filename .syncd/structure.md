@@ -3,7 +3,7 @@
 Syncd is an AI-powered social media management and content orchestration platform. It streamlines the workflow for creators and social media managers by providing a centralized workspace to generate, draft, schedule, and publish content across platforms, with a focus on high-quality AI assistance and direct integrations.
 
 ## Key Features
-- **AI-Powered Generation**: Integrated AI tools to generate post ideas and full drafts from raw input.
+- **AI-Powered Generation**: Integrated AI tools to generate post ideas and full drafts from raw input, with pluggable provider support (OpenAI-compatible & Google Gemini).
 - **Cross-Platform Publishing**: Direct publishing and scheduling, starting with LinkedIn.
 - **Drafts Library**: Centralized, searchable library of saved drafts with preview, inline editing, and publishing.
 - **Media Management**: Multi-image carousel, video uploads, and document attachments with tier-based storage quotas.
@@ -21,11 +21,19 @@ social-sync-connect/
 ├── .lovable/                 # Lovable development and planning
 │   ├── plan.md              # Project implementation plan
 │   └── structure.md         # This file
+├── docs/                    # Developer documentation
+│   └── ai-providers.md      # AI provider configuration guide
 ├── public/                  # Static assets
+├── scripts/                 # Utility scripts
+│   └── export-db.sh         # Database export script
 ├── src/                     # Main source code
 │   ├── assets/              # Images, fonts, and other assets
 │   ├── components/          # React components
 │   │   ├── ui/              # shadcn/ui shared components
+│   │   ├── skeletons/       # Loading skeleton components
+│   │   │   ├── DraftsSkeleton.tsx
+│   │   │   ├── SettingsSkeleton.tsx
+│   │   │   └── WorkspaceSkeleton.tsx
 │   │   ├── BrandMark.tsx    # Brand logo component
 │   │   ├── ConfirmDialog.tsx # Reusable confirmation dialog
 │   │   ├── CreditBanner.tsx  # Credit-limit banner in workspace
@@ -35,18 +43,30 @@ social-sync-connect/
 │   │   ├── SiteNav.tsx      # Main navigation header
 │   │   └── WorkspacePreview.tsx # Dashboard workspace card
 │   ├── hooks/               # Custom React hooks
-│   │   ├── useCredits.ts    # Real-time credit balance hook
+│   │   ├── useCredits.ts    # Re-exports useCredits from credits-context
 │   │   ├── useStorage.ts    # Storage usage hook
 │   │   └── use-mobile.tsx   # Mobile breakpoint hook
 │   ├── integrations/        # External service integrations
 │   │   ├── lovable/         # Lovable AI Gateway integration
 │   │   └── supabase/        # Supabase client, types, auth middleware
+│   │       ├── auth-attacher.ts
+│   │       ├── auth-middleware.ts
+│   │       ├── client.server.ts # Server-side admin client (service role)
+│   │       ├── client.ts        # Browser client
+│   │       └── types.ts         # Generated DB types
 │   ├── lib/                 # Utility functions and shared logic
+│   │   ├── ai-provider.server.ts # AI provider abstraction (OpenAI/Gemini)
 │   │   ├── auth.tsx         # Authentication logic/context
+│   │   ├── avatar-upload.ts # Avatar upload/remove helpers
 │   │   ├── credits-context.tsx # Real-time credit state provider
 │   │   ├── image-validation.ts # Media processing and validation
+│   │   ├── linkedin-publish.server.ts # LinkedIn publishing logic
 │   │   ├── plans.ts         # Subscription tier definitions
+│   │   ├── require-auth.ts  # Server-side auth middleware
 │   │   ├── subscription.functions.ts # Subscription management server functions
+│   │   ├── supabase-admin.server.ts # Service-role Supabase client (lazy)
+│   │   ├── supabase-env.server.ts   # Server-side env resolution (APP_* overrides)
+│   │   ├── theme.ts         # Light/dark theme hook
 │   │   └── utils.ts         # Tailwind merger and helpers
 │   ├── routes/              # TanStack Router page components
 │   │   ├── __root.tsx       # Root layout wrapper
@@ -54,24 +74,30 @@ social-sync-connect/
 │   │   ├── login.tsx        # Auth page (email + Google OAuth)
 │   │   ├── app.tsx          # Main workspace / AI generation
 │   │   ├── drafts.tsx       # Drafts library with preview/edit/publish
-│   │   ├── settings.tsx     # Tabbed settings (Profile, LinkedIn, Billing, Account, Danger)
+│   │   ├── settings.tsx     # Tabbed settings (Profile, LinkedIn, Billing, Team, Account, Danger)
 │   │   ├── pricing.tsx      # Pricing table with monthly/annual toggle
 │   │   ├── methodology.tsx  # Product explanation
 │   │   ├── privacy.tsx      # Privacy policy
 │   │   ├── terms.tsx        # Terms of service
 │   │   ├── auth.tsx         # Auth callback handler
-│   │   ├── api.generate.ts  # AI generation endpoint
-│   │   ├── api.linkedin.*   # LinkedIn OAuth and publishing
-│   │   ├── api.polar.*      # Polar checkout and customer portal
+│   │   ├── api.generate.ts  # AI generation endpoint (SSE streaming)
+│   │   ├── api.linkedin.start.ts     # LinkedIn OAuth start
+│   │   ├── api.linkedin.callback.ts  # LinkedIn OAuth callback
+│   │   ├── api.linkedin.publish.ts   # LinkedIn publish endpoint
+│   │   ├── api.linkedin.disconnect.ts # LinkedIn disconnect endpoint
+│   │   ├── api.polar.checkout.ts     # Polar checkout session creation
+│   │   ├── api.polar.portal.ts       # Polar customer portal session
 │   │   ├── api.public.polar.webhook.ts # Polar webhook handler
-│   │   └── api.public.scheduler.ts # Scheduler worker for scheduled posts
+│   │   ├── api.public.scheduler.ts   # Scheduler worker for scheduled posts
+│   │   └── sitemap[.]xml.ts          # XML sitemap endpoint
 │   ├── routeTree.gen.ts     # Auto-generated TanStack route tree
 │   ├── router.tsx           # Router instance configuration
 │   └── styles.css           # Global Tailwind & base styles
 ├── supabase/                # Backend configuration
 │   ├── migrations/          # SQL database migrations
 │   └── config.toml          # Supabase project settings
-├── .env                     # Local environment variables
+├── .env.example             # Example environment variables
+├── .gitignore               # Git ignore rules
 ├── components.json          # shadcn/ui configuration
 ├── eslint.config.js         # Linting rules
 ├── package.json             # Dependencies and scripts
@@ -92,12 +118,26 @@ social-sync-connect/
 - **teams**: Team workspace metadata.
 - **team_members**: Membership rows linking users to teams with role.
 - **user_roles**: RBAC roles (`admin`, `moderator`, `user`) for privileged access.
-- **has_role / get_user_plan**: Security definer helpers for server-side authorization.
-- **consume_credit / refund_credit / handle_plan_change**: Credit accounting RPCs.
+- **linkedin_connections**: OAuth tokens and profile info for connected LinkedIn accounts (with expiry).
+- **linkedin_oauth_states**: CSRF state tokens for the LinkedIn OAuth flow.
+- **has_role / get_user_plan / get_team_role / is_team_member**: Security definer helpers for server-side authorization.
+- **consume_credit / refund_credit / handle_plan_change / grant_subscription_credits / grant_topup_credits**: Credit accounting RPCs.
 - **check_storage_quota / increment_storage / decrement_storage / sync_draft_storage**: Storage accounting RPCs and trigger.
+- **cleanup_linkedin_oauth_states / expire_linkedin_connections**: OAuth state and connection cleanup RPCs.
 - **publish_scheduled_post**: Scheduler RPC invoked by the public scheduler route.
 
 # Recent Changes
+
+## 2026-08-22
+- **AI Provider Abstraction**: Added `ai-provider.server.ts` supporting both OpenAI-compatible (default `gpt-5.6`) and Google Gemini (default `gemini-2.5-flash`) providers via `AI_PROVIDER` env var. Refactored `api.generate.ts` to stream SSE responses, support image inputs (up to 4), and refund credits on provider errors. Added `docs/ai-providers.md` documenting configuration.
+- **Polar Payment Integration**: Added `api.polar.checkout.ts` and `api.polar.portal.ts` routes. Refactored `api.public.polar.webhook.ts` to use explicit types, support both raw and `whsec_` secrets, log delivery outcomes, and derive event IDs reliably. Added `.env.example` with all Supabase, Polar, and LinkedIn env vars.
+- **LinkedIn OAuth & Publishing**: Added `linkedin_connections` and `linkedin_oauth_states` tables with realtime support. Added `api.linkedin.start.ts`, `api.linkedin.callback.ts`, `api.linkedin.publish.ts`, and `api.linkedin.disconnect.ts` routes. Added `linkedin-publish.server.ts` for shared publishing logic. Added `expire_linkedin_connections` RPC and scheduler cleanup.
+- **Server-Side Auth & Env**: Added `supabase-admin.server.ts` (lazy service-role client), `supabase-env.server.ts` (resolves `APP_SUPABASE_*` overrides), and `require-auth.ts` (server middleware for bearer-token auth). Updated `auth.tsx` to validate sessions via `getUser()` after project migration.
+- **Sitemap**: Added `sitemap[.]xml.ts` route generating XML sitemap from `APP_URL`.
+- **Responsive Fix**: Adjusted `CreditIndicator` visibility in `SiteNav` for mobile/desktop breakpoints.
+
+## 2026-07-25
+- **Brand Rename**: Renamed the product from **SocialSync** to **Syncd** across all UI components, page `<title>` and SEO meta tags, the AI system prompt (`api.generate.ts`), and planning documentation. Contact emails updated to the `@syncd.app` domain. Deployment URLs (`sociosync.lovable.app`) left unchanged.
 
 ## 2026-07-24
 - **Credit & Subscription Model**: Hardened credit accounting with `consume_credit`, `refund_credit`, and `handle_plan_change` RPCs. Implemented real-time credit balance via `useCredits` and `CreditIndicator` in `SiteNav`. Added `CreditBanner` to the workspace to block/warn generation at plan limits.
@@ -124,6 +164,3 @@ social-sync-connect/
 - **Persistence**: Updated draft saving and LinkedIn publishing logic to support both images and file attachments in the drafts library.
 - **Legal Infrastructure**: Added dedicated `Privacy Policy` and `Terms of Service` pages to the landing page and footer to ensure transparency and compliance for LinkedIn OAuth and data handling.
 - **Dynamic Pricing**: Updated the pricing page (`/pricing`) to dynamically reflect the user's current subscription status and admin privileges, highlighting active plans and granting full access to admin users.
-
-## 2026-07-25
-- **Brand Rename**: Renamed the product from **SocialSync** to **Syncd** across all UI components, page `<title>` and SEO meta tags, the AI system prompt (`api.generate.ts`), and planning documentation. Contact emails updated to the `@syncd.app` domain. Deployment URLs (`sociosync.lovable.app`) left unchanged.
