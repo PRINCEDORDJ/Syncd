@@ -12,8 +12,10 @@ import {
   Linkedin,
 } from "lucide-react";
 
+const BASE_URL = process.env.APP_URL;
+
 export const Route = createFileRoute("/")({
-  head: () => ({
+  head: () => ({   
     meta: [
       { title: "Syncd — AI LinkedIn posts, scheduling & team drafts" },
       {
@@ -27,7 +29,7 @@ export const Route = createFileRoute("/")({
         content: "Voice-matched AI drafts, scheduling, team libraries, and one-click LinkedIn publishing.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://sociosync.lovable.app/" },
+      { property: "og:url", content: `${BASE_URL}/` },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Syncd — AI LinkedIn posts, scheduling & team drafts" },
       {
@@ -35,7 +37,7 @@ export const Route = createFileRoute("/")({
         content: "Voice-matched AI drafts, scheduling, team libraries, and one-click LinkedIn publishing.",
       },
     ],
-    links: [{ rel: "canonical", href: "https://sociosync.lovable.app/" }],
+    links: [{ rel: "canonical", href: `${BASE_URL}/` }],
   }),
   component: LandingPage,
 });
