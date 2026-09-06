@@ -116,7 +116,7 @@ export const Route = createFileRoute("/api/generate")({
           console.error("[generate] consume_credit failed", creditErr);
           return jsonResponse({ error: "Could not verify your credit balance." }, 500);
         }
-        const credit = creditRes as { success?: boolean; reason?: string } | null;
+        const credit: any = creditRes as { success?: boolean; reason?: string } | null;
         if (!credit?.success) {
           const message =
             credit.reason === "daily_limit_reached"
