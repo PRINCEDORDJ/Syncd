@@ -15,7 +15,6 @@ import {
   Sheet,
   Presentation,
   File as FileIcon,
-  Film,
 } from "lucide-react";
 import {
   MAX_IMAGES,
@@ -24,8 +23,6 @@ import {
   formatBytes,
   validateImageBatch,
   validateAttachmentBatch,
-  validateVideoBatch,
-  MAX_VIDEOS,
   type AttachmentItem,
 } from "@/lib/image-validation";
 import { CreditBanner, useIsGenerationBlocked } from "@/components/CreditBanner";
@@ -94,7 +91,6 @@ function Workspace() {
   const [input, setInput] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
-  const [videos, setVideos] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [title, setTitle] = useState("Untitled draft");
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -110,7 +106,6 @@ function Workspace() {
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileAttachInputRef = useRef<HTMLInputElement | null>(null);
-  const fileVideoInputRef = useRef<HTMLInputElement | null>(null);
   const carouselRef = useRef<HTMLDivElement | null>(null);
 
   async function handleFiles(files: FileList | null) {
@@ -178,30 +173,6 @@ function Workspace() {
     setAttachments((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  async function handleVideoFiles(files: FileList | null) {
-    if (!files || !files.length) return;
-    const { accepted, errors } = validateVideoBatch(Array.from(files), videos.length);
-    if (errors.length) setError(errors.join(" "));
-    else setError(null);
-    if (!accepted.length) return;
-    const dataUrls = await Promise.all(
-      accepted.map(
-        (f) =>
-          new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result));
-            reader.onerror = () => reject(reader.error);
-            reader.readAsDataURL(f);
-          }),
-      ),
-    );
-    setVideos((prev) => [...prev, ...dataUrls].slice(0, MAX_VIDEOS));
-  }
-
-  function removeVideo(idx: number) {
-    setVideos((prev) => prev.filter((_, i) => i !== idx));
-  }
-
   async function saveDraft(asPublished = false): Promise<string | null> {
     if (!user || !draft.trim()) return null;
     setSaving(true);
@@ -215,10 +186,8 @@ function Workspace() {
         title: title.trim() || "Untitled draft",
         images,
         attachments: attachments as unknown as Json,
-        videos: videos as unknown as Json,
         media_bytes:
           images.reduce((s, u) => s + dataUrlByteSize(u), 0) +
-          videos.reduce((s, u) => s + dataUrlByteSize(u), 0) +
           attachments.reduce((s, a) => s + (a.size || dataUrlByteSize(a.dataUrl)), 0),
         ...(asPublished ? { published: true } : {}),
       };
@@ -300,7 +269,7 @@ function Workspace() {
     }, 1200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft, title, images, attachments, videos, user, generating]);
+  }, [draft, title, images, attachments, user, generating]);
 
   async function generate() {
     if (!input.trim() || generating) return;
@@ -549,16 +518,6 @@ function Workspace() {
                   if (fileAttachInputRef.current) fileAttachInputRef.current.value = "";
                 }}
               />
-              <input
-                ref={fileVideoInputRef}
-                type="file"
-                accept="video/mp4,video/quicktime,video/webm"
-                className="hidden"
-                onChange={(e) => {
-                  handleVideoFiles(e.target.files);
-                  if (fileVideoInputRef.current) fileVideoInputRef.current.value = "";
-                }}
-              />
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -578,16 +537,6 @@ function Workspace() {
                 className="h-7 w-7 inline-flex items-center justify-center rounded border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
               >
                 <Paperclip className="size-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => fileVideoInputRef.current?.click()}
-                disabled={videos.length >= MAX_VIDEOS}
-                title="Add video"
-                aria-label="Add video"
-                className="h-7 w-7 inline-flex items-center justify-center rounded border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-              >
-                <Film className="size-3.5" />
               </button>
             </div>
           </div>
@@ -764,34 +713,7 @@ function Workspace() {
                 </div>
               )}
 
-              {/* Videos */}
-              {videos.length > 0 && (
-                <div className="mt-3 flex flex-col gap-2">
-                  {videos.map((src, i) => (
-                    <div
-                      key={`video-${i}`}
-                      className="relative group/vid rounded-md overflow-hidden border border-border bg-black"
-                    >
-                      <video
-                        src={src}
-                        controls
-                        playsInline
-                        className="w-full max-h-[360px] object-contain bg-black"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeVideo(i)}
-                        className="absolute top-2 right-2 h-7 w-7 inline-flex items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover/vid:opacity-100 transition-opacity"
-                        aria-label="Remove video"
-                      >
-                        <X className="size-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {error && (
+                  {error && (
                 <div className="mt-4 px-3 py-2.5 rounded-md bg-destructive/5 border border-destructive/20 text-[13px] text-destructive">
                   {error}
                 </div>
