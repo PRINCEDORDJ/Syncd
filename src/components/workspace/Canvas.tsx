@@ -1,5 +1,5 @@
 import { useRef, useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useWorkspace, TONES, type Tone } from "@/lib/workspace-context";
 import {
   X,
@@ -11,9 +11,13 @@ import {
   File as FileIcon,
   ImagePlus,
   Paperclip,
+  CalendarClock,
+  Trash2,
 } from "lucide-react";
 import { formatBytes, MAX_IMAGES, MAX_ATTACHMENTS } from "@/lib/image-validation";
 import type { AttachmentItem } from "@/lib/image-validation";
+import { supabase } from "@/integrations/supabase/client";
+import { SchedulePicker } from "@/components/SchedulePicker";
 
 function attachmentIcon(name: string, type: string) {
   const lower = name.toLowerCase();
@@ -53,7 +57,34 @@ export function Canvas() {
     linkedinConnected,
     publishing,
     publish,
+    draftId,
   } = useWorkspace();
+  
+  const navigate = useNavigate();
+  const [showScheduler, setShowScheduler] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+
+  async function handleDelete() {
+    if (!draftId) return;
+    await supabase.from("drafts").delete().eq("id", draftId);
+    navigate({ to: "/drafts" });
+  }
+
+  async function handleSchedule(iso: string) {
+    if (!draftId) return;
+    setScheduling(true);
+    const { error: err } = await supabase
+        .from("drafts")
+        .update({
+          scheduled_at: iso,
+          schedule_status: "pending",
+        })
+        .eq("id", draftId);
+    if (err) setError(err.message);
+    else setSuccess("Post scheduled successfully.");
+    setScheduling(false);
+    setShowScheduler(false);
+  }
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachInputRef = useRef<HTMLInputElement | null>(null);
@@ -157,7 +188,25 @@ export function Canvas() {
 
           {/* Tone pills */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.12em] shrink-0">
+            {draftId && (
+              <button
+                 type="button"
+                 onClick={() => setShowScheduler(!showScheduler)}
+                 className="h-6 px-2 rounded text-[11px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors"
+              >
+                 <CalendarClock className="size-3" />
+              </button>
+            )}
+            {draftId && (
+              <button
+                 type="button"
+                 onClick={handleDelete}
+                 className="h-6 px-2 rounded text-[11px] font-medium border border-destructive/20 bg-card text-destructive hover:bg-destructive/5 transition-colors"
+              >
+                 <Trash2 className="size-3" />
+              </button>
+            )}
+            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.12em] shrink-0 ml-2">
               Tone
             </span>
             {TONES.map((t) => (
@@ -329,6 +378,15 @@ export function Canvas() {
         )}
       </div>
 
+      {showScheduler && draftId && (
+        <div className="px-5 py-4 border-t border-border bg-card">
+           <SchedulePicker
+             submitting={scheduling}
+             onSchedule={handleSchedule}
+           />
+        </div>
+      )}
+
       {/* Action bar */}
       <div className="shrink-0 px-5 py-3 border-t border-border flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
@@ -339,6 +397,24 @@ export function Canvas() {
         </div>
 
         <div className="flex items-center gap-2">
+          {draftId && (
+            <button
+               type="button"
+               onClick={() => setShowScheduler(!showScheduler)}
+               className="h-8 px-3 rounded-md text-[13px] font-medium text-ink border border-border hover:bg-subtle transition-colors"
+            >
+               <CalendarClock className="size-4" />
+            </button>
+          )}
+          {draftId && (
+             <button
+                type="button"
+                onClick={handleDelete}
+                className="h-8 px-3 rounded-md text-[13px] font-medium text-destructive border border-destructive/20 hover:bg-destructive/5 transition-colors"
+             >
+                <Trash2 className="size-4" />
+             </button>
+          )}
           <button
             type="button"
             onClick={() => navigator.clipboard?.writeText(draft)}

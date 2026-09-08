@@ -28,6 +28,7 @@ import {
   Building2,
   Check,
   ChevronsUpDown,
+  Book,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -45,15 +46,16 @@ const SETTINGS_SEARCH = {
 };
 
 interface NavLink {
-  to: "/app" | "/drafts";
+  to: "/app" | "/drafts" | "/methodology";
   label: string;
   icon: typeof LayoutGrid;
 }
 
 const NAV_LINKS: NavLink[] = [
   { to: "/app", label: "Workspace", icon: LayoutGrid },
-  { to: "/drafts", label: "Posts / Drafts", icon: FileText },
-];
+  { to: "/drafts", label: "Drafts", icon: FileText },
+  { to: "/methodology", label: "Methodology", icon: Book },
+]
 
 const ACTIVE_WORKSPACE_KEY = "syncd:active-workspace";
 
