@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { createUniqueChannel } from "@/lib/realtime";
 import { useWorkspace } from "@/lib/workspace-context";
 import { FileText, Plus, Clock } from "lucide-react";
 import type { AttachmentItem } from "@/lib/image-validation";
@@ -64,21 +65,28 @@ export function DraftList({ collapsed = false, onSelect }: DraftListProps) {
     void fetchDrafts();
   }, [fetchDrafts]);
 
-  // Realtime subscription to update list on draft saves
+  // Keep the latest fetch callback in a ref so identity changes don't resubscribe
+  const fetchDraftsRef = useRef(fetchDrafts);
+  fetchDraftsRef.current = fetchDrafts;
+
+  // Realtime subscription to update list on draft saves.
+  // Uses a unique channel topic: reusing `draft-list-${userId}` races with the
+  // async removeChannel() cleanup (StrictMode double-mount / dep changes) and
+  // throws "cannot add postgres_changes callbacks ... after subscribe()".
+  const userId = user?.id;
   useEffect(() => {
-    if (!user) return;
-    const ch = supabase
-      .channel(`draft-list-${user.id}`)
+    if (!userId) return;
+    const ch = createUniqueChannel(`draft-list-${userId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "drafts", filter: `user_id=eq.${user.id}` },
-        () => void fetchDrafts(),
+        { event: "*", schema: "public", table: "drafts", filter: `user_id=eq.${userId}` },
+        () => void fetchDraftsRef.current(),
       )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [user, fetchDrafts]);
+  }, [userId]);
 
   if (collapsed) {
     return (

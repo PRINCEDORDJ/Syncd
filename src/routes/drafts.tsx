@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { SiteNav } from "@/components/SiteNav";
+import { SidebarShell } from "@/components/workspace/SidebarShell";
 import {
   Trash2,
   X,
@@ -482,9 +482,9 @@ function DraftsList() {
     ) ?? null;
 
   return (
-    <div className="min-h-dvh bg-background text-ink flex flex-col">
-      <SiteNav />
-      <main className="flex-1 w-full max-w-4xl mx-auto px-3 sm:px-6 py-6 sm:py-10">
+    <SidebarShell mobileTitle="Posts / Drafts">
+      <div className="h-full min-h-0 w-full overflow-y-auto">
+      <main className="w-full max-w-4xl mx-auto px-3 sm:px-6 py-6 sm:py-10">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6 sm:mb-8">
           <div>
             <p className="text-[10px] sm:text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-2">
@@ -947,6 +947,7 @@ function DraftsList() {
         confirmText="Delete post"
         variant="destructive"
       />
-    </div>
+      </div>
+    </SidebarShell>
   );
 }
