@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +11,7 @@ export const Route = createFileRoute("/login")({
   }),
   head: () => ({
     meta: [
-      { title: "Sign in — Syncd" },
+      { title: "Sign in â€” Syncd" },
       { name: "description", content: "Sign in to your Syncd workspace." },
     ],
   }),
@@ -22,9 +22,9 @@ type Mode = "signin" | "signup";
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, onboarding } = useAuth();
   const search = Route.useSearch();
-  const redirectTo = search.redirect ?? "/app";
+  const redirectTo = search.redirect ?? "/onboarding";
 
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
@@ -36,8 +36,10 @@ function LoginPage() {
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) navigate({ to: redirectTo });
-  }, [user, loading, navigate, redirectTo]);
+    if (loading || !user) return;
+    const needsOnboarding = onboarding?.onboarding_status === "pending";
+    navigate({ to: needsOnboarding ? "/onboarding" : redirectTo, replace: true });
+  }, [user, loading, onboarding?.onboarding_status, navigate, redirectTo]);
 
   async function handleGoogle() {
     setError(null);
@@ -67,17 +69,18 @@ function LoginPage() {
 
     try {
       if (mode === "signup") {
+        const origin = typeof window !== "undefined" ? window.location.origin : "";
+        const redirectParam = encodeURIComponent(redirectTo);
         const { error: err } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo:
-              typeof window !== "undefined" ? window.location.origin : undefined,
+            emailRedirectTo: `${origin}/auth?redirect=${redirectParam}`,
             data: { display_name: displayName || email.split("@")[0] },
           },
         });
         if (err) throw err;
-        setInfo("Account created. Check your inbox if email confirmation is on.");
+        setInfo("Account created. We’ll finish setup after you confirm your email.");
       } else {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (err) throw err;

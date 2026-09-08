@@ -26,13 +26,14 @@ import {
   type AttachmentItem,
 } from "@/lib/image-validation";
 import { CreditBanner, useIsGenerationBlocked } from "@/components/CreditBanner";
+import { WorkspaceAccessPanel } from "@/components/WorkspaceAccessPanel";
 
 import { WorkspaceSkeleton } from "@/components/skeletons/WorkspaceSkeleton";
 
 export const Route = createFileRoute("/app")({
   head: () => ({
     meta: [
-      { title: "Workspace — Syncd" },
+      { title: "Workspace â€” Syncd" },
       {
         name: "description",
         content: "Draft, refine, and publish your next LinkedIn post.",
@@ -43,14 +44,18 @@ export const Route = createFileRoute("/app")({
 });
 
 function WorkspaceGate() {
-  const { user, loading } = useAuth();
+  const { user, loading, onboarding } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate({ to: "/login", search: { redirect: "/app" } });
+      navigate({ to: "/login", search: { redirect: "/onboarding" } });
+      return;
     }
-  }, [user, loading, navigate]);
+    if (!loading && user && onboarding?.onboarding_status === "pending") {
+      navigate({ to: "/onboarding", replace: true });
+    }
+  }, [user, loading, onboarding?.onboarding_status, navigate]);
 
   if (loading || !user) {
     return <WorkspaceSkeleton />;
@@ -78,10 +83,10 @@ function deriveTitle(content: string): string {
   if (title.length > MAX) {
     const slice = title.slice(0, MAX);
     const lastSpace = slice.lastIndexOf(" ");
-    title = (lastSpace > 30 ? slice.slice(0, lastSpace) : slice).trim() + "…";
+    title = (lastSpace > 30 ? slice.slice(0, lastSpace) : slice).trim() + "â€¦";
   }
   // Strip trailing punctuation for a cleaner title
-  title = title.replace(/[.,;:!?\-–—]+$/g, "").trim();
+  title = title.replace(/[.,;:!?\-â€“â€”]+$/g, "").trim();
   return title || "Untitled draft";
 }
 
@@ -365,7 +370,7 @@ function Workspace() {
     const token = sessionData.session?.access_token;
     if (!token) {
       setPublishing(false);
-      setError("Session expired — please sign in again.");
+      setError("Session expired â€” please sign in again.");
       return;
     }
 
@@ -422,6 +427,8 @@ function Workspace() {
       <SiteNav />
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 py-5 sm:py-8">
+        <WorkspaceAccessPanel />
+
         {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-5 sm:mb-6">
           <div>
@@ -434,7 +441,7 @@ function Workspace() {
           </div>
           <div className="flex items-center gap-3 text-[12px] font-mono">
             {linkedinConnected === null ? (
-              <span className="text-muted-foreground">Checking LinkedIn…</span>
+              <span className="text-muted-foreground">Checking LinkedInâ€¦</span>
             ) : linkedinConnected ? (
               <span className="inline-flex items-center gap-1.5 text-ink">
                 <span className="size-1.5 rounded-full bg-ink" />
@@ -447,7 +454,7 @@ function Workspace() {
                 className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-ink"
               >
                 <span className="size-1.5 rounded-full bg-muted-foreground" />
-                LinkedIn not connected · connect →
+                LinkedIn not connected Â· connect â†’
               </Link>
             )}
           </div>
@@ -473,7 +480,7 @@ function Workspace() {
               />
               {saving && (
                 <span className="text-[11px] font-mono text-muted-foreground ml-1 shrink-0">
-                  Saving…
+                  Savingâ€¦
                 </span>
               )}
             </div>
@@ -560,7 +567,7 @@ function Workspace() {
                 id="raw"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Dump a thought, a voice note transcript, or three messy bullets…"
+                placeholder="Dump a thought, a voice note transcript, or three messy bulletsâ€¦"
                 className="flex-1 resize-none p-3 bg-card rounded-md text-[14px] text-ink border border-border leading-relaxed focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink min-h-[200px]"
               />
 
@@ -572,7 +579,7 @@ function Workspace() {
                 className="h-10 rounded-md bg-ink text-surface text-[14px] font-medium hover:bg-ink/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
               >
                 {generating
-                  ? "Generating…"
+                  ? "Generatingâ€¦"
                   : draft
                     ? "Regenerate"
                     : "Generate draft"}
@@ -599,11 +606,11 @@ function Workspace() {
                   setDraft(e.target.value);
                   setSuccess(null);
                 }}
-                placeholder="Your generated post will appear here. Edit anything — it's yours."
+                placeholder="Your generated post will appear here. Edit anything â€” it's yours."
                 className="w-full resize-none bg-transparent text-ink text-[16px] leading-relaxed focus:outline-none placeholder:text-muted-foreground/60 min-h-[40vh]"
               />
 
-              {/* Reddit-style image carousel — full width, horizontal scroll */}
+              {/* Reddit-style image carousel â€” full width, horizontal scroll */}
               {images.length > 0 && (
                 <div className="mt-4 relative group/carousel">
                   <div
@@ -679,7 +686,7 @@ function Workspace() {
                 </div>
               )}
 
-              {/* File attachments — pill list */}
+              {/* File attachments â€” pill list */}
               {attachments.length > 0 && (
                 <div className="mt-3 flex flex-col gap-1.5">
                   {attachments.map((a, i) => {
@@ -753,8 +760,8 @@ function Workspace() {
                       disabled={!draft.trim() || overLimit || publishing}
                       className="h-9 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 disabled:opacity-50 transition-colors inline-flex items-center justify-center gap-1.5 flex-1 sm:flex-none"
                     >
-                      {publishing ? "Publishing…" : "Publish to LinkedIn"}
-                      <span aria-hidden className="text-surface/60">→</span>
+                      {publishing ? "Publishingâ€¦" : "Publish to LinkedIn"}
+                      <span aria-hidden className="text-surface/60">â†’</span>
                     </button>
                   ) : (
                     <Link
@@ -763,7 +770,7 @@ function Workspace() {
                       className="h-9 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 inline-flex items-center justify-center gap-1.5 flex-1 sm:flex-none"
                     >
                       Connect LinkedIn
-                      <span aria-hidden className="text-surface/60">→</span>
+                      <span aria-hidden className="text-surface/60">â†’</span>
                     </Link>
                   )}
                 </div>
@@ -775,3 +782,5 @@ function Workspace() {
     </div>
   );
 }
+
+

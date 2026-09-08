@@ -1,4 +1,4 @@
-import {
+﻿import {
   createContext,
   useCallback,
   useContext,
@@ -9,12 +9,18 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  loadPostSignupContext,
+  type PostSignupContext,
+} from "@/lib/workspace-onboarding";
 
 interface AuthContextValue {
   session: Session | null;
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  onboarding: PostSignupContext | null;
+  refreshOnboarding: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -22,6 +28,25 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [onboarding, setOnboarding] = useState<PostSignupContext | null>(null);
+
+  const refreshOnboarding = useCallback(async () => {
+    if (!session?.user) {
+      setOnboarding(null);
+      return;
+    }
+
+    try {
+      const ctx = await loadPostSignupContext();
+      setOnboarding(ctx);
+    } catch {
+      setOnboarding({
+        onboarding_status: "unknown",
+        workspace_count: 0,
+        project_count: 0,
+      });
+    }
+  }, [session?.user]);
 
   useEffect(() => {
     let active = true;
@@ -66,6 +91,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!session?.user) {
+      setOnboarding(null);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const ctx = await loadPostSignupContext();
+        if (!cancelled) setOnboarding(ctx);
+      } catch {
+        if (!cancelled) {
+          setOnboarding({
+            onboarding_status: "unknown",
+            workspace_count: 0,
+            project_count: 0,
+          });
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
   }, []);
@@ -76,8 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: session?.user ?? null,
       loading,
       signOut,
+      onboarding,
+      refreshOnboarding,
     }),
-    [session, loading, signOut],
+    [session, loading, signOut, onboarding, refreshOnboarding],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
