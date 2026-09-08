@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { createUniqueChannel } from "@/lib/realtime";
@@ -36,8 +37,18 @@ function relativeTime(dateStr: string) {
 export function DraftList({ collapsed = false, onSelect }: DraftListProps) {
   const { user } = useAuth();
   const { draftId, loadDraft, newDraft } = useWorkspace();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [drafts, setDrafts] = useState<DraftRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // The + button always lands on a blank canvas in /app, even when clicked
+  // from /drafts, /settings or the mobile drawer.
+  const handleNewDraft = () => {
+    newDraft();
+    onSelect?.();
+    if (pathname !== "/app") void navigate({ to: "/app" });
+  };
 
   const fetchDrafts = useCallback(async () => {
     if (!user) return;
@@ -92,10 +103,7 @@ export function DraftList({ collapsed = false, onSelect }: DraftListProps) {
     return (
       <button
         type="button"
-        onClick={() => {
-          newDraft();
-          onSelect?.();
-        }}
+        onClick={handleNewDraft}
         title="New draft"
         aria-label="New draft"
         className="w-full flex items-center justify-center h-8 rounded-lg text-muted-foreground hover:text-ink hover:bg-subtle transition-colors"
@@ -114,10 +122,7 @@ export function DraftList({ collapsed = false, onSelect }: DraftListProps) {
         </span>
         <button
           type="button"
-          onClick={() => {
-            newDraft();
-            onSelect?.();
-          }}
+          onClick={handleNewDraft}
           title="New draft"
           aria-label="New draft"
           className="h-5 w-5 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-ink hover:bg-subtle transition-colors"

@@ -125,6 +125,44 @@ function makeId() {
   return Math.random().toString(36).slice(2);
 }
 
+function parseDualStream(raw: string): { thoughts: string; post: string | null; isKeepCurrent: boolean } {
+  const thoughtsTag = "<<<THOUGHTS>>>";
+  const postTag = "<<<POST>>>";
+
+  if (!raw.includes(thoughtsTag) && !raw.includes(postTag)) {
+    return { thoughts: raw, post: null, isKeepCurrent: false };
+  }
+
+  let thoughts = "";
+  let post: string | null = null;
+  let isKeepCurrent = false;
+
+  const postIndex = raw.indexOf(postTag);
+  const thoughtsIndex = raw.indexOf(thoughtsTag);
+
+  if (thoughtsIndex !== -1) {
+    if (postIndex !== -1 && postIndex > thoughtsIndex) {
+      thoughts = raw.slice(thoughtsIndex + thoughtsTag.length, postIndex).trim();
+    } else {
+      thoughts = raw.slice(thoughtsIndex + thoughtsTag.length).trimStart();
+    }
+  } else if (postIndex !== -1) {
+    thoughts = raw.slice(0, postIndex).trim();
+  }
+
+  if (postIndex !== -1) {
+    const postContent = raw.slice(postIndex + postTag.length).trimStart();
+    if (postContent.trim() === "KEEP_CURRENT" || postContent.startsWith("KEEP_CURRENT")) {
+      isKeepCurrent = true;
+      post = null;
+    } else {
+      post = postContent;
+    }
+  }
+
+  return { thoughts, post, isKeepCurrent };
+}
+
 /** Reads an SSE stream and accumulates the full text, calling onChunk for each delta. */
 async function consumeSseStream(resp: Response, onChunk: (chunk: string) => void): Promise<void> {
   if (!resp.body) throw new Error("Empty response body.");
@@ -143,13 +181,13 @@ async function consumeSseStream(resp: Response, onChunk: (chunk: string) => void
       if (line.endsWith("\r")) line = line.slice(0, -1);
       if (line.startsWith(":") || line.trim() === "") continue;
       if (!line.startsWith("data: ")) continue;
-      const json = line.slice(6).trim();
-      if (json === "[DONE]") {
+      const payloadStr = line.slice(6).trim();
+      if (payloadStr === "[DONE]") {
         done = true;
         break;
       }
       try {
-        const parsed = JSON.parse(json);
+        const parsed = JSON.parse(payloadStr);
         if (typeof parsed.error === "string") throw new Error(parsed.error);
         const content: string | undefined = parsed.choices?.[0]?.delta?.content;
         if (content) onChunk(content);
@@ -374,10 +412,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setError(null);
       setSuccess(null);
 
-      const userMsg: ChatMessage = { id: makeId(), role: "user", content: userInput };
+      const userMsg: ChatMessage = { id: makeId(), role: "user", content: userInput.trim() };
+      const assistantMsgId = makeId();
       const isFirstTurn = messages.length === 0;
 
-      setMessages((prev) => [...prev, userMsg]);
+      setMessages((prev) => [
+        ...prev,
+        userMsg,
+        { id: assistantMsgId, role: "assistant", content: "", isCanvasUpdate: false },
+      ]);
       setGenerating(true);
 
       abortRef.current?.abort();
@@ -386,94 +429,92 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
+      if (!token) {
+        setGenerating(false);
+        setError("Please sign in to generate posts.");
+        setMessages((prev) => prev.filter((m) => m.id !== userMsg.id && m.id !== assistantMsgId));
+        return;
+      }
 
       try {
+        const payloadInput = isFirstTurn
+          ? userInput
+          : `Current draft:\n"""\n${draft}\n"""\n\nInstruction: ${userInput}`;
+
         if (isFirstTurn) {
-          // ── First turn: generate ──────────────────────────────────────────────
           setDraft("");
           setDraftId(null);
           setTitle("Untitled draft");
           setTitleEdited(false);
+        }
 
-          const resp = await fetch("/api/generate", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify({ input: userInput, tone, images }),
-            signal: controller.signal,
-          });
+        const resp = await fetch("/api/generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            input: payloadInput,
+            tone,
+            images,
+          }),
+          signal: controller.signal,
+        });
 
-          if (!resp.ok || !resp.body) {
-            const data = await resp.json().catch(() => null);
-            throw new Error(data?.error ?? "Generation failed.");
+        if (!resp.ok) {
+          const errData = (await resp.json().catch(() => ({}))) as { error?: string };
+          throw new Error(errData.error || `Generation failed (${resp.status})`);
+        }
+
+        let accumulated = "";
+        await consumeSseStream(resp, (chunk) => {
+          accumulated += chunk;
+          const { thoughts, post, isKeepCurrent } = parseDualStream(accumulated);
+
+          if (thoughts) {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantMsgId ? { ...m, content: thoughts } : m))
+            );
           }
 
-          let accumulated = "";
-          await consumeSseStream(resp, (chunk) => {
-            accumulated += chunk;
-            setDraft(accumulated);
-          });
-
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: makeId(),
-              role: "system",
-              content: "Generated a first draft.",
-              isCanvasUpdate: true,
-            },
-          ]);
-        } else {
-          // ── Subsequent turns: refine ──────────────────────────────────────────
-          const currentDraft = draft; // capture for closure
-
-          const refineInput = `Current draft:\n"""\n${currentDraft}\n"""\n\nInstruction: ${userInput}\n\nApply the instruction and return only the updated post text. No preamble, no labels.`;
-
-          const resp = await fetch("/api/generate", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify({ input: refineInput, tone, images }),
-            signal: controller.signal,
-          });
-
-          if (!resp.ok || !resp.body) {
-            const data = await resp.json().catch(() => null);
-            throw new Error(data?.error ?? "Refinement failed.");
+          if (post !== null && !isKeepCurrent) {
+            setDraft(post);
+            if (!titleEdited) {
+              setTitle(deriveTitle(post));
+            }
           }
+        });
 
-          let accumulated = "";
-          await consumeSseStream(resp, (chunk) => {
-            accumulated += chunk;
-            setDraft(accumulated);
-          });
+        const { thoughts, post, isKeepCurrent } = parseDualStream(accumulated);
+        const finalThoughts =
+          thoughts.trim() ||
+          (isKeepCurrent
+            ? "I've reviewed your request."
+            : `Applied: "${userInput.slice(0, 80)}${userInput.length > 80 ? "…" : ""}"`);
 
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: makeId(),
-              role: "assistant",
-              content: `Applied: "${userInput.slice(0, 80)}${userInput.length > 80 ? "…" : ""}"`,
-              isCanvasUpdate: true,
-            },
-          ]);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === assistantMsgId ? { ...m, content: finalThoughts } : m))
+        );
+
+        if (post !== null && !isKeepCurrent) {
+          setDraft(post);
+          if (!titleEdited) {
+            setTitle(deriveTitle(post));
+          }
         }
       } catch (e) {
         if ((e as Error).name === "AbortError") {
-          setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
+          setMessages((prev) => prev.filter((m) => m.id !== userMsg.id && m.id !== assistantMsgId));
           return;
         }
         setError(e instanceof Error ? e.message : "Something went wrong.");
-        setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
+        setMessages((prev) => prev.filter((m) => m.id !== userMsg.id && m.id !== assistantMsgId));
       } finally {
         setGenerating(false);
       }
     },
-    [generating, messages, draft, tone, images],
+    [generating, messages, draft, tone, images, titleEdited],
   );
 
   // ── Publish ─────────────────────────────────────────────────────────────────

@@ -1,10 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 import { PLAN_LIMITS, PLAN_LABELS, type PlanTier, type PlanLimits } from "@/lib/plans";
 
-export type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
-export type ProjectAccessLevel = "owner" | "editor" | "viewer";
-export type GrantStatus = "active" | "invited" | "revoked" | "pending";
-export type InviteStatus = "pending" | "accepted" | "expired" | "revoked";
+export type WorkspaceRole = "owner" | "admin" | "member";
+export type ProjectAccessLevel = "owner" | "admin" | "editor" | "viewer";
+export type GrantStatus = "active" | "inactive" | "revoked";
+export type InviteStatus = "pending" | "accepted" | "declined" | "revoked" | "expired";
 
 export interface Workspace {
   id: string;
@@ -28,11 +28,14 @@ export interface WorkspaceMember {
 export interface WorkspaceInvite {
   id: string;
   workspace_id: string;
-  email: string;
+  email: string | null;
   role: WorkspaceRole;
   status: InviteStatus;
   expires_at: string | null;
   created_at: string;
+  invited_by?: string | null;
+  team_id?: string | null;
+  updated_at?: string;
 }
 
 export interface WorkspaceTeamAccess {
@@ -40,7 +43,10 @@ export interface WorkspaceTeamAccess {
   workspace_id: string;
   team_id: string;
   access_level: WorkspaceRole;
-  granted_by: string | null;
+  role?: WorkspaceRole;
+  granted_by?: string | null;
+  invited_by?: string | null;
+  status?: GrantStatus;
   created_at: string;
   team_name?: string;
 }
@@ -50,7 +56,7 @@ export interface Project {
   workspace_id: string;
   name: string;
   status: string;
-  created_by: string;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
   access_type?: "workspace_wide" | "direct_grant" | "team_grant" | "owner";
@@ -61,6 +67,7 @@ export interface ProjectMember {
   project_id: string;
   user_id: string;
   role: ProjectAccessLevel;
+  access_level?: ProjectAccessLevel;
   status: GrantStatus;
   created_at: string;
   email?: string | null;
@@ -70,11 +77,14 @@ export interface ProjectMember {
 export interface ProjectInvite {
   id: string;
   project_id: string;
-  email: string;
+  email: string | null;
   access_level: ProjectAccessLevel;
   status: InviteStatus;
   expires_at: string | null;
   created_at: string;
+  invited_by?: string | null;
+  team_id?: string | null;
+  updated_at?: string;
 }
 
 export interface ProjectTeamAccess {
@@ -82,7 +92,9 @@ export interface ProjectTeamAccess {
   project_id: string;
   team_id: string;
   access_level: ProjectAccessLevel;
-  granted_by: string | null;
+  granted_by?: string | null;
+  invited_by?: string | null;
+  status?: GrantStatus;
   created_at: string;
   team_name?: string;
 }
@@ -124,6 +136,22 @@ export async function getUserPlanAndLimits(userId: string): Promise<{
  * workspace membership, and workspace-level team access grants.
  */
 export async function fetchUserWorkspaces(userId: string): Promise<Workspace[]> {
+  // Try querying my_workspaces view (enforcing security definer access checks)
+  const { data: viewData, error: viewErr } = await supabase
+    .from("my_workspaces")
+    .select("id, name, owner_id, created_at, updated_at")
+    .order("created_at", { ascending: false });
+
+  if (!viewErr && viewData && viewData.length > 0) {
+    return viewData.map((w) => ({
+      id: w.id ?? "",
+      name: w.name ?? "",
+      owner_id: w.owner_id ?? userId,
+      created_at: w.created_at ?? new Date().toISOString(),
+      updated_at: w.updated_at ?? new Date().toISOString(),
+    }));
+  }
+
   // 1. Direct workspace memberships & ownership
   const { data: memberRows } = await supabase
     .from("workspace_members")
@@ -185,6 +213,35 @@ export async function fetchWorkspaceProjects(
   workspaceId: string,
   userId: string,
 ): Promise<Project[]> {
+  // Try querying my_projects view
+  const { data: viewProjects, error: viewErr } = await supabase
+    .from("my_projects")
+    .select("id, workspace_id, name, status, created_by, created_at, updated_at, access_source")
+    .eq("workspace_id", workspaceId)
+    .order("created_at", { ascending: false });
+
+  if (!viewErr && viewProjects && viewProjects.length > 0) {
+    return viewProjects.map((p) => ({
+      id: p.id ?? "",
+      workspace_id: p.workspace_id ?? workspaceId,
+      name: p.name ?? "",
+      status: p.status ?? "active",
+      created_by: p.created_by ?? userId,
+      created_at: p.created_at ?? new Date().toISOString(),
+      updated_at: p.updated_at ?? new Date().toISOString(),
+      access_type:
+        p.access_source === "workspace_member"
+          ? (p.created_by === userId ? "owner" : "workspace_wide")
+          : p.access_source === "workspace_team"
+            ? "team_grant"
+            : p.access_source === "project_team"
+              ? "team_grant"
+              : p.created_by === userId
+                ? "owner"
+                : "direct_grant",
+    }));
+  }
+
   // Check user's workspace role
   const { data: ws } = await supabase
     .from("workspaces")
@@ -231,12 +288,12 @@ export async function fetchWorkspaceProjects(
   // Direct project members
   const { data: directMembers } = await supabase
     .from("project_members")
-    .select("project_id, role")
+    .select("project_id, access_level")
     .in("project_id", projectIds)
     .eq("user_id", userId)
     .eq("status", "active");
 
-  const directMap = new Map((directMembers ?? []).map((m) => [m.project_id, m.role]));
+  const directMap = new Map((directMembers ?? []).map((m) => [m.project_id, m.access_level]));
 
   // Team grants
   const { data: userTeams } = await supabase
@@ -449,7 +506,7 @@ export async function createProject(
   const { error: memErr } = await supabase.from("project_members").insert({
     project_id: project.id,
     user_id: userId,
-    role: "owner",
+    access_level: "owner",
     status: "active",
   });
 
@@ -554,7 +611,11 @@ export async function fetchWorkspaceTeamAccess(
 
   return data.map((d) => ({
     ...d,
-    access_level: d.access_level as WorkspaceRole,
+    access_level: d.role as WorkspaceRole,
+    role: d.role as WorkspaceRole,
+    granted_by: d.invited_by ?? null,
+    invited_by: d.invited_by ?? null,
+    status: d.status as GrantStatus,
     team_name: teamMap.get(d.team_id) ?? "Team",
   }));
 }
@@ -642,8 +703,9 @@ export async function grantTeamWorkspaceAccess(
     .insert({
       workspace_id: workspaceId,
       team_id: teamId,
-      access_level: accessLevel,
-      granted_by: grantedBy || null,
+      role: accessLevel,
+      invited_by: grantedBy || null,
+      status: "active",
     })
     .select()
     .single();
@@ -651,7 +713,11 @@ export async function grantTeamWorkspaceAccess(
   if (error) throw error;
   return {
     ...data,
-    access_level: data.access_level as WorkspaceRole,
+    access_level: data.role as WorkspaceRole,
+    role: data.role as WorkspaceRole,
+    granted_by: data.invited_by ?? null,
+    invited_by: data.invited_by ?? null,
+    status: data.status as GrantStatus,
   };
 }
 
@@ -676,7 +742,7 @@ export async function revokeWorkspaceTeamAccess(accessId: string): Promise<void>
 export async function fetchProjectMembers(projectId: string): Promise<ProjectMember[]> {
   const { data, error } = await supabase
     .from("project_members")
-    .select("id, project_id, user_id, role, status, created_at")
+    .select("id, project_id, user_id, access_level, status, created_at")
     .eq("project_id", projectId);
 
   if (error) throw error;
@@ -692,7 +758,8 @@ export async function fetchProjectMembers(projectId: string): Promise<ProjectMem
 
   return data.map((m) => ({
     ...m,
-    role: m.role as ProjectAccessLevel,
+    role: m.access_level as ProjectAccessLevel,
+    access_level: m.access_level as ProjectAccessLevel,
     status: m.status as GrantStatus,
     display_name: profileMap.get(m.user_id) ?? null,
   }));
@@ -729,6 +796,9 @@ export async function fetchProjectTeamAccess(projectId: string): Promise<Project
   return data.map((d) => ({
     ...d,
     access_level: d.access_level as ProjectAccessLevel,
+    granted_by: d.invited_by ?? null,
+    invited_by: d.invited_by ?? null,
+    status: d.status as GrantStatus,
     team_name: teamMap.get(d.team_id) ?? "Team",
   }));
 }
@@ -803,7 +873,8 @@ export async function grantTeamProjectAccess(
       project_id: projectId,
       team_id: teamId,
       access_level: accessLevel,
-      granted_by: grantedBy || null,
+      invited_by: grantedBy || null,
+      status: "active",
     })
     .select()
     .single();
@@ -812,6 +883,9 @@ export async function grantTeamProjectAccess(
   return {
     ...data,
     access_level: data.access_level as ProjectAccessLevel,
+    granted_by: data.invited_by ?? null,
+    invited_by: data.invited_by ?? null,
+    status: data.status as GrantStatus,
   };
 }
 

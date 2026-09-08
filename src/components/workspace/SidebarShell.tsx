@@ -126,13 +126,11 @@ export function SidebarShell({ children, mobileTitle }: SidebarShellProps) {
           aria-modal="true"
           aria-label="Workspace menu"
           aria-hidden={!drawerOpen}
-          className={`fixed inset-y-0 left-0 z-50 w-60 max-w-[85vw] bg-sidebar border-r border-border transition-transform duration-300 lg:hidden ${
+          className={`fixed inset-y-0 left-0 z-50 w-60 max-w-[85vw] bg-sidebar border-r border-border transition-transform duration-300 lg:hidden flex flex-col h-full ${
             drawerOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <div className="h-full overflow-y-auto">
-            <Sidebar collapsed={false} onSelectDraft={() => setDrawerOpen(false)} />
-          </div>
+          <Sidebar collapsed={false} onSelectDraft={() => setDrawerOpen(false)} />
         </aside>
       </div>
     </SidebarDrawerContext.Provider>

@@ -26,7 +26,7 @@ export interface ProjectSummary {
   workspace_id: string;
   name: string;
   status: string;
-  created_by: string;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -92,7 +92,7 @@ export async function createWorkspaceWithStarterProject(
   const { error: projectMemberError } = await supabase.from("project_members").insert({
     project_id: project.id,
     user_id: userId,
-    role: "owner",
+    access_level: "owner",
     status: "active",
   });
 
