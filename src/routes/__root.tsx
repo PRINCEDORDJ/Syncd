@@ -3,6 +3,7 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/r
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { CreditsProvider } from "@/lib/credits-context";
+import { WorkspaceProvider } from "@/lib/workspace-context";
 
 function NotFoundComponent() {
   return (
@@ -76,7 +77,11 @@ function RootComponent() {
   return (
     <AuthProvider>
       <CreditsProvider>
-        <Outlet />
+        {/* Global so the persistent sidebar's draft list shares one workspace
+            state with the canvas across /app, /drafts and /settings. */}
+        <WorkspaceProvider>
+          <Outlet />
+        </WorkspaceProvider>
       </CreditsProvider>
     </AuthProvider>
   );

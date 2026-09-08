@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useWorkspace, TONES, type Tone } from "@/lib/workspace-context";
-import { Sidebar } from "@/components/workspace/Sidebar";
+import { SidebarShell, SidebarMenuButton } from "@/components/workspace/SidebarShell";
 import { Canvas } from "@/components/workspace/Canvas";
 import { AiChatPanel } from "@/components/workspace/AiChatPanel";
 import { ChatInputBar } from "@/components/workspace/ChatInputBar";
@@ -12,9 +12,8 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { Menu, ChevronDown, Check, PanelRightOpen } from "lucide-react";
+import { ChevronDown, Check, PanelRightOpen } from "lucide-react";
 
-const SIDEBAR_COLLAPSED_KEY = "syncd:sidebar-collapsed";
 const CHAT_COLLAPSED_KEY = "syncd:chat-collapsed";
 
 function readBool(key: string, fallback: boolean): boolean {
@@ -42,35 +41,17 @@ function persistBool(key: string, value: boolean) {
 export function AppShell() {
   const { title, setTitle, setTitleEdited, tone, setTone, messages, sendMessage } = useWorkspace();
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() =>
-    readBool(SIDEBAR_COLLAPSED_KEY, false),
-  );
   const [chatCollapsed, setChatCollapsed] = useState(() => readBool(CHAT_COLLAPSED_KEY, false));
 
   // Mobile-only state
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("canvas");
   const [mobileInput, setMobileInput] = useState("");
   const mobileSendTabRef = useRef<WorkspaceTab>("canvas");
   const prevMsgCountRef = useRef(0);
 
   useEffect(() => {
-    persistBool(SIDEBAR_COLLAPSED_KEY, sidebarCollapsed);
-  }, [sidebarCollapsed]);
-
-  useEffect(() => {
     persistBool(CHAT_COLLAPSED_KEY, chatCollapsed);
   }, [chatCollapsed]);
-
-  // Escape closes the mobile drawer
-  useEffect(() => {
-    if (!drawerOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setDrawerOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [drawerOpen]);
 
   // Mobile: auto-switch to the Chat tab only for conversational assistant
   // replies. Canvas-update summaries (generate / refine) keep you on Canvas.
@@ -99,14 +80,9 @@ export function AppShell() {
   };
 
   return (
-    <div className="h-dvh bg-background text-ink flex overflow-hidden">
-      {/* ── Desktop: Sidebar | Canvas | AI Sidechat ─────────────────────────── */}
-      <div className="hidden lg:flex h-full min-h-0">
-        <Sidebar
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        />
-
+    <SidebarShell>
+      {/* ── Desktop: Canvas | AI Sidechat (sidebar rendered by SidebarShell) ── */}
+      <div className="hidden lg:flex h-full min-h-0 w-full">
         <div className="flex-1 min-w-0 min-h-0">
           <Canvas />
         </div>
@@ -129,18 +105,10 @@ export function AppShell() {
       </div>
 
       {/* ── Mobile: header + tabs + pinned input ────────────────────────────── */}
-      <div className="flex lg:hidden flex-col h-full min-h-0">
+      <div className="flex lg:hidden flex-col h-full min-h-0 w-full">
         {/* Compact header */}
         <header className="h-12 shrink-0 flex items-center gap-2 px-3 border-b border-border bg-card/40">
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            title="Open menu"
-            aria-label="Open menu"
-            className="size-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-ink hover:bg-subtle transition-colors shrink-0"
-          >
-            <Menu className="size-4" />
-          </button>
+          <SidebarMenuButton />
 
           <input
             type="text"
@@ -197,28 +165,6 @@ export function AppShell() {
           />
         </div>
       </div>
-
-      {/* ── Mobile drawer (full-height slide-over) ──────────────────────────── */}
-      <div
-        aria-hidden={!drawerOpen}
-        onClick={() => setDrawerOpen(false)}
-        className={`fixed inset-0 z-50 bg-background/70 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
-          drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-      />
-      <aside
-        role="dialog"
-        aria-modal="true"
-        aria-label="Workspace menu"
-        aria-hidden={!drawerOpen}
-        className={`fixed inset-y-0 left-0 z-50 w-60 max-w-[85vw] bg-sidebar border-r border-border transition-transform duration-300 lg:hidden ${
-          drawerOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <div className="h-full overflow-y-auto">
-          <Sidebar collapsed={false} onSelectDraft={() => setDrawerOpen(false)} />
-        </div>
-      </aside>
-    </div>
+    </SidebarShell>
   );
 }

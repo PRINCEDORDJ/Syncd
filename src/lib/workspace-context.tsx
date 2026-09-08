@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { createUniqueChannel } from "@/lib/realtime";
 import type { Json } from "@/integrations/supabase/types";
 import {
   MAX_IMAGES,
@@ -93,7 +94,7 @@ export interface WorkspaceActions {
 
 type WorkspaceCtx = WorkspaceState & WorkspaceActions;
 
-const WorkspaceContext = createContext<WorkspaceCtx | null>(null);
+export const WorkspaceContext = createContext<WorkspaceCtx | null>(null);
 
 export function useWorkspace() {
   const ctx = useContext(WorkspaceContext);
@@ -162,6 +163,7 @@ async function consumeSseStream(resp: Response, onChunk: (chunk: string) => void
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const userId = user?.id;
 
   const [draftId, setDraftId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -180,6 +182,22 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const abortRef = useRef<AbortController | null>(null);
 
+  // Reset all workspace state on account switch / sign-out so a previous
+  // user's in-progress draft is never carried into another session
+  // (important now that the provider lives above all routes).
+  useEffect(() => {
+    setDraftId(null);
+    setDraft("");
+    setTitle("Untitled draft");
+    setTitleEdited(false);
+    setTone("Authoritative & Warm");
+    setImages([]);
+    setAttachments([]);
+    setMessages([]);
+    setError(null);
+    setSuccess(null);
+  }, [userId]);
+
   // ── LinkedIn connection check ───────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
@@ -194,8 +212,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setLinkedinConnected(!!data && new Date(data.expires_at).getTime() > Date.now());
     };
     void check();
-    const channel = supabase
-      .channel(`linkedin-ws-${user.id}`)
+    const channel = createUniqueChannel(`linkedin-ws-${user.id}`)
       .on(
         "postgres_changes",
         {

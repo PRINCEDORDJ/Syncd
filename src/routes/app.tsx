@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
-import { WorkspaceProvider } from "@/lib/workspace-context";
 import { AppShell } from "@/components/workspace/AppShell";
 import { WorkspaceSkeleton } from "@/components/skeletons/WorkspaceSkeleton";
 
@@ -36,9 +35,5 @@ function WorkspaceGate() {
     return <WorkspaceSkeleton />;
   }
 
-  return (
-    <WorkspaceProvider>
-      <AppShell />
-    </WorkspaceProvider>
-  );
+  return <AppShell />;
 }

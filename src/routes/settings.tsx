@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { SiteNav } from "@/components/SiteNav";
+import { createUniqueChannel } from "@/lib/realtime";
+import { SidebarShell } from "@/components/workspace/SidebarShell";
 import {
   PLAN_LABELS,
   PLAN_LIMITS,
@@ -213,8 +214,7 @@ function SettingsPage() {
   // Realtime subscription for LinkedIn connection status and auto-disconnect on expiry
   useEffect(() => {
     if (!user) return;
-    const channel = supabase
-      .channel(`linkedin-conn-${user.id}`)
+    const channel = createUniqueChannel(`linkedin-conn-${user.id}`)
       .on(
         "postgres_changes",
         {
@@ -269,8 +269,7 @@ function SettingsPage() {
       });
     };
     void load();
-    const channel = supabase
-      .channel(`credits-${user.id}`)
+    const channel = createUniqueChannel(`credits-${user.id}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "user_credits", filter: `user_id=eq.${user.id}` },
@@ -371,8 +370,7 @@ function SettingsPage() {
     };
     const onFocus = () => void refresh();
     window.addEventListener("focus", onFocus);
-    const channel = supabase
-      .channel(`sub-${user.id}`)
+    const channel = createUniqueChannel(`sub-${user.id}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${user.id}` },
@@ -665,8 +663,8 @@ function SettingsPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-background text-ink">
-      <SiteNav />
+    <SidebarShell mobileTitle="Settings">
+      <div className="h-full min-h-0 w-full overflow-y-auto">
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <div className="mb-8 sm:mb-10">
@@ -1266,7 +1264,8 @@ function SettingsPage() {
           void deleteAccount();
         }}
       />
-    </div>
+      </div>
+    </SidebarShell>
   );
 }
 

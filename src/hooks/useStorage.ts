@@ -3,6 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { PLAN_LIMITS, type PlanTier } from "@/lib/plans";
 import { getMySubscription } from "@/lib/subscription.functions";
+import { createUniqueChannel } from "@/lib/realtime";
 
 export interface StorageState {
   bytesUsed: number;
@@ -75,8 +76,7 @@ export function useStorage(): StorageState {
     }
     void load();
 
-    const channel = supabase
-      .channel(`user_storage:${user.id}`)
+    const channel = createUniqueChannel(`user_storage:${user.id}`)
       .on(
         "postgres_changes",
         {

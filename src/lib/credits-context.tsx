@@ -3,6 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { PLAN_LIMITS, type PlanTier } from "@/lib/plans";
 import { getMySubscription } from "@/lib/subscription.functions";
+import { createUniqueChannel } from "@/lib/realtime";
 
 export interface CreditsState {
   subscriptionCredits: number;
@@ -83,8 +84,7 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
     }
     void load();
 
-    const channel = supabase
-      .channel(`user_credits:${user.id}`)
+    const channel = createUniqueChannel(`user_credits:${user.id}`)
       .on(
         "postgres_changes",
         {
