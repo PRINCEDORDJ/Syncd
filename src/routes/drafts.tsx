@@ -1,32 +1,24 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarShell } from "@/components/workspace/SidebarShell";
 import {
   Trash2,
-  X,
-  Send,
-  ImagePlus,
-  Paperclip,
-  FileText,
-  Sheet,
-  Presentation,
-  File as FileIcon,
-  Pencil,
   Clock,
-  CalendarClock,
+  FileText,
+  File,
 } from "lucide-react";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { SchedulePicker } from "@/components/SchedulePicker";
+import { useWorkspace } from "@/lib/workspace-context";
 import {
-  MAX_IMAGES,
-  MAX_ATTACHMENTS,
-  dataUrlByteSize,
   formatBytes,
+  dataUrlByteSize,
   validateImageBatch,
   validateAttachmentBatch,
+  MAX_IMAGES,
+  MAX_ATTACHMENTS,
 } from "@/lib/image-validation";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 type DraftAttachment = {
   name: string;
@@ -38,14 +30,9 @@ type DraftAttachment = {
 function attachmentIcon(name: string, type: string) {
   const lower = name.toLowerCase();
   if (lower.endsWith(".pdf")) return FileText;
-  if (lower.endsWith(".csv") || lower.endsWith(".xls") || lower.endsWith(".xlsx"))
-    return Sheet;
-  if (lower.endsWith(".ppt") || lower.endsWith(".pptx")) return Presentation;
-  if (lower.endsWith(".doc") || lower.endsWith(".docx") || lower.endsWith(".txt"))
-    return FileText;
-  if (type?.startsWith("text/")) return FileText;
-  return FileIcon;
+  return File;
 }
+// Note: Keeping simpler for now and focusing on navigation
 
 export const Route = createFileRoute("/drafts")({
   head: () => ({
@@ -110,6 +97,26 @@ function DraftsList() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileAttachInputRef = useRef<HTMLInputElement | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { loadDraft } = useWorkspace();
+  const navigate = useNavigate();
+
+  function openDraft(r: DraftRow) {
+    loadDraft({
+      id: r.id,
+      content: r.content,
+      title: r.title,
+      tone: r.tone,
+      images: r.images,
+      attachments: r.attachments.map((a) => ({
+        name: a.name,
+        size: a.size,
+        type: a.type,
+        dataUrl: a.dataUrl || "",
+      })),
+      raw_input: "",
+    });
+    navigate({ to: "/app" });
+  }
 
   const dirty = useMemo(() => {
     if (!selected) return false;
@@ -118,7 +125,7 @@ function DraftsList() {
     const a = selected.images ?? [];
     if (a.length !== modalImages.length) return true;
     for (let i = 0; i < a.length; i++) if (a[i] !== modalImages[i]) return true;
-    
+
     const b = selected.attachments ?? [];
     if (b.length !== modalAttachments.length) return true;
     for (let i = 0; i < b.length; i++) {
@@ -126,7 +133,7 @@ function DraftsList() {
       if (b[i].size !== modalAttachments[i].size) return true;
       if (b[i].dataUrl !== modalAttachments[i].dataUrl) return true;
     }
-    
+
     return false;
   }, [selected, modalImages, modalAttachments, modalTitle, modalContent]);
 
@@ -243,17 +250,17 @@ function DraftsList() {
       setRows((prev) =>
         prev
           ? prev.map((r) =>
-              r.id === selected.id
-                ? {
-                    ...r,
-                    title: nextTitle,
-                    content: nextContent,
-                    char_count: nextCharCount,
-                    images: modalImages,
-                    attachments: modalAttachments,
-                  }
-                : r,
-            )
+            r.id === selected.id
+              ? {
+                ...r,
+                title: nextTitle,
+                content: nextContent,
+                char_count: nextCharCount,
+                images: modalImages,
+                attachments: modalAttachments,
+              }
+              : r,
+          )
           : prev,
       );
       setSelected({
@@ -384,18 +391,18 @@ function DraftsList() {
       setRows((prev) =>
         prev
           ? prev.map((r) =>
-              r.id === row.id
-                ? {
-                    ...r,
-                    published: true,
-                    title: titleToSend,
-                    content: contentToSend,
-                    char_count: contentToSend.length,
-                    images: imagesToSend,
-                    attachments: attachmentsToSend,
-                  }
-                : r,
-            )
+            r.id === row.id
+              ? {
+                ...r,
+                published: true,
+                title: titleToSend,
+                content: contentToSend,
+                char_count: contentToSend.length,
+                images: imagesToSend,
+                attachments: attachmentsToSend,
+              }
+              : r,
+          )
           : prev,
       );
       setSelected({
@@ -438,10 +445,10 @@ function DraftsList() {
       setRows((prev) =>
         prev
           ? prev.map((r) =>
-              r.id === row.id
-                ? { ...r, scheduled_at: iso, schedule_status: "pending" }
-                : r,
-            )
+            r.id === row.id
+              ? { ...r, scheduled_at: iso, schedule_status: "pending" }
+              : r,
+          )
           : prev,
       );
       setShowScheduler(false);
@@ -465,10 +472,10 @@ function DraftsList() {
     setRows((prev) =>
       prev
         ? prev.map((r) =>
-            r.id === row.id
-              ? { ...r, scheduled_at: null, schedule_status: "draft" }
-              : r,
-          )
+          r.id === row.id
+            ? { ...r, scheduled_at: null, schedule_status: "draft" }
+            : r,
+        )
         : prev,
     );
     if (selected?.id === row.id) {
@@ -484,470 +491,181 @@ function DraftsList() {
   return (
     <SidebarShell mobileTitle="Posts / Drafts">
       <div className="h-full min-h-0 w-full overflow-y-auto">
-      <main className="w-full max-w-4xl mx-auto px-3 sm:px-6 py-6 sm:py-10">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6 sm:mb-8">
-          <div>
-            <p className="text-[10px] sm:text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-2">
-              Library
-            </p>
-            <h1 className="text-xl sm:text-2xl md:text-3xl tracking-[-0.02em] font-semibold leading-tight">
-              Saved posts
-            </h1>
-          </div>
-          <div className="flex items-center gap-1.5 -mx-3 px-3 overflow-x-auto sm:mx-0 sm:px-0 sm:overflow-visible">
-            {(["all", "drafts", "published"] as const).map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                className={`h-7 px-2.5 rounded text-[12px] font-medium border transition-colors capitalize shrink-0 ${
-                  filter === f
+        <main className="w-full max-w-4xl mx-auto px-3 sm:px-6 py-6 sm:py-10">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6 sm:mb-8">
+            <div>
+              <p className="text-[10px] sm:text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-2">
+                Library
+              </p>
+              <h1 className="text-xl sm:text-2xl md:text-3xl tracking-[-0.02em] font-semibold leading-tight">
+                Saved posts
+              </h1>
+            </div>
+            <div className="flex items-center gap-1.5 -mx-3 px-3 overflow-x-auto sm:mx-0 sm:px-0 sm:overflow-visible">
+              {(["all", "drafts", "published"] as const).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setFilter(f)}
+                  className={`h-7 px-2.5 rounded text-[12px] font-medium border transition-colors capitalize shrink-0 ${filter === f
                     ? "bg-ink text-surface border-ink"
                     : "bg-card text-ink border-border hover:bg-subtle"
-                }`}
-              >
-                {f}
-              </button>
-            ))}
+                    }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {error && (
-          <div className="mb-4 px-3 py-2.5 rounded-md bg-destructive/5 border border-destructive/20 text-[13px] text-destructive">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="mb-4 px-3 py-2.5 rounded-md bg-destructive/5 border border-destructive/20 text-[13px] text-destructive">
+              {error}
+            </div>
+          )}
 
-        {filtered === null ? (
-          <ul className="space-y-3">
-            <DraftItemSkeleton />
-            <DraftItemSkeleton />
-            <DraftItemSkeleton />
-          </ul>
-        ) : filtered.length === 0 ? (
-          <div className="border border-dashed border-border rounded-xl p-10 text-center">
-            <p className="text-[14px] text-muted-foreground mb-4">
-              No posts yet. Generate your first draft in the workspace.
-            </p>
-            <Link
-              to="/app"
-              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90"
-            >
-              Open workspace →
-            </Link>
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {filtered.map((r) => (
-              <li
-                key={r.id}
-                className="border border-border rounded-xl bg-card p-4 sm:p-5 hover:border-ink/30 transition-colors cursor-pointer"
-                onClick={() => {
-                  setSelected(r);
-                  setPublishMsg(null);
-                }}
+          {filtered === null ? (
+            <ul className="space-y-3">
+              <DraftItemSkeleton />
+              <DraftItemSkeleton />
+              <DraftItemSkeleton />
+            </ul>
+          ) : filtered.length === 0 ? (
+            <div className="border border-dashed border-border rounded-xl p-10 text-center">
+              <p className="text-[14px] text-muted-foreground mb-4">
+                No posts yet. Generate your first draft in the workspace.
+              </p>
+              <Link
+                to="/app"
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90"
               >
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="min-w-0 flex-1">
-                    <h2 className="font-medium text-ink text-[15px] truncate">
-                      {r.title || "Untitled draft"}
-                    </h2>
-                    <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground flex-wrap">
-                      {r.scheduled_at && r.schedule_status === "pending" ? (
-                        <span className="px-1.5 py-0.5 rounded border bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 inline-flex items-center gap-1">
-                          <Clock className="size-3" />
-                          Scheduled
-                        </span>
-                      ) : (
-                        <span
-                        className={`px-1.5 py-0.5 rounded border ${
-                          r.published
-                            ? "bg-ink text-surface border-ink"
-                            : "bg-subtle border-border"
-                        }`}
-                      >
-                        {r.published ? "Published" : "Draft"}
-                        </span>
-                      )}
-                      <span>{r.tone.split(" ")[0]}</span>
-                      <span>·</span>
-                      <span>{r.char_count} ch</span>
-                      <span>·</span>
-                      <span>
-                        {r.scheduled_at && r.schedule_status === "pending"
-                          ? new Date(r.scheduled_at).toLocaleString(undefined, {
+                Open workspace →
+              </Link>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {filtered.map((r) => (
+                <li
+                  key={r.id}
+                  className="border border-border rounded-xl bg-card p-4 sm:p-5 hover:border-ink/30 transition-colors cursor-pointer"
+                  onClick={() => openDraft(r)}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <h2 className="font-medium text-ink text-[15px] truncate">
+                        {r.title || "Untitled draft"}
+                      </h2>
+                      <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground flex-wrap">
+                        {r.scheduled_at && r.schedule_status === "pending" ? (
+                          <span className="px-1.5 py-0.5 rounded border bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 inline-flex items-center gap-1">
+                            <Clock className="size-3" />
+                            Scheduled
+                          </span>
+                        ) : (
+                          <span
+                            className={`px-1.5 py-0.5 rounded border ${r.published
+                              ? "bg-ink text-surface border-ink"
+                              : "bg-subtle border-border"
+                              }`}
+                          >
+                            {r.published ? "Published" : "Draft"}
+                          </span>
+                        )}
+                        <span>{r.tone.split(" ")[0]}</span>
+                        <span>·</span>
+                        <span>{r.char_count} ch</span>
+                        <span>·</span>
+                        <span>
+                          {r.scheduled_at && r.schedule_status === "pending"
+                            ? new Date(r.scheduled_at).toLocaleString(undefined, {
                               month: "short",
                               day: "numeric",
                               hour: "numeric",
                               minute: "2-digit",
                             })
-                          : new Date(r.updated_at).toLocaleDateString()}
-                      </span>
-                      {r.scheduled_at && r.schedule_status === "pending" && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void cancelSchedule(r);
-                          }}
-                          className="underline hover:text-ink"
-                        >
-                          Cancel
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      remove(r.id);
-                    }}
-                    className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-                    aria-label="Delete"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-                {r.images.length > 0 && (
-                  <div className={`mb-3 ${r.images.length === 1 ? "" : "flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1"}`}>
-                    {r.images.map((src, i) => (
-                      <img
-                        key={i}
-                        src={src}
-                        alt={`Thumb ${i + 1}`}
-                        className={`rounded-lg border border-border object-cover shrink-0 ${
-                          r.images.length === 1
-                            ? "w-full aspect-video max-h-[240px]"
-                            : "h-24 w-auto aspect-square sm:h-32"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                )}
-                {r.attachments.length > 0 && (
-                  <div className="mb-2 flex flex-wrap gap-1.5">
-                    {r.attachments.map((a, i) => {
-                      const Icon = attachmentIcon(a.name, a.type);
-                      return (
-                        <div
-                          key={i}
-                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-subtle text-[11px] font-mono text-ink max-w-[200px]"
-                          title={a.name}
-                        >
-                          <Icon className="size-3 text-muted-foreground shrink-0" />
-                          <span className="truncate">{a.name}</span>
-                          <span className="text-muted-foreground tabular-nums shrink-0">
-                            {formatBytes(a.size)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <p className="text-[14px] text-ink/80 leading-relaxed line-clamp-3 whitespace-pre-wrap">
-                  {r.content}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </main>
-
-      {selected && (
-        <div
-          className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
-          onClick={closeModal}
-        >
-          <div
-            className="bg-card border border-border rounded-t-xl sm:rounded-xl shadow-xl w-full max-w-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-border">
-              <div className="min-w-0 flex-1">
-                {editing ? (
-                  <input
-                    type="text"
-                    value={modalTitle}
-                    onChange={(e) => setModalTitle(e.target.value)}
-                    placeholder="Untitled draft"
-                    className="w-full font-semibold text-ink text-[16px] bg-transparent border-b border-border focus:border-ink outline-none pb-1"
-                  />
-                ) : (
-                  <h2 className="font-semibold text-ink text-[16px] truncate">
-                    {modalTitle || "Untitled draft"}
-                  </h2>
-                )}
-                <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground flex-wrap">
-                  <span
-                    className={`px-1.5 py-0.5 rounded border ${
-                      selected.published
-                        ? "bg-ink text-surface border-ink"
-                        : "bg-subtle border-border"
-                    }`}
-                  >
-                    {selected.published ? "Published" : "Draft"}
-                  </span>
-                  <span>{selected.tone}</span>
-                  <span>·</span>
-                  <span>{modalContent.length} ch</span>
-                  <span>·</span>
-                  <span>{new Date(selected.updated_at).toLocaleString()}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setEditing((v) => !v)}
-                  title={editing ? "Done editing" : "Edit post"}
-                  aria-label={editing ? "Done editing" : "Edit post"}
-                  className={`h-8 w-8 inline-flex items-center justify-center rounded border transition-colors shrink-0 ${
-                    editing
-                      ? "bg-ink text-surface border-ink"
-                      : "bg-card text-ink border-border hover:bg-subtle"
-                  }`}
-                >
-                  <Pencil className="size-4" />
-                </button>
-                {!selected.published && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={modalImages.length >= MAX_IMAGES}
-                      title="Add image"
-                      aria-label="Add image"
-                      className="h-8 w-8 inline-flex items-center justify-center rounded border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                    >
-                      <ImagePlus className="size-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => fileAttachInputRef.current?.click()}
-                      disabled={modalAttachments.length >= MAX_ATTACHMENTS}
-                      title="Add file"
-                      aria-label="Add file"
-                      className="h-8 w-8 inline-flex items-center justify-center rounded border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                    >
-                      <Paperclip className="size-4" />
-                    </button>
-                  </>
-                )}
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="p-1.5 text-muted-foreground hover:text-ink transition-colors"
-                  aria-label="Close"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5">
-              {editing ? (
-                <textarea
-                  value={modalContent}
-                  onChange={(e) => setModalContent(e.target.value)}
-                  rows={12}
-                  maxLength={3000}
-                  className="w-full text-[14px] sm:text-[15px] text-ink leading-relaxed bg-card border border-border rounded-md p-3 outline-none focus:border-ink resize-y min-h-[240px]"
-                />
-              ) : (
-                <p className="text-[14px] sm:text-[15px] text-ink leading-relaxed whitespace-pre-wrap">
-                  {modalContent}
-                </p>
-              )}
-              <div className="mt-5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-[0.12em]">
-                    Images
-                  </p>
-                </div>
-                <input
-                  ref={fileAttachInputRef}
-                  type="file"
-                  accept=".pdf,.doc,.docx,.csv,.txt,.xls,.xlsx,.ppt,.pptx"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    handleModalAttachments(e.target.files);
-                    if (fileAttachInputRef.current) fileAttachInputRef.current.value = "";
-                  }}
-                />
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    handleModalFiles(e.target.files);
-                    if (fileInputRef.current) fileInputRef.current.value = "";
-                  }}
-                />
-                {modalImages.length > 0 && (
-                  <div className={`flex gap-3 overflow-x-auto pb-4 no-scrollbar -mx-1 px-1 snap-x ${modalImages.length === 1 ? "" : "snap-mandatory"}`}>
-                    {modalImages.map((src, i) => (
-                      <div
-                        key={i}
-                        className={`relative flex-none rounded-xl overflow-hidden border border-border bg-card group snap-center ${
-                          modalImages.length === 1
-                            ? "w-full aspect-video"
-                            : "w-[85%] sm:w-[400px] aspect-square sm:aspect-video"
-                        }`}
-                      >
-                        <img
-                          src={src}
-                          alt={`Attachment ${i + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                        {!selected.published && (
+                            : new Date(r.updated_at).toLocaleDateString()}
+                        </span>
+                        {r.scheduled_at && r.schedule_status === "pending" && (
                           <button
                             type="button"
-                            onClick={() => removeModalImage(i)}
-                            className="absolute top-2 right-2 size-6 rounded-full bg-ink/80 text-surface flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
-                            aria-label="Remove image"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void cancelSchedule(r);
+                            }}
+                            className="underline hover:text-ink"
                           >
-                            <X className="size-3.5" />
+                            Cancel
                           </button>
                         )}
                       </div>
-                    ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        remove(r.id);
+                      }}
+                      className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+                      aria-label="Delete"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
                   </div>
-                )}
-                {modalAttachments.length > 0 && (
-                  <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar -mx-1 px-1 mt-1">
-                    {modalAttachments.map((a, i) => {
-                      const Icon = attachmentIcon(a.name, a.type);
-                      return (
-                        <div
-                          key={`${a.name}-${i}`}
-                          className="relative flex-none inline-flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-subtle hover:bg-muted transition-colors group h-10"
-                        >
-                          <Icon className="size-4 text-muted-foreground shrink-0" />
-                          <span className="text-[13px] text-ink truncate max-w-[150px]" title={a.name}>
-                            {a.name}
-                          </span>
-                          {!selected.published && (
-                            <button
-                              type="button"
-                              onClick={() => removeModalAttachment(i)}
-                              className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-ink/80 text-surface flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                              aria-label="Remove attachment"
-                            >
-                              <X className="size-3" />
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {modalError && (
-                  <div className="px-3 py-2.5 rounded-md bg-destructive/5 border border-destructive/20 text-[13px] text-destructive">
-                    {modalError}
-                  </div>
-                )}
-              </div>
-            </div>
+                  {r.images.length > 0 && (
+                    <div className={`mb-3 ${r.images.length === 1 ? "" : "flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1"}`}>
+                      {r.images.map((src, i) => (
+                        <img
+                          key={i}
+                          src={src}
+                          alt={`Thumb ${i + 1}`}
+                          className={`rounded-lg border border-border object-cover shrink-0 ${r.images.length === 1
+                            ? "w-full aspect-video max-h-[240px]"
+                            : "h-24 w-auto aspect-square sm:h-32"
+                            }`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {r.attachments.length > 0 && (
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {r.attachments.map((a, i) => {
+                        const Icon = attachmentIcon(a.name, a.type);
+                        return (
+                          <div
+                            key={i}
+                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-subtle text-[11px] font-mono text-ink max-w-[200px]"
+                            title={a.name}
+                          >
+                            <Icon className="size-3 text-muted-foreground shrink-0" />
+                            <span className="truncate">{a.name}</span>
+                            <span className="text-muted-foreground tabular-nums shrink-0">
+                              {formatBytes(a.size)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <p className="text-[14px] text-ink/80 leading-relaxed line-clamp-3 whitespace-pre-wrap">
+                    {r.content}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </main>
 
-            {publishMsg && (
-              <div
-                className={`mx-5 sm:mx-6 mb-3 px-3 py-2.5 rounded-md text-[13px] border ${
-                  publishMsg.includes("success")
-                    ? "bg-subtle border-border text-ink"
-                    : "bg-destructive/5 border-destructive/20 text-destructive"
-                }`}
-              >
-                {publishMsg}
-              </div>
-            )}
-
-            <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t border-border bg-subtle/40">
-              <button
-                type="button"
-                onClick={closeModal}
-                className="h-9 px-4 rounded-md text-[13px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors w-full sm:w-auto"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => setDeleteId(selected.id)}
-                className="h-9 px-4 rounded-md text-[13px] font-medium border border-destructive/30 text-destructive hover:bg-destructive/5 transition-colors inline-flex items-center justify-center gap-1.5 w-full sm:w-auto"
-              >
-                <Trash2 className="size-3.5" />
-                Delete post
-              </button>
-              {dirty && (
-                <button
-                  type="button"
-                  onClick={saveModalChanges}
-                  disabled={saving}
-                  className="h-9 px-4 rounded-md text-[13px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-60 inline-flex items-center justify-center gap-1.5 w-full sm:w-auto"
-                >
-                  <span className="size-1.5 rounded-full bg-ink" />
-                  {saving ? "Saving…" : "Save changes"}
-                </button>
-              )}
-              {!selected.published && (
-                <button
-                  type="button"
-                  onClick={() => publishDraft(selected)}
-                  disabled={publishing}
-                  className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 disabled:opacity-60 transition-colors w-full sm:w-auto"
-                >
-                  <Send className="size-3.5" />
-                  {publishing ? "Publishing…" : "Publish to LinkedIn"}
-                </button>
-              )}
-              {!selected.published && !selected.scheduled_at && (
-                <button
-                  type="button"
-                  onClick={() => setShowScheduler((v) => !v)}
-                  className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md text-[13px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors w-full sm:w-auto"
-                >
-                  <CalendarClock className="size-3.5" />
-                  {showScheduler ? "Hide scheduler" : "Schedule"}
-                </button>
-              )}
-              {selected.scheduled_at && selected.schedule_status === "pending" && (
-                <button
-                  type="button"
-                  onClick={() => cancelSchedule(selected)}
-                  className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md text-[13px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors w-full sm:w-auto"
-                >
-                  <Clock className="size-3.5" />
-                  Cancel schedule
-                </button>
-              )}
-            </div>
-            {showScheduler && !selected.published && !selected.scheduled_at && (
-              <div className="mt-4 p-4 rounded-lg border border-border bg-subtle/40">
-                <p className="text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground mb-3">
-                  Schedule post
-                </p>
-                <SchedulePicker
-                  submitting={scheduling}
-                  onSchedule={(iso) => scheduleDraft(selected, iso)}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      <ConfirmDialog
-        open={deleteId !== null}
-        onOpenChange={(o) => !o && setDeleteId(null)}
-        title="Delete post?"
-        description="This will permanently remove this draft from your library. This action cannot be undone."
-        onConfirm={handleConfirmDelete}
-        confirmText="Delete post"
-        variant="destructive"
-      />
+        <ConfirmDialog
+          open={deleteId !== null}
+          onOpenChange={(o) => !o && setDeleteId(null)}
+          title="Delete post?"
+          description="This will permanently remove this draft from your library. This action cannot be undone."
+          onConfirm={handleConfirmDelete}
+          confirmText="Delete post"
+          variant="destructive"
+        />
       </div>
     </SidebarShell>
-  );
+  )
 }
+
