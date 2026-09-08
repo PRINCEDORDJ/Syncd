@@ -190,7 +190,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
                 aria-label={l.label}
                 className={`size-9 inline-flex items-center justify-center rounded-lg transition-colors ${
                   active
-                    ? "bg-accent-cyan/10 text-accent-cyan"
+                    ? "bg-accent-cyan/10 text-white"
                     : "text-muted-foreground hover:text-ink hover:bg-subtle"
                 }`}
               >
