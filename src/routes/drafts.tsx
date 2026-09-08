@@ -125,7 +125,7 @@ function DraftsList() {
     const a = selected.images ?? [];
     if (a.length !== modalImages.length) return true;
     for (let i = 0; i < a.length; i++) if (a[i] !== modalImages[i]) return true;
-    
+
     const b = selected.attachments ?? [];
     if (b.length !== modalAttachments.length) return true;
     for (let i = 0; i < b.length; i++) {
@@ -133,7 +133,7 @@ function DraftsList() {
       if (b[i].size !== modalAttachments[i].size) return true;
       if (b[i].dataUrl !== modalAttachments[i].dataUrl) return true;
     }
-    
+
     return false;
   }, [selected, modalImages, modalAttachments, modalTitle, modalContent]);
 
@@ -174,7 +174,7 @@ function DraftsList() {
     if (!accepted.length) return;
     const dataUrls = await Promise.all(
       accepted.map(
-        (f: File) =>
+        (f) =>
           new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(String(reader.result));
@@ -201,7 +201,7 @@ function DraftsList() {
     if (!accepted.length) return;
     const items = await Promise.all(
       accepted.map(
-        (f: File) =>
+        (f) =>
           new Promise<DraftAttachment>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () =>
@@ -250,17 +250,17 @@ function DraftsList() {
       setRows((prev) =>
         prev
           ? prev.map((r) =>
-              r.id === selected.id
-                ? {
-                    ...r,
-                    title: nextTitle,
-                    content: nextContent,
-                    char_count: nextCharCount,
-                    images: modalImages,
-                    attachments: modalAttachments,
-                  }
-                : r,
-            )
+            r.id === selected.id
+              ? {
+                ...r,
+                title: nextTitle,
+                content: nextContent,
+                char_count: nextCharCount,
+                images: modalImages,
+                attachments: modalAttachments,
+              }
+              : r,
+          )
           : prev,
       );
       setSelected({
@@ -391,18 +391,18 @@ function DraftsList() {
       setRows((prev) =>
         prev
           ? prev.map((r) =>
-              r.id === row.id
-                ? {
-                    ...r,
-                    published: true,
-                    title: titleToSend,
-                    content: contentToSend,
-                    char_count: contentToSend.length,
-                    images: imagesToSend,
-                    attachments: attachmentsToSend,
-                  }
-                : r,
-            )
+            r.id === row.id
+              ? {
+                ...r,
+                published: true,
+                title: titleToSend,
+                content: contentToSend,
+                char_count: contentToSend.length,
+                images: imagesToSend,
+                attachments: attachmentsToSend,
+              }
+              : r,
+          )
           : prev,
       );
       setSelected({
@@ -445,10 +445,10 @@ function DraftsList() {
       setRows((prev) =>
         prev
           ? prev.map((r) =>
-              r.id === row.id
-                ? { ...r, scheduled_at: iso, schedule_status: "pending" }
-                : r,
-            )
+            r.id === row.id
+              ? { ...r, scheduled_at: iso, schedule_status: "pending" }
+              : r,
+          )
           : prev,
       );
       setShowScheduler(false);
@@ -472,10 +472,10 @@ function DraftsList() {
     setRows((prev) =>
       prev
         ? prev.map((r) =>
-            r.id === row.id
-              ? { ...r, scheduled_at: null, schedule_status: "draft" }
-              : r,
-          )
+          r.id === row.id
+            ? { ...r, scheduled_at: null, schedule_status: "draft" }
+            : r,
+        )
         : prev,
     );
     if (selected?.id === row.id) {
@@ -491,183 +491,181 @@ function DraftsList() {
   return (
     <SidebarShell mobileTitle="Posts / Drafts">
       <div className="h-full min-h-0 w-full overflow-y-auto">
-      <main className="w-full max-w-4xl mx-auto px-3 sm:px-6 py-6 sm:py-10">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6 sm:mb-8">
-          <div>
-            <p className="text-[10px] sm:text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-2">
-              Library
-            </p>
-            <h1 className="text-xl sm:text-2xl md:text-3xl tracking-[-0.02em] font-semibold leading-tight">
-              Saved posts
-            </h1>
-          </div>
-          <div className="flex items-center gap-1.5 -mx-3 px-3 overflow-x-auto sm:mx-0 sm:px-0 sm:overflow-visible">
-            {(["all", "drafts", "published"] as const).map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                className={`h-7 px-2.5 rounded text-[12px] font-medium border transition-colors capitalize shrink-0 ${
-                  filter === f
+        <main className="w-full max-w-4xl mx-auto px-3 sm:px-6 py-6 sm:py-10">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6 sm:mb-8">
+            <div>
+              <p className="text-[10px] sm:text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-2">
+                Library
+              </p>
+              <h1 className="text-xl sm:text-2xl md:text-3xl tracking-[-0.02em] font-semibold leading-tight">
+                Saved posts
+              </h1>
+            </div>
+            <div className="flex items-center gap-1.5 -mx-3 px-3 overflow-x-auto sm:mx-0 sm:px-0 sm:overflow-visible">
+              {(["all", "drafts", "published"] as const).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setFilter(f)}
+                  className={`h-7 px-2.5 rounded text-[12px] font-medium border transition-colors capitalize shrink-0 ${filter === f
                     ? "bg-ink text-surface border-ink"
                     : "bg-card text-ink border-border hover:bg-subtle"
-                }`}
-              >
-                {f}
-              </button>
-            ))}
+                    }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {error && (
-          <div className="mb-4 px-3 py-2.5 rounded-md bg-destructive/5 border border-destructive/20 text-[13px] text-destructive">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="mb-4 px-3 py-2.5 rounded-md bg-destructive/5 border border-destructive/20 text-[13px] text-destructive">
+              {error}
+            </div>
+          )}
 
-        {filtered === null ? (
-          <ul className="space-y-3">
-            <DraftItemSkeleton />
-            <DraftItemSkeleton />
-            <DraftItemSkeleton />
-          </ul>
-        ) : filtered.length === 0 ? (
-          <div className="border border-dashed border-border rounded-xl p-10 text-center">
-            <p className="text-[14px] text-muted-foreground mb-4">
-              No posts yet. Generate your first draft in the workspace.
-            </p>
-            <Link
-              to="/app"
-              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90"
-            >
-              Open workspace →
-            </Link>
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {filtered.map((r) => (
-              <li
-                key={r.id}
-                className="border border-border rounded-xl bg-card p-4 sm:p-5 hover:border-ink/30 transition-colors cursor-pointer"
-                onClick={() => openDraft(r)}
+          {filtered === null ? (
+            <ul className="space-y-3">
+              <DraftItemSkeleton />
+              <DraftItemSkeleton />
+              <DraftItemSkeleton />
+            </ul>
+          ) : filtered.length === 0 ? (
+            <div className="border border-dashed border-border rounded-xl p-10 text-center">
+              <p className="text-[14px] text-muted-foreground mb-4">
+                No posts yet. Generate your first draft in the workspace.
+              </p>
+              <Link
+                to="/app"
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90"
               >
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="min-w-0 flex-1">
-                    <h2 className="font-medium text-ink text-[15px] truncate">
-                      {r.title || "Untitled draft"}
-                    </h2>
-                    <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground flex-wrap">
-                      {r.scheduled_at && r.schedule_status === "pending" ? (
-                        <span className="px-1.5 py-0.5 rounded border bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 inline-flex items-center gap-1">
-                          <Clock className="size-3" />
-                          Scheduled
-                        </span>
-                      ) : (
-                        <span
-                        className={`px-1.5 py-0.5 rounded border ${
-                          r.published
-                            ? "bg-ink text-surface border-ink"
-                            : "bg-subtle border-border"
-                        }`}
-                      >
-                        {r.published ? "Published" : "Draft"}
-                        </span>
-                      )}
-                      <span>{r.tone.split(" ")[0]}</span>
-                      <span>·</span>
-                      <span>{r.char_count} ch</span>
-                      <span>·</span>
-                      <span>
-                        {r.scheduled_at && r.schedule_status === "pending"
-                          ? new Date(r.scheduled_at).toLocaleString(undefined, {
+                Open workspace →
+              </Link>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {filtered.map((r) => (
+                <li
+                  key={r.id}
+                  className="border border-border rounded-xl bg-card p-4 sm:p-5 hover:border-ink/30 transition-colors cursor-pointer"
+                  onClick={() => openDraft(r)}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <h2 className="font-medium text-ink text-[15px] truncate">
+                        {r.title || "Untitled draft"}
+                      </h2>
+                      <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground flex-wrap">
+                        {r.scheduled_at && r.schedule_status === "pending" ? (
+                          <span className="px-1.5 py-0.5 rounded border bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 inline-flex items-center gap-1">
+                            <Clock className="size-3" />
+                            Scheduled
+                          </span>
+                        ) : (
+                          <span
+                            className={`px-1.5 py-0.5 rounded border ${r.published
+                              ? "bg-ink text-surface border-ink"
+                              : "bg-subtle border-border"
+                              }`}
+                          >
+                            {r.published ? "Published" : "Draft"}
+                          </span>
+                        )}
+                        <span>{r.tone.split(" ")[0]}</span>
+                        <span>·</span>
+                        <span>{r.char_count} ch</span>
+                        <span>·</span>
+                        <span>
+                          {r.scheduled_at && r.schedule_status === "pending"
+                            ? new Date(r.scheduled_at).toLocaleString(undefined, {
                               month: "short",
                               day: "numeric",
                               hour: "numeric",
                               minute: "2-digit",
                             })
-                          : new Date(r.updated_at).toLocaleDateString()}
-                      </span>
-                      {r.scheduled_at && r.schedule_status === "pending" && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void cancelSchedule(r);
-                          }}
-                          className="underline hover:text-ink"
-                        >
-                          Cancel
-                        </button>
-                      )}
+                            : new Date(r.updated_at).toLocaleDateString()}
+                        </span>
+                        {r.scheduled_at && r.schedule_status === "pending" && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void cancelSchedule(r);
+                            }}
+                            className="underline hover:text-ink"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        remove(r.id);
+                      }}
+                      className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+                      aria-label="Delete"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      remove(r.id);
-                    }}
-                    className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-                    aria-label="Delete"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-                {r.images.length > 0 && (
-                  <div className={`mb-3 ${r.images.length === 1 ? "" : "flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1"}`}>
-                    {r.images.map((src, i) => (
-                      <img
-                        key={i}
-                        src={src}
-                        alt={`Thumb ${i + 1}`}
-                        className={`rounded-lg border border-border object-cover shrink-0 ${
-                          r.images.length === 1
+                  {r.images.length > 0 && (
+                    <div className={`mb-3 ${r.images.length === 1 ? "" : "flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1"}`}>
+                      {r.images.map((src, i) => (
+                        <img
+                          key={i}
+                          src={src}
+                          alt={`Thumb ${i + 1}`}
+                          className={`rounded-lg border border-border object-cover shrink-0 ${r.images.length === 1
                             ? "w-full aspect-video max-h-[240px]"
                             : "h-24 w-auto aspect-square sm:h-32"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                )}
-                {r.attachments.length > 0 && (
-                  <div className="mb-2 flex flex-wrap gap-1.5">
-                    {r.attachments.map((a, i) => {
-                      const Icon = attachmentIcon(a.name, a.type);
-                      return (
-                        <div
-                          key={i}
-                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-subtle text-[11px] font-mono text-ink max-w-[200px]"
-                          title={a.name}
-                        >
-                          <Icon className="size-3 text-muted-foreground shrink-0" />
-                          <span className="truncate">{a.name}</span>
-                          <span className="text-muted-foreground tabular-nums shrink-0">
-                            {formatBytes(a.size)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <p className="text-[14px] text-ink/80 leading-relaxed line-clamp-3 whitespace-pre-wrap">
-                  {r.content}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </main>
-      <ConfirmDialog
-        open={deleteId !== null}
-        onOpenChange={(o) => !o && setDeleteId(null)}
-        title="Delete post?"
-        description="This will permanently remove this draft from your library. This action cannot be undone."
-        onConfirm={handleConfirmDelete}
-        confirmText="Delete post"
-        variant="destructive"
-      />
+                            }`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {r.attachments.length > 0 && (
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {r.attachments.map((a, i) => {
+                        const Icon = attachmentIcon(a.name, a.type);
+                        return (
+                          <div
+                            key={i}
+                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-subtle text-[11px] font-mono text-ink max-w-[200px]"
+                            title={a.name}
+                          >
+                            <Icon className="size-3 text-muted-foreground shrink-0" />
+                            <span className="truncate">{a.name}</span>
+                            <span className="text-muted-foreground tabular-nums shrink-0">
+                              {formatBytes(a.size)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <p className="text-[14px] text-ink/80 leading-relaxed line-clamp-3 whitespace-pre-wrap">
+                    {r.content}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </main>
+
+        <ConfirmDialog
+          open={deleteId !== null}
+          onOpenChange={(o) => !o && setDeleteId(null)}
+          title="Delete post?"
+          description="This will permanently remove this draft from your library. This action cannot be undone."
+          onConfirm={handleConfirmDelete}
+          confirmText="Delete post"
+          variant="destructive"
+        />
       </div>
     </SidebarShell>
-  );
+  )
 }
 
