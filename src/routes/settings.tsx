@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { WorkspaceManager } from "@/components/WorkspaceManager";
 
 export const Route = createFileRoute("/settings")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -694,10 +695,15 @@ function SettingsPage() {
             <TabsTrigger value="profile" className="text-[13px]">Profile</TabsTrigger>
             <TabsTrigger value="linkedin" className="text-[13px]">LinkedIn</TabsTrigger>
             <TabsTrigger value="billing" className="text-[13px]">Billing</TabsTrigger>
-            <TabsTrigger value="team" className="text-[13px]">Team</TabsTrigger>
+            <TabsTrigger value="workspaces" className="text-[13px]">Workspaces & Projects</TabsTrigger>
+            <TabsTrigger value="team" className="text-[13px]">Teams</TabsTrigger>
             <TabsTrigger value="account" className="text-[13px]">Account</TabsTrigger>
             <TabsTrigger value="danger" className="text-[13px] data-[state=active]:text-destructive">Danger</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="workspaces" className="mt-0">
+            <WorkspaceManager />
+          </TabsContent>
 
           <TabsContent value="profile" className="mt-0">
         <Section title="Profile" subtitle="How you appear inside Syncd.">
@@ -1332,10 +1338,10 @@ const TIERS: Array<{
     cadenceAnnual: "forever",
     description: "Get a feel for the workspace. No credit card.",
     features: [
-      "30 credits per month",
-      "5 generations per day",
+      "30 credits per month (5/day cap)",
+      "1 Workspace & 2 Projects",
       "1 LinkedIn account",
-      "Email support",
+      "200 MB media storage",
     ],
     highlighted: false,
   },
@@ -1348,12 +1354,13 @@ const TIERS: Array<{
     cadenceAnnual: "per year",
     description: "For solo creators shipping a real cadence.",
     features: [
-      "100 credits per month",
-      "1 LinkedIn account",
-      "Post scheduling",
-      "Credit top-ups when you need more",
+      "100 credits per month (No daily cap)",
+      "Up to 3 Workspaces",
+      "Up to 10 Projects per workspace",
+      "Direct project collaborator grants",
+      "Post scheduling & Top-ups",
       "Full voice mapping",
-      "Priority support",
+      "5 GB media storage",
     ],
     highlighted: true,
   },
@@ -1364,13 +1371,15 @@ const TIERS: Array<{
     priceAnnual: "$290",
     cadenceMonthly: "per month",
     cadenceAnnual: "per year",
-    description: "Shared workspace for execs and ghost-writers.",
+    description: "Shared workspace for agencies, execs & collaborative teams.",
     features: [
-      "Everything in Studio",
       "350 credits per month",
-      "Up to 5 team seats",
+      "Unlimited Workspaces & Projects",
+      "Up to 5 Workspace Team seats",
+      "Team-level workspace access grants",
+      "Role-based permissions (Owner, Admin, Member)",
       "Up to 10 LinkedIn accounts",
-      "Shared drafts & voice profiles",
+      "20 GB media storage",
     ],
     highlighted: false,
   },

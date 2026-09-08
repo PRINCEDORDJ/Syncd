@@ -14,6 +14,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DraftsRouteImport } from './routes/drafts'
@@ -53,6 +54,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MethodologyRoute = MethodologyRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/drafts': typeof DraftsRoute
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
+  '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByTo {
   '/drafts': typeof DraftsRoute
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
+  '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
@@ -183,6 +191,7 @@ export interface FileRoutesById {
   '/drafts': typeof DraftsRoute
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
+  '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/drafts'
     | '/login'
     | '/methodology'
+    | '/onboarding'
     | '/pricing'
     | '/privacy'
     | '/settings'
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/drafts'
     | '/login'
     | '/methodology'
+    | '/onboarding'
     | '/pricing'
     | '/privacy'
     | '/settings'
@@ -251,6 +262,7 @@ export interface FileRouteTypes {
     | '/drafts'
     | '/login'
     | '/methodology'
+    | '/onboarding'
     | '/pricing'
     | '/privacy'
     | '/settings'
@@ -274,6 +286,7 @@ export interface RootRouteChildren {
   DraftsRoute: typeof DraftsRoute
   LoginRoute: typeof LoginRoute
   MethodologyRoute: typeof MethodologyRoute
+  OnboardingRoute: typeof OnboardingRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   SettingsRoute: typeof SettingsRoute
@@ -325,6 +338,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/methodology': {
@@ -442,6 +462,7 @@ const rootRouteChildren: RootRouteChildren = {
   DraftsRoute: DraftsRoute,
   LoginRoute: LoginRoute,
   MethodologyRoute: MethodologyRoute,
+  OnboardingRoute: OnboardingRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   SettingsRoute: SettingsRoute,

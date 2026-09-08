@@ -5,6 +5,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { type PlanTier, TOPUP_PACKS, type BillingInterval } from "@/lib/plans";
+import { getUserPlanAndLimits } from "@/lib/workspace-access";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -45,10 +46,9 @@ const tiers: TierDef[] = [
     annual: 0,
     description: "Test the workspace with a monthly credit allowance.",
     features: [
-      "30 credits / month",
-      "5 generations / day cap",
+      "30 credits / month (5/day cap)",
+      "1 Workspace & 2 Projects",
       "1 LinkedIn account",
-      "200 MB media storage",
     ],
     cta: "Start free",
     highlighted: false,
@@ -58,14 +58,14 @@ const tiers: TierDef[] = [
     name: "Studio",
     monthly: 9,
     annual: 90,
-    description: "For solo writers shipping a serious cadence.",
+    description: "For solo writers shipping a serious cadence across multiple projects.",
     features: [
-      "100 credits / month",
-      "No daily cap",
+      "100 credits / month (No daily cap)",
+      "Up to 3 Workspaces",
+      "Up to 10 Projects per workspace",
+      "Direct project collaborator grants",
       "Voice mapping & tone dial",
-      "Scheduling",
-      "Top-up packs",
-      "5 GB media storage",
+      "Post scheduling & Top-ups",
     ],
     cta: "Choose Studio",
     highlighted: true,
@@ -75,14 +75,14 @@ const tiers: TierDef[] = [
     name: "Teams",
     monthly: 29,
     annual: 290,
-    description: "Shared workspaces for founders, execs & ghost-writers.",
+    description: "Shared workspaces for agencies, founders, execs & collaborative teams.",
     features: [
       "350 credits / month",
-      "Up to 5 seats",
+      "Unlimited Workspaces & Projects",
+      "Up to 5 Workspace Team seats",
+      "Team-level workspace access grants",
+      "Role-based permissions (Owner, Admin, Member)",
       "Up to 10 LinkedIn accounts",
-      "Team drafts & scheduling",
-      "Top-up packs",
-      "20 GB media storage",
     ],
     cta: "Choose Teams",
     highlighted: false,
@@ -106,24 +106,12 @@ function PricingPage() {
 
     let cancelled = false;
     (async () => {
-      const [{ data: subRow }, { data: roles }] = await Promise.all([
-        supabase
-          .from("subscriptions")
-          .select("plan")
-          .eq("user_id", user.id)
-          .maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", user.id),
-      ]);
+      const { plan, isAdmin: userIsAdmin } = await getUserPlanAndLimits(user.id);
 
       if (cancelled) return;
 
-      if (subRow) {
-        setSubPlan(subRow.plan as PlanTier);
-      } else {
-        setSubPlan("trial");
-      }
-
-      setIsAdmin(!!roles?.some((r) => r.role === "admin"));
+      setSubPlan(plan);
+      setIsAdmin(userIsAdmin);
       setInitialLoading(false);
     })();
 
@@ -186,18 +174,16 @@ function PricingPage() {
             <button
               type="button"
               onClick={() => setInterval("month")}
-              className={`px-3 h-7 rounded-full transition-colors ${
-                interval === "month" ? "bg-ink text-surface" : "text-muted-foreground"
-              }`}
+              className={`px-3 h-7 rounded-full transition-colors ${interval === "month" ? "bg-ink text-surface" : "text-muted-foreground"
+                }`}
             >
               Monthly
             </button>
             <button
               type="button"
               onClick={() => setInterval("year")}
-              className={`px-3 h-7 rounded-full transition-colors ${
-                interval === "year" ? "bg-ink text-surface" : "text-muted-foreground"
-              }`}
+              className={`px-3 h-7 rounded-full transition-colors ${interval === "year" ? "bg-ink text-surface" : "text-muted-foreground"
+                }`}
             >
               Yearly <span className="opacity-60">· save ~17%</span>
             </button>
@@ -242,11 +228,10 @@ function PricingPage() {
             return (
               <div
                 key={t.id}
-                className={`relative flex flex-col gap-6 p-7 rounded-xl border transition-all ${
-                  t.highlighted
-                    ? "bg-ink text-surface border-ink shadow-pop"
-                    : "bg-card text-ink border-border hover:border-ink/30"
-                }`}
+                className={`relative flex flex-col gap-6 p-7 rounded-xl border transition-all ${t.highlighted
+                  ? "bg-ink text-surface border-ink shadow-pop"
+                  : "bg-card text-ink border-border hover:border-ink/30"
+                  }`}
               >
                 {t.highlighted && (
                   <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-surface text-ink text-[10px] font-mono uppercase tracking-[0.12em] border border-border">
@@ -258,11 +243,10 @@ function PricingPage() {
                     <h3 className="text-[15px] font-semibold tracking-tight">{t.name}</h3>
                     {isActive && (
                       <span
-                        className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                          t.highlighted
-                            ? "bg-surface/10 border-surface/20 text-surface"
-                            : "bg-subtle border-border text-muted-foreground"
-                        }`}
+                        className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border ${t.highlighted
+                          ? "bg-surface/10 border-surface/20 text-surface"
+                          : "bg-subtle border-border text-muted-foreground"
+                          }`}
                       >
                         {isAdmin && t.id === "teams" ? "Admin Access" : "Current Plan"}
                       </span>
@@ -273,17 +257,15 @@ function PricingPage() {
                       {priceLabel}
                     </span>
                     <span
-                      className={`text-[13px] ${
-                        t.highlighted ? "text-surface/60" : "text-muted-foreground"
-                      }`}
+                      className={`text-[13px] ${t.highlighted ? "text-surface/60" : "text-muted-foreground"
+                        }`}
                     >
                       {cadence}
                     </span>
                   </div>
                   <p
-                    className={`mt-3 text-[13px] ${
-                      t.highlighted ? "text-surface/70" : "text-muted-foreground"
-                    }`}
+                    className={`mt-3 text-[13px] ${t.highlighted ? "text-surface/70" : "text-muted-foreground"
+                      }`}
                   >
                     {t.description}
                   </p>
@@ -293,9 +275,8 @@ function PricingPage() {
                   {t.features.map((f) => (
                     <li key={f} className="flex items-start gap-2.5">
                       <span
-                        className={`mt-1.5 size-1 rounded-full shrink-0 ${
-                          t.highlighted ? "bg-surface/60" : "bg-ink/40"
-                        }`}
+                        className={`mt-1.5 size-1 rounded-full shrink-0 ${t.highlighted ? "bg-surface/60" : "bg-ink/40"
+                          }`}
                       />
                       <span className={t.highlighted ? "text-surface/85" : "text-ink/80"}>
                         {f}
@@ -308,13 +289,11 @@ function PricingPage() {
                   <Link
                     to="/app"
                     disabled={isActive}
-                    className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors ${
-                      isActive ? "opacity-50 cursor-default" : ""
-                    } ${
-                      t.highlighted
+                    className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors ${isActive ? "opacity-50 cursor-default" : ""
+                      } ${t.highlighted
                         ? "bg-surface text-ink hover:bg-surface/90"
                         : "bg-ink text-surface hover:bg-ink/90"
-                    }`}
+                      }`}
                   >
                     {isActive ? "Already active" : t.cta}
                     {!isActive && <span aria-hidden>→</span>}
@@ -324,11 +303,10 @@ function PricingPage() {
                     type="button"
                     onClick={() => startCheckout(planKey)}
                     disabled={loadingPlan !== null || isActive || (isAdmin && t.id !== "teams")}
-                    className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors disabled:opacity-50 ${
-                      t.highlighted
-                        ? "bg-surface text-ink hover:bg-surface/90"
-                        : "bg-ink text-surface hover:bg-ink/90"
-                    }`}
+                    className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors disabled:opacity-50 ${t.highlighted
+                      ? "bg-surface text-ink hover:bg-surface/90"
+                      : "bg-ink text-surface hover:bg-ink/90"
+                      }`}
                   >
                     {loadingPlan === planKey
                       ? "Redirecting…"

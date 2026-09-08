@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+﻿import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { BrandMark } from "@/components/BrandMark";
 import { useEffect, useState } from "react";
@@ -20,12 +20,13 @@ import { CreditIndicator } from "@/components/CreditIndicator";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function SiteNav() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, onboarding } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const workspaceHref = onboarding?.onboarding_status === "pending" ? "/onboarding" : "/app";
 
   useEffect(() => {
     if (!user) {
@@ -59,7 +60,7 @@ export function SiteNav() {
   return (
     <nav className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
       <div className="flex items-center justify-between px-4 sm:px-6 md:px-8 h-14 w-full max-w-7xl mx-auto gap-3">
-        <Link to={user ? "/app" : "/"} className="flex items-center gap-2 group">
+        <Link to={workspaceHref as "/app" | "/onboarding"} className="flex items-center gap-2 group">
           <BrandMark size={22} />
           <span className="font-semibold tracking-tight text-[15px] text-ink">Syncd</span>
         </Link>
@@ -100,7 +101,7 @@ export function SiteNav() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/app" className="cursor-pointer">
+                  <Link to={workspaceHref as "/app" | "/onboarding"} className="cursor-pointer">
                     <LayoutGrid className="h-4 w-4" />
                     Workspace
                   </Link>
@@ -158,7 +159,7 @@ export function SiteNav() {
               </Link>
               <Link
                 to="/login"
-                search={{ redirect: "/app" }}
+                search={{ redirect: "/onboarding" }}
                 className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 transition-colors"
               >
                 Get started
@@ -188,7 +189,7 @@ export function SiteNav() {
               {user && (
                 <>
                   <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
-                    <Link to="/app">Workspace</Link>
+                    <Link to={workspaceHref as "/app" | "/onboarding"}>Workspace</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
                     <Link to="/drafts">Posts</Link>

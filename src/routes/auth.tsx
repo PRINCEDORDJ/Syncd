@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/auth")({
   }),
   head: () => ({
     meta: [
-      { title: "Signing you in — Syncd" },
+      { title: "Signing you in â€” Syncd" },
       { name: "description", content: "Completing sign-in to Syncd." },
     ],
   }),
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthCallback() {
-  const { user, loading } = useAuth();
+  const { user, loading, onboarding } = useAuth();
   const navigate = useNavigate();
   const { redirect } = Route.useSearch();
   const [timedOut, setTimedOut] = useState(false);
@@ -28,17 +28,22 @@ function AuthCallback() {
   useEffect(() => {
     if (loading) return;
     if (user) {
-      const dest = redirect && redirect.startsWith("/") ? redirect : "/app";
+      const needsOnboarding = onboarding?.onboarding_status === "pending";
+      const dest = needsOnboarding
+        ? "/onboarding"
+        : redirect && redirect.startsWith("/")
+          ? redirect
+          : "/app";
       navigate({ to: dest, replace: true });
       return;
     }
     const t = setTimeout(() => setTimedOut(true), 4000);
     return () => clearTimeout(t);
-  }, [user, loading, navigate, redirect]);
+  }, [user, loading, onboarding?.onboarding_status, navigate, redirect]);
 
   useEffect(() => {
     if (timedOut && !user) {
-      navigate({ to: "/login", search: { redirect: "/app" } });
+      navigate({ to: "/login", search: { redirect: "/onboarding" } });
     }
   }, [timedOut, user, navigate]);
 
@@ -47,7 +52,7 @@ function AuthCallback() {
       <BrandMark size={28} />
       <Skeleton className="h-1.5 w-32 rounded-full" />
       <p className="text-[13px] font-mono text-muted-foreground">
-        {timedOut ? "Redirecting…" : "Signing you in…"}
+        {timedOut ? "Redirectingâ€¦" : "Signing you inâ€¦"}
       </p>
     </div>
   );

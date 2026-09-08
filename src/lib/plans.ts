@@ -10,6 +10,16 @@ export interface PlanLimits {
   maxLinkedInAccounts: number;
   /** Team seats included. */
   teamSeats: number;
+  /** Max workspaces user can create / own. */
+  maxWorkspaces: number;
+  /** Max projects per workspace. */
+  maxProjectsPerWorkspace: number;
+  /** Max members per workspace. */
+  maxWorkspaceMembers: number;
+  /** Whether the plan allows team-level workspace access grants. */
+  allowsTeamWorkspaceAccess: boolean;
+  /** Whether the plan allows project-specific scoped collaborator invites. */
+  allowsProjectAccessGrants: boolean;
   /** Whether the plan exposes voice mapping. */
   voiceMapping: boolean;
   /** Whether the plan allows scheduling posts. */
@@ -28,6 +38,11 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     dailyCap: 5,
     maxLinkedInAccounts: 1,
     teamSeats: 1,
+    maxWorkspaces: 1,
+    maxProjectsPerWorkspace: 2,
+    maxWorkspaceMembers: 1,
+    allowsTeamWorkspaceAccess: false,
+    allowsProjectAccessGrants: false,
     voiceMapping: false,
     scheduling: false,
     topUps: false,
@@ -39,6 +54,11 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     dailyCap: 0,
     maxLinkedInAccounts: 1,
     teamSeats: 1,
+    maxWorkspaces: 3,
+    maxProjectsPerWorkspace: 10,
+    maxWorkspaceMembers: 1,
+    allowsTeamWorkspaceAccess: false,
+    allowsProjectAccessGrants: true,
     voiceMapping: true,
     scheduling: true,
     topUps: true,
@@ -50,6 +70,11 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     dailyCap: 0,
     maxLinkedInAccounts: 10,
     teamSeats: 5,
+    maxWorkspaces: 999, // Unlimited
+    maxProjectsPerWorkspace: 999, // Unlimited
+    maxWorkspaceMembers: 5,
+    allowsTeamWorkspaceAccess: true,
+    allowsProjectAccessGrants: true,
     voiceMapping: true,
     scheduling: true,
     topUps: true,
