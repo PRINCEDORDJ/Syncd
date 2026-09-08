@@ -75,3 +75,5 @@ Single thread per draft:
   both; targeted patch is nicer but riskier to get right with an LLM.
 - Persisting sidebar collapsed/expanded state and last-active tab per user (localStorage
   or a `ui_state` Supabase row).
+
+

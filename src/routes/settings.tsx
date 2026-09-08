@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { WorkspaceManager } from "@/components/WorkspaceManager";
+import { WorkspacesSettingsPanel } from "@/components/settings/WorkspacesSettingsPanel";
 
 export const Route = createFileRoute("/settings")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -700,7 +700,7 @@ function SettingsPage() {
           </TabsList>
 
           <TabsContent value="workspaces" className="mt-0">
-            <WorkspaceManager />
+            <WorkspacesSettingsPanel />
           </TabsContent>
 
           <TabsContent value="profile" className="mt-0">

@@ -40,12 +40,6 @@ import {
   type TeamOption,
 } from "@/lib/workspace-access";
 import {
-  PLAN_LIMITS,
-  PLAN_LABELS,
-  type PlanTier,
-  type PlanLimits,
-} from "@/lib/plans";
-import {
   FolderKanban,
   LayoutGrid,
   Plus,
@@ -62,10 +56,24 @@ import {
   Lock,
   ArrowUpRight,
 } from "lucide-react";
+import {
+  PLAN_LIMITS,
+  PLAN_LABELS,
+  type PlanTier,
+  type PlanLimits,
+} from "@/lib/plans";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Card, ButtonPrimary, ButtonOutline, ButtonDanger, Badge, Eyebrow } from "./ui-primitives";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
-export function WorkspaceManager() {
+export function WorkspacesSettingsPanel() {
   const { user } = useAuth();
   const [workspaces, setWorkspaces] = useState<AccessibleWorkspace[] | null>(null);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
@@ -475,126 +483,81 @@ export function WorkspaceManager() {
       )}
 
       {/* Workspace Header & Selector */}
-      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
-                Current Workspace
-              </span>
-              {currentWorkspace && (
-                <span className="rounded-full border border-border bg-subtle px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-ink font-semibold">
-                  {currentWorkspace.current_user_role || "member"}
-                </span>
-              )}
-            </div>
-            <div className="mt-1 flex items-center gap-3">
-              {workspaces && workspaces.length > 0 ? (
-                <select
-                  value={selectedWorkspaceId ?? ""}
-                  onChange={(e) => setSelectedWorkspaceId(e.target.value)}
-                  className="rounded-lg border border-border bg-background px-3 py-1.5 text-[16px] font-semibold text-ink outline-none focus:border-ink"
-                >
-                  {workspaces.map((ws) => (
-                    <option key={ws.id} value={ws.id}>
-                      {ws.name} ({ws.projects.length} project{ws.projects.length === 1 ? "" : "s"})
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <h3 className="text-lg font-semibold text-ink">No workspaces found</h3>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {isManager && currentWorkspace && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditWsName(currentWorkspace.name);
-                  setEditWsOpen(true);
-                }}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-[12px] font-medium text-ink hover:bg-subtle"
-              >
-                <Edit2 className="size-3.5" />
-                Rename
-              </button>
-            )}
-
-            {currentWorkspace?.is_direct_owner && (
-              <button
-                type="button"
-                onClick={() => setDeleteWsConfirmOpen(true)}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 text-[12px] font-medium text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="size-3.5" />
-                Delete
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => {
-                if (isAtWorkspaceLimit) {
-                  setError(
-                    `You have reached the limit of ${planLimits.maxWorkspaces} workspace${
-                      planLimits.maxWorkspaces === 1 ? "" : "s"
-                    } on the ${PLAN_LABELS[planTier]} plan. Upgrade to create more workspaces.`,
-                  );
-                } else {
-                  setCreateWsOpen(true);
-                }
-              }}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-ink px-3.5 text-[12px] font-medium text-surface hover:bg-ink/90"
-            >
-              <Plus className="size-4" />
-              New workspace
-            </button>
-          </div>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Eyebrow>Workspaces</Eyebrow>
+          <ButtonPrimary
+            onClick={() => {
+              if (isAtWorkspaceLimit) {
+                setError(
+                  `You have reached the limit of ${planLimits.maxWorkspaces} workspace${planLimits.maxWorkspaces === 1 ? "" : "s"
+                  } on the ${PLAN_LABELS[planTier]} plan. Upgrade to create more workspaces.`,
+                );
+              } else {
+                setCreateWsOpen(true);
+              }
+            }}
+          >
+            <Plus className="size-4" />
+            New workspace
+          </ButtonPrimary>
         </div>
 
-        {/* Workspace Navigation Tabs */}
-        {currentWorkspace && (
-          <div className="mt-6 flex border-b border-border text-[13px] font-medium">
-            <button
-              type="button"
-              onClick={() => setActiveTab("projects")}
-              className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors ${
-                activeTab === "projects"
-                  ? "border-ink font-semibold text-ink"
-                  : "border-transparent text-muted-foreground hover:text-ink"
-              }`}
+        <div className="flex gap-3 overflow-x-auto pb-4 -mb-4 no-scrollbar">
+          {workspaces?.map((ws) => (
+            <Card
+              key={ws.id}
+              className={cn(
+                "w-[220px] shrink-0 p-4 cursor-pointer relative border-l-2",
+                selectedWorkspaceId === ws.id ? "border-l-cyan-400" : "border-l-transparent"
+              )}
+              onClick={() => setSelectedWorkspaceId(ws.id)}
             >
-              <FolderKanban className="size-4" />
-              Projects ({currentWorkspace.projects.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("members")}
-              className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors ${
-                activeTab === "members"
-                  ? "border-ink font-semibold text-ink"
-                  : "border-transparent text-muted-foreground hover:text-ink"
-              }`}
-            >
-              <Users className="size-4" />
-              Workspace Members ({members.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("teams")}
-              className={`flex items-center gap-2 border-b-2 px-4 py-2.5 transition-colors ${
-                activeTab === "teams"
-                  ? "border-ink font-semibold text-ink"
-                  : "border-transparent text-muted-foreground hover:text-ink"
-              }`}
-            >
-              <Building className="size-4" />
-              Team Access ({teamAccess.length})
-            </button>
-          </div>
-        )}
+              <div className="flex items-center justify-between mb-2">
+                <div className="size-8 rounded-full bg-subtle flex items-center justify-center font-semibold text-ink">
+                  {ws.name[0].toUpperCase()}
+                </div>
+                <div className="opacity-0 group-hover:opacity-100 transition">
+                  {/* Kebab menu here */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="p-1 rounded hover:bg-subtle">
+                        <span className="sr-only">Menu</span>
+                        ⋯
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => {
+                        setEditWsName(ws.name);
+                        setEditWsOpen(true);
+                        setSelectedWorkspaceId(ws.id);
+                      }}>Rename</DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive" onClick={() => {
+                        setSelectedWorkspaceId(ws.id);
+                        setDeleteWsConfirmOpen(true);
+                      }}>Delete</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+              <h4 className="font-semibold text-sm truncate">{ws.name}</h4>
+              <p className="text-xs text-muted-foreground">{ws.projects.length} projects</p>
+              {/* Stacked Avatars row */}
+            </Card>
+          ))}
+          <Card className="w-[220px] shrink-0 p-4 border-dashed flex items-center justify-center cursor-pointer hover:border-ink/20" onClick={() => {
+              if (isAtWorkspaceLimit) {
+                setError(
+                  `You have reached the limit of ${planLimits.maxWorkspaces} workspace${planLimits.maxWorkspaces === 1 ? "" : "s"
+                  } on the ${PLAN_LABELS[planTier]} plan. Upgrade to create more workspaces.`,
+                );
+              } else {
+                setCreateWsOpen(true);
+              }
+            }}>
+            <Plus className="size-6 text-muted-foreground" />
+          </Card>
+        </div>
       </div>
 
       {/* Tab 1: Projects Under Workspace */}
@@ -628,90 +591,54 @@ export function WorkspaceManager() {
             )}
           </div>
 
-          {currentWorkspace.projects.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border bg-subtle/30 p-8 text-center">
-              <FolderKanban className="mx-auto size-8 text-muted-foreground opacity-50" />
-              <p className="mt-2 text-[14px] font-medium text-ink">No projects in this workspace yet</p>
-              <p className="mt-1 text-[12px] text-muted-foreground">
-                Create your first project to start creating scoped posts and inviting project collaborators.
-              </p>
-              {isManager && (
-                <button
-                  type="button"
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {currentWorkspace.projects.length === 0 ? (
+              <>
+                <Card className="border-dashed border-border p-4 opacity-40 flex items-center gap-3">
+                  <FolderKanban className="size-8 text-muted-foreground" />
+                  <div>
+                    <div className="font-medium text-ink">Example project</div>
+                    <div className="text-xs text-muted-foreground">0 posts · updated 0d ago</div>
+                  </div>
+                </Card>
+                <Card className="border-dashed border-border p-4 opacity-40 flex items-center gap-3">
+                  <FolderKanban className="size-8 text-muted-foreground" />
+                  <div>
+                    <div className="font-medium text-ink">Example project</div>
+                    <div className="text-xs text-muted-foreground">0 posts · updated 0d ago</div>
+                  </div>
+                </Card>
+                <Card
+                  className="border-dashed border-border p-4 flex items-center justify-center cursor-pointer hover:border-ink/20"
                   onClick={() => setCreateProjectOpen(true)}
-                  className="mt-4 inline-flex h-8 items-center gap-1.5 rounded-lg bg-ink px-3 text-[12px] font-medium text-surface hover:bg-ink/90"
                 >
-                  <Plus className="size-3.5" />
-                  Create project
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {currentWorkspace.projects.map((project) => (
-                <div
+                  <Plus className="size-6 text-muted-foreground" />
+                </Card>
+              </>
+            ) : (
+              currentWorkspace.projects.map((project) => (
+                <Card
                   key={project.id}
-                  className="flex flex-col justify-between rounded-xl border border-border bg-background p-4 transition hover:border-ink/20 shadow-sm"
+                  className="flex flex-col justify-between p-4 transition hover:border-ink/20 shadow-none"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <FolderKanban className="size-4 text-muted-foreground shrink-0" />
-                        <h4 className="text-[14px] font-semibold text-ink truncate">{project.name}</h4>
+                        <h4 className="text-sm font-semibold text-ink truncate">{project.name}</h4>
                       </div>
-                      <span className="rounded-full border border-border bg-subtle px-2 py-0.5 text-[10px] font-mono uppercase text-muted-foreground shrink-0">
-                        {project.status}
-                      </span>
                     </div>
-
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground font-mono">
-                      <span>Access:</span>
-                      <span className="rounded-md border border-border bg-subtle/60 px-1.5 py-0.5 text-[10px] text-ink">
-                        {project.access_type === "owner"
-                          ? "Creator / Owner"
-                          : project.access_type === "workspace_wide"
-                          ? "Full Workspace Access"
-                          : project.access_type === "team_grant"
-                          ? "Team Project Grant"
-                          : "Direct Project Grant"}
-                      </span>
-                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">0 posts · updated 0d ago</p>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-                    <span className="text-[11px] text-muted-foreground">
-                      ID: {project.id.slice(0, 8)}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {isManager && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedProject(project);
-                            setEditProjName(project.name);
-                            setEditProjStatus(project.status);
-                            setEditProjectOpen(true);
-                          }}
-                          className="rounded-md p-1.5 text-muted-foreground hover:bg-subtle hover:text-ink"
-                          title="Edit project"
-                        >
-                          <Edit2 className="size-3.5" />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => openProjectAccessModal(project)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-ink hover:bg-subtle"
-                      >
-                        <Shield className="size-3.5" />
-                        Manage access
-                      </button>
-                    </div>
+                  <div className="mt-4 flex items-center justify-end">
+                    {/* Avatar stack here */}
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                </Card>
+              ))
+            )}
+          </div>
+
         </div>
       )}
 
