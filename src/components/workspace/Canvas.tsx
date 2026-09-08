@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useWorkspace, TONES, type Tone } from "@/lib/workspace-context";
 import {
@@ -9,10 +9,11 @@ import {
   Sheet,
   Presentation,
   File as FileIcon,
+  ImagePlus,
+  Paperclip,
 } from "lucide-react";
-import { formatBytes } from "@/lib/image-validation";
+import { formatBytes, MAX_IMAGES, MAX_ATTACHMENTS } from "@/lib/image-validation";
 import type { AttachmentItem } from "@/lib/image-validation";
-import { useState } from "react";
 
 function attachmentIcon(name: string, type: string) {
   const lower = name.toLowerCase();
@@ -36,8 +37,10 @@ export function Canvas() {
     setTone,
     images,
     removeImage,
+    handleFiles,
     attachments,
     removeAttachment,
+    handleAttachFiles,
     saving,
     generating,
     error,
@@ -52,6 +55,8 @@ export function Canvas() {
     publish,
   } = useWorkspace();
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const attachInputRef = useRef<HTMLInputElement | null>(null);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
 
@@ -62,8 +67,8 @@ export function Canvas() {
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* Canvas toolbar: title + tone pills (mobile header replaces this) */}
-      <div className="hidden lg:flex lg:items-center lg:justify-between gap-2 px-5 py-3 border-b border-border shrink-0">
+      {/* Canvas toolbar: title + tone pills & media upload buttons (mobile header replaces this) */}
+      <div className="hidden lg:flex lg:items-center lg:justify-between gap-3 px-5 py-3 border-b border-border shrink-0">
         {/* Title */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-[0.12em] shrink-0">
@@ -86,25 +91,90 @@ export function Canvas() {
           )}
         </div>
 
-        {/* Tone pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.12em] shrink-0">
-            Tone
-          </span>
-          {TONES.map((t) => (
+        {/* Right side: Media Uploads + Tone pills */}
+        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar shrink-0">
+          {/* Media upload triggers */}
+          <div className="flex items-center gap-1.5">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                void handleFiles(e.target.files);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}
+            />
+            <input
+              ref={attachInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.csv,.txt,.xls,.xlsx,.ppt,.pptx"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                void handleAttachFiles(e.target.files);
+                if (attachInputRef.current) attachInputRef.current.value = "";
+              }}
+            />
+
             <button
-              key={t}
               type="button"
-              onClick={() => setTone(t)}
-              className={`h-6 px-2 rounded text-[11px] font-medium border transition-colors shrink-0 ${
-                tone === t
-                  ? "bg-ink text-surface border-ink"
-                  : "bg-card text-ink border-border hover:bg-subtle"
-              }`}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={images.length >= MAX_IMAGES}
+              title={images.length >= MAX_IMAGES ? "Image limit reached" : "Upload images"}
+              aria-label="Upload images"
+              className="h-6 px-2 inline-flex items-center gap-1.5 rounded text-[11px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {t}
+              <ImagePlus className="size-3 text-muted-foreground" />
+              <span>Image</span>
+              {images.length > 0 && (
+                <span className="size-3.5 rounded-full bg-accent-cyan/20 text-accent-cyan text-[9px] font-mono flex items-center justify-center font-bold">
+                  {images.length}
+                </span>
+              )}
             </button>
-          ))}
+
+            <button
+              type="button"
+              onClick={() => attachInputRef.current?.click()}
+              disabled={attachments.length >= MAX_ATTACHMENTS}
+              title={attachments.length >= MAX_ATTACHMENTS ? "Attachment limit reached" : "Attach file"}
+              aria-label="Attach file"
+              className="h-6 px-2 inline-flex items-center gap-1.5 rounded text-[11px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Paperclip className="size-3 text-muted-foreground" />
+              <span>File</span>
+              {attachments.length > 0 && (
+                <span className="size-3.5 rounded-full bg-accent-cyan/20 text-accent-cyan text-[9px] font-mono flex items-center justify-center font-bold">
+                  {attachments.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          <div className="h-4 w-px bg-border shrink-0" aria-hidden />
+
+          {/* Tone pills */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.12em] shrink-0">
+              Tone
+            </span>
+            {TONES.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTone(t)}
+                className={`h-6 px-2 rounded text-[11px] font-medium border transition-colors shrink-0 ${
+                  tone === t
+                    ? "bg-ink text-surface border-ink"
+                    : "bg-card text-ink border-border hover:bg-subtle"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

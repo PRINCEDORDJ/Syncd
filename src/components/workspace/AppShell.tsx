@@ -12,7 +12,8 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Check, PanelRightOpen } from "lucide-react";
+import { ChevronDown, Check, PanelRightOpen, ImagePlus, Paperclip } from "lucide-react";
+import { MAX_IMAGES, MAX_ATTACHMENTS } from "@/lib/image-validation";
 
 const CHAT_COLLAPSED_KEY = "syncd:chat-collapsed";
 
@@ -39,7 +40,19 @@ function persistBool(key: string, value: boolean) {
  * state (persisted to localStorage) and the mobile canvas→chat auto-switch.
  */
 export function AppShell() {
-  const { title, setTitle, setTitleEdited, tone, setTone, messages, sendMessage } = useWorkspace();
+  const {
+    title,
+    setTitle,
+    setTitleEdited,
+    tone,
+    setTone,
+    messages,
+    sendMessage,
+    images,
+    attachments,
+    handleFiles,
+    handleAttachFiles,
+  } = useWorkspace();
 
   const [chatCollapsed, setChatCollapsed] = useState(() => readBool(CHAT_COLLAPSED_KEY, false));
 
@@ -48,6 +61,8 @@ export function AppShell() {
   const [mobileInput, setMobileInput] = useState("");
   const mobileSendTabRef = useRef<WorkspaceTab>("canvas");
   const prevMsgCountRef = useRef(0);
+  const mobileImageInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileAttachInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     persistBool(CHAT_COLLAPSED_KEY, chatCollapsed);
@@ -107,7 +122,7 @@ export function AppShell() {
       {/* ── Mobile: header + tabs + pinned input ────────────────────────────── */}
       <div className="flex lg:hidden flex-col h-full min-h-0 w-full">
         {/* Compact header */}
-        <header className="h-12 shrink-0 flex items-center gap-2 px-3 border-b border-border bg-card/40">
+        <header className="h-12 shrink-0 flex items-center gap-1.5 px-2.5 border-b border-border bg-card/40">
           <SidebarMenuButton />
 
           <input
@@ -119,33 +134,90 @@ export function AppShell() {
             }}
             placeholder="Untitled draft"
             aria-label="Draft title"
-            className="flex-1 min-w-0 bg-transparent text-[13px] font-medium text-ink focus:outline-none focus:bg-card focus:rounded px-1"
+            className="flex-1 min-w-0 bg-transparent text-[13px] font-medium text-ink focus:outline-none focus:bg-card focus:rounded px-1 truncate"
           />
 
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className="h-8 inline-flex items-center gap-1 px-2 rounded-md text-[11px] font-medium text-ink border border-border bg-subtle/40 hover:bg-subtle transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
-              aria-label="Change tone"
+          <input
+            ref={mobileImageInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              void handleFiles(e.target.files);
+              if (mobileImageInputRef.current) mobileImageInputRef.current.value = "";
+            }}
+          />
+          <input
+            ref={mobileAttachInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx,.csv,.txt,.xls,.xlsx,.ppt,.pptx"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              void handleAttachFiles(e.target.files);
+              if (mobileAttachInputRef.current) mobileAttachInputRef.current.value = "";
+            }}
+          />
+
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => mobileImageInputRef.current?.click()}
+              disabled={images.length >= MAX_IMAGES}
+              title={images.length >= MAX_IMAGES ? "Image limit reached" : "Upload images"}
+              aria-label="Upload images"
+              className="relative size-7 inline-flex items-center justify-center rounded-md border border-border bg-subtle/40 hover:bg-subtle text-ink transition-colors disabled:opacity-40"
             >
-              {tone.split(" ")[0]}
-              <ChevronDown className="size-3 text-muted-foreground" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={4} className="w-52">
-              <DropdownMenuLabel className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground font-normal">
-                Tone
-              </DropdownMenuLabel>
-              {TONES.map((t: Tone) => (
-                <DropdownMenuItem
-                  key={t}
-                  onClick={() => setTone(t)}
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  {t === tone && <Check className="size-3.5 text-ink shrink-0" />}
-                  <span className="flex-1 truncate text-[13px]">{t}</span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <ImagePlus className="size-3.5" />
+              {images.length > 0 && (
+                <span className="absolute -top-1 -right-1 size-3.5 rounded-full bg-accent-cyan text-surface text-[9px] font-mono font-bold flex items-center justify-center">
+                  {images.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => mobileAttachInputRef.current?.click()}
+              disabled={attachments.length >= MAX_ATTACHMENTS}
+              title={attachments.length >= MAX_ATTACHMENTS ? "Attachment limit reached" : "Attach file"}
+              aria-label="Attach file"
+              className="relative size-7 inline-flex items-center justify-center rounded-md border border-border bg-subtle/40 hover:bg-subtle text-ink transition-colors disabled:opacity-40"
+            >
+              <Paperclip className="size-3.5" />
+              {attachments.length > 0 && (
+                <span className="absolute -top-1 -right-1 size-3.5 rounded-full bg-accent-cyan text-surface text-[9px] font-mono font-bold flex items-center justify-center">
+                  {attachments.length}
+                </span>
+              )}
+            </button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="h-7 inline-flex items-center gap-1 px-2 rounded-md text-[11px] font-medium text-ink border border-border bg-subtle/40 hover:bg-subtle transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
+                aria-label="Change tone"
+              >
+                <span className="truncate max-w-[70px]">{tone.split(" ")[0]}</span>
+                <ChevronDown className="size-3 text-muted-foreground shrink-0" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" sideOffset={4} className="w-52">
+                <DropdownMenuLabel className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground font-normal">
+                  Tone
+                </DropdownMenuLabel>
+                {TONES.map((t: Tone) => (
+                  <DropdownMenuItem
+                    key={t}
+                    onClick={() => setTone(t)}
+                    className="flex items-center justify-between text-[13px] cursor-pointer"
+                  >
+                    <span>{t}</span>
+                    {tone === t && <Check className="size-3.5 text-ink shrink-0" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </header>
 
         <MobileTabs
