@@ -65,6 +65,7 @@
   --color-surface: var(--surface);
   --color-subtle: var(--subtle);
   --color-hairline: var(--hairline);
+  --color-accent-cyan: var(--accent-cyan);
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -94,6 +95,7 @@
   --ink: oklch(0.16 0 0); /* near-black */
   --subtle: oklch(0.98 0 0); /* faint grey for inset surfaces */
   --hairline: oklch(0.92 0 0); /* 1px borders */
+  --accent-cyan: oklch(0.7 0.15 195); /* cyan accent for active/generating states */
 
   --background: oklch(1 0 0);
   --foreground: var(--ink);
@@ -136,6 +138,7 @@
   --ink: oklch(0.98 0 0);
   --subtle: oklch(0.22 0 0);
   --hairline: oklch(0.28 0 0);
+  --accent-cyan: oklch(0.75 0.14 195); /* slightly brighter in dark mode */
 
   --background: oklch(0.14 0 0);
   --foreground: var(--ink);
@@ -214,4 +217,13 @@
     linear-gradient(to right, var(--hairline) 1px, transparent 1px),
     linear-gradient(to bottom, var(--hairline) 1px, transparent 1px);
   background-size: 56px 56px;
+}
+
+/* Streaming cursor blink for AI generation */
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+@utility animate-cursor-blink {
+  animation: cursor-blink 0.9s ease-in-out infinite;
 }
