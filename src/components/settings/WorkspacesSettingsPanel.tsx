@@ -55,6 +55,7 @@ import {
   Sparkles,
   Lock,
   ArrowUpRight,
+  EllipsisVertical
 } from "lucide-react";
 import {
   PLAN_LIMITS,
@@ -508,7 +509,7 @@ export function WorkspacesSettingsPanel() {
             <Card
               key={ws.id}
               className={cn(
-                "w-[220px] shrink-0 p-4 cursor-pointer relative border-l-2",
+                "w-[220px] shrink-0 p-4 cursor-pointer relative border-l-2 group",
                 selectedWorkspaceId === ws.id ? "border-l-cyan-400" : "border-l-transparent"
               )}
               onClick={() => setSelectedWorkspaceId(ws.id)}
@@ -518,12 +519,11 @@ export function WorkspacesSettingsPanel() {
                   {ws.name[0].toUpperCase()}
                 </div>
                 <div className="opacity-0 group-hover:opacity-100 transition">
-                  {/* Kebab menu here */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="p-1 rounded hover:bg-subtle">
-                        <span className="sr-only">Menu</span>
-                        ⋯
+                      <button type="button" className="p-1 rounded hover:bg-subtle" onClick={(e) => e.stopPropagation()}>
+                        <EllipsisVertical className="size-4 text-muted-foreground" />
+                        <span className="sr-only">Actions</span>
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -619,7 +619,7 @@ export function WorkspacesSettingsPanel() {
               currentWorkspace.projects.map((project) => (
                 <Card
                   key={project.id}
-                  className="flex flex-col justify-between p-4 transition hover:border-ink/20 shadow-none"
+                  className="flex flex-col justify-between p-4 transition hover:border-ink/20 shadow-none group"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2">
@@ -627,6 +627,38 @@ export function WorkspacesSettingsPanel() {
                         <FolderKanban className="size-4 text-muted-foreground shrink-0" />
                         <h4 className="text-sm font-semibold text-ink truncate">{project.name}</h4>
                       </div>
+                      {isManager && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="p-1 rounded hover:bg-subtle opacity-0 group-hover:opacity-100 transition"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <EllipsisVertical className="size-4 text-muted-foreground" />
+                              <span className="sr-only">Actions</span>
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedProject(project);
+                              setEditProjName(project.name);
+                              setEditProjStatus(project.status);
+                              setEditProjectOpen(true);
+                            }}>
+                              <Edit2 className="size-3.5" />
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => {
+                              setSelectedProject(project);
+                              setDeleteProjectConfirmOpen(true);
+                            }}>
+                              <Trash2 className="size-3.5" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">0 posts · updated 0d ago</p>
                   </div>
