@@ -1,11 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { SiteNav } from "@/components/SiteNav";
-import { SiteFooter } from "@/components/SiteFooter";
+import { SidebarShell } from "@/components/workspace/SidebarShell";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { type PlanTier, TOPUP_PACKS, type BillingInterval } from "@/lib/plans";
+import {
+  type PlanTier,
+  PLAN_LABELS,
+  PLAN_LIMITS,
+  TOPUP_PACKS,
+  type BillingInterval,
+} from "@/lib/plans";
 import { getUserPlanAndLimits } from "@/lib/workspace-access";
+import { useCredits } from "@/hooks/useCredits";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -45,11 +51,7 @@ const tiers: TierDef[] = [
     monthly: 0,
     annual: 0,
     description: "Test the workspace with a monthly credit allowance.",
-    features: [
-      "30 credits / month (5/day cap)",
-      "1 Workspace",
-      "1 LinkedIn account",
-    ],
+    features: ["30 credits / month (5/day cap)", "1 Workspace", "1 LinkedIn account"],
     cta: "Start free",
     highlighted: false,
   },
@@ -89,6 +91,7 @@ const tiers: TierDef[] = [
 
 function PricingPage() {
   const { user } = useAuth();
+  const credits = useCredits();
   const [subPlan, setSubPlan] = useState<PlanTier | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [, setInitialLoading] = useState(true);
@@ -153,215 +156,243 @@ function PricingPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-background text-ink">
-      <SiteNav />
-
-      <main className="max-w-6xl mx-auto px-6 pt-16 md:pt-24 pb-16">
-        <div className="text-center max-w-2xl mx-auto">
-          <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-4">
-            Pricing
-          </p>
-          <h1 className="text-4xl md:text-5xl tracking-[-0.02em] font-semibold leading-[1.05] text-balance">
-            One honest price for serious writers.
-          </h1>
-          <p className="mt-4 text-[16px] text-muted-foreground">
-            Credit-based generations. Top up anytime. Cancel anytime.
-          </p>
-
-          <div className="mt-6 inline-flex items-center gap-1 p-1 rounded-full border border-border bg-card text-[12px] font-mono">
-            <button
-              type="button"
-              onClick={() => setInterval("month")}
-              className={`px-3 h-7 rounded-full transition-colors ${interval === "month" ? "bg-ink text-surface" : "text-muted-foreground"
-                }`}
-            >
-              Monthly
-            </button>
-            <button
-              type="button"
-              onClick={() => setInterval("year")}
-              className={`px-3 h-7 rounded-full transition-colors ${interval === "year" ? "bg-ink text-surface" : "text-muted-foreground"
-                }`}
-            >
-              Yearly <span className="opacity-60">· save ~17%</span>
-            </button>
-          </div>
-
-          {error && (
-            <div className="mt-4 inline-block px-3 py-1.5 rounded-md bg-destructive/5 border border-destructive/20 text-destructive text-[13px]">
-              {error}
-            </div>
-          )}
-        </div>
-
-        <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-4">
-          {tiers.map((t) => {
-            const isCurrentPlan = subPlan === t.id;
-            const showAdminAccess = isAdmin && t.id === "teams";
-            const isActive = isCurrentPlan || showAdminAccess;
-            const priceNum = interval === "year" ? t.annual : t.monthly;
-            const priceLabel =
-              t.id === "trial"
-                ? "Free"
-                : priceNum == null
-                  ? "—"
-                  : `$${priceNum}`;
-            const cadence =
-              t.id === "trial"
-                ? "forever"
-                : interval === "year"
-                  ? "per year"
-                  : "per month";
-            const planKey =
-              t.id === "studio"
-                ? interval === "year"
-                  ? "studio_annual"
-                  : "studio_monthly"
-                : t.id === "teams"
-                  ? interval === "year"
-                    ? "teams_annual"
-                    : "teams_monthly"
-                  : "";
-
-            return (
-              <div
-                key={t.id}
-                className={`relative flex flex-col gap-6 p-7 rounded-xl border transition-all ${t.highlighted
-                  ? "bg-ink text-surface border-ink shadow-pop"
-                  : "bg-card text-ink border-border hover:border-ink/30"
-                  }`}
-              >
-                {t.highlighted && (
-                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-surface text-ink text-[10px] font-mono uppercase tracking-[0.12em] border border-border">
-                    Most chosen
-                  </div>
-                )}
-                <div>
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-[15px] font-semibold tracking-tight">{t.name}</h3>
-                    {isActive && (
-                      <span
-                        className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border ${t.highlighted
-                          ? "bg-surface/10 border-surface/20 text-surface"
-                          : "bg-subtle border-border text-muted-foreground"
-                          }`}
-                      >
-                        {isAdmin && t.id === "teams" ? "Admin Access" : "Current Plan"}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-3 flex items-baseline gap-1.5">
-                    <span className="text-4xl font-semibold tracking-[-0.03em] tabular-nums">
-                      {priceLabel}
-                    </span>
-                    <span
-                      className={`text-[13px] ${t.highlighted ? "text-surface/60" : "text-muted-foreground"
-                        }`}
-                    >
-                      {cadence}
-                    </span>
-                  </div>
-                  <p
-                    className={`mt-3 text-[13px] ${t.highlighted ? "text-surface/70" : "text-muted-foreground"
-                      }`}
-                  >
-                    {t.description}
-                  </p>
-                </div>
-
-                <ul className="space-y-2.5 text-[13px]">
-                  {t.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5">
-                      <span
-                        className={`mt-1.5 size-1 rounded-full shrink-0 ${t.highlighted ? "bg-surface/60" : "bg-ink/40"
-                          }`}
-                      />
-                      <span className={t.highlighted ? "text-surface/85" : "text-ink/80"}>
-                        {f}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-
-                {t.id === "trial" ? (
-                  <Link
-                    to="/app"
-                    disabled={isActive}
-                    className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors ${isActive ? "opacity-50 cursor-default" : ""
-                      } ${t.highlighted
-                        ? "bg-surface text-ink hover:bg-surface/90"
-                        : "bg-ink text-surface hover:bg-ink/90"
-                      }`}
-                  >
-                    {isActive ? "Already active" : t.cta}
-                    {!isActive && <span aria-hidden>→</span>}
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => startCheckout(planKey)}
-                    disabled={loadingPlan !== null || isActive || (isAdmin && t.id !== "teams")}
-                    className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors disabled:opacity-50 ${t.highlighted
-                      ? "bg-surface text-ink hover:bg-surface/90"
-                      : "bg-ink text-surface hover:bg-ink/90"
-                      }`}
-                  >
-                    {loadingPlan === planKey
-                      ? "Redirecting…"
-                      : isActive
-                        ? "Already active"
-                        : isAdmin
-                          ? "Included"
-                          : t.cta}
-                    {!isActive && !isAdmin && <span aria-hidden>→</span>}
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <section className="mt-16">
-          <div className="text-center max-w-xl mx-auto">
-            <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-2">
-              Top-ups
+    <SidebarShell mobileTitle="Pricing">
+      <main className="h-full overflow-y-auto">
+        <div className="max-w-6xl mx-auto px-6 pt-8 md:pt-12 pb-16">
+          <div className="text-center max-w-2xl mx-auto">
+            <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-4">
+              Pricing
             </p>
-            <h2 className="text-2xl md:text-3xl font-semibold tracking-[-0.02em]">
-              Need more credits this month?
-            </h2>
-            <p className="mt-2 text-[14px] text-muted-foreground">
-              Add non-expiring credits to any paid plan. One-time purchase.
+            <h1 className="text-4xl md:text-5xl tracking-[-0.02em] font-semibold leading-[1.05] text-balance">
+              One honest price for serious writers.
+            </h1>
+            <p className="mt-4 text-[16px] text-muted-foreground">
+              Credit-based generations. Top up anytime. Cancel anytime.
             </p>
-          </div>
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl mx-auto">
-            {TOPUP_PACKS.map((pack) => (
+
+            <div className="mt-6 inline-flex items-center gap-1 p-1 rounded-full border border-border bg-card text-[12px] font-mono">
               <button
-                key={pack.key}
                 type="button"
-                disabled={loadingPlan !== null || !user}
-                onClick={() => startCheckout(pack.key)}
-                className="flex flex-col items-start gap-2 p-5 rounded-xl border border-border bg-card hover:border-ink/30 transition-colors text-left disabled:opacity-50"
+                onClick={() => setInterval("month")}
+                className={`px-3 h-7 rounded-full transition-colors ${
+                  interval === "month" ? "bg-ink text-surface" : "text-muted-foreground"
+                }`}
               >
-                <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-muted-foreground">
-                  {pack.credits} credits
-                </span>
-                <span className="text-2xl font-semibold tracking-[-0.02em]">
-                  ${pack.priceUsd}
-                </span>
-                <span className="text-[12px] text-muted-foreground">
-                  {loadingPlan === pack.key ? "Redirecting…" : "Buy pack →"}
-                </span>
+                Monthly
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={() => setInterval("year")}
+                className={`px-3 h-7 rounded-full transition-colors ${
+                  interval === "year" ? "bg-ink text-surface" : "text-muted-foreground"
+                }`}
+              >
+                Yearly <span className="opacity-60">· save ~17%</span>
+              </button>
+            </div>
+
+            {user && subPlan && subPlan !== "trial" && !credits.isLoading && (
+              <div className="mt-5 inline-flex items-center gap-3 px-4 py-2.5 rounded-lg border border-border bg-card text-[13px]">
+                <span className="font-medium text-ink">{PLAN_LABELS[subPlan]} plan</span>
+                <span className="text-muted-foreground">·</span>
+                <span className="text-muted-foreground">
+                  {credits.subscriptionCredits} of {PLAN_LIMITS[subPlan].monthlyCredits} monthly
+                  credits
+                </span>
+                {credits.topupCredits > 0 && (
+                  <>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="text-muted-foreground">+{credits.topupCredits} top-up</span>
+                  </>
+                )}
+                <Link
+                  to="/settings"
+                  search={{
+                    linkedin_connected: undefined,
+                    linkedin_error: undefined,
+                    billing: undefined,
+                  }}
+                  className="ml-1 text-accent-cyan hover:underline font-medium"
+                >
+                  Manage billing →
+                </Link>
+              </div>
+            )}
+
+            {error && (
+              <div className="mt-4 inline-block px-3 py-1.5 rounded-md bg-destructive/5 border border-destructive/20 text-destructive text-[13px]">
+                {error}
+              </div>
+            )}
           </div>
-        </section>
 
-        <p className="mt-12 text-center text-[12px] font-mono text-muted-foreground">
-          Cancel anytime · Top-up credits never expire
-        </p>
+          <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {tiers.map((t) => {
+              const isCurrentPlan = subPlan === t.id;
+              const showAdminAccess = isAdmin && t.id === "teams";
+              const isActive = isCurrentPlan || showAdminAccess;
+              const priceNum = interval === "year" ? t.annual : t.monthly;
+              const priceLabel =
+                t.id === "trial" ? "Free" : priceNum == null ? "—" : `$${priceNum}`;
+              const cadence =
+                t.id === "trial" ? "forever" : interval === "year" ? "per year" : "per month";
+              const planKey =
+                t.id === "studio"
+                  ? interval === "year"
+                    ? "studio_annual"
+                    : "studio_monthly"
+                  : t.id === "teams"
+                    ? interval === "year"
+                      ? "teams_annual"
+                      : "teams_monthly"
+                    : "";
+
+              return (
+                <div
+                  key={t.id}
+                  className={`relative flex flex-col gap-6 p-7 rounded-xl border transition-all ${
+                    t.highlighted
+                      ? "bg-ink text-surface border-ink shadow-pop"
+                      : "bg-card text-ink border-border hover:border-ink/30"
+                  }`}
+                >
+                  {t.highlighted && (
+                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-surface text-ink text-[10px] font-mono uppercase tracking-[0.12em] border border-border">
+                      Most chosen
+                    </div>
+                  )}
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-[15px] font-semibold tracking-tight">{t.name}</h3>
+                      {isActive && (
+                        <span
+                          className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                            t.highlighted
+                              ? "bg-surface/10 border-surface/20 text-surface"
+                              : "bg-subtle border-border text-muted-foreground"
+                          }`}
+                        >
+                          {isAdmin && t.id === "teams" ? "Admin Access" : "Current Plan"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-3 flex items-baseline gap-1.5">
+                      <span className="text-4xl font-semibold tracking-[-0.03em] tabular-nums">
+                        {priceLabel}
+                      </span>
+                      <span
+                        className={`text-[13px] ${
+                          t.highlighted ? "text-surface/60" : "text-muted-foreground"
+                        }`}
+                      >
+                        {cadence}
+                      </span>
+                    </div>
+                    <p
+                      className={`mt-3 text-[13px] ${
+                        t.highlighted ? "text-surface/70" : "text-muted-foreground"
+                      }`}
+                    >
+                      {t.description}
+                    </p>
+                  </div>
+
+                  <ul className="space-y-2.5 text-[13px]">
+                    {t.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5">
+                        <span
+                          className={`mt-1.5 size-1 rounded-full shrink-0 ${
+                            t.highlighted ? "bg-surface/60" : "bg-ink/40"
+                          }`}
+                        />
+                        <span className={t.highlighted ? "text-surface/85" : "text-ink/80"}>
+                          {f}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {t.id === "trial" ? (
+                    <Link
+                      to="/app"
+                      disabled={isActive}
+                      className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors ${
+                        isActive ? "opacity-50 cursor-default" : ""
+                      } ${
+                        t.highlighted
+                          ? "bg-surface text-ink hover:bg-surface/90"
+                          : "bg-ink text-surface hover:bg-ink/90"
+                      }`}
+                    >
+                      {isActive ? "Already active" : t.cta}
+                      {!isActive && <span aria-hidden>→</span>}
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => startCheckout(planKey)}
+                      disabled={loadingPlan !== null || isActive || (isAdmin && t.id !== "teams")}
+                      className={`mt-auto inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md text-[13px] font-medium transition-colors disabled:opacity-50 ${
+                        t.highlighted
+                          ? "bg-surface text-ink hover:bg-surface/90"
+                          : "bg-ink text-surface hover:bg-ink/90"
+                      }`}
+                    >
+                      {loadingPlan === planKey
+                        ? "Redirecting…"
+                        : isActive
+                          ? "Already active"
+                          : isAdmin
+                            ? "Included"
+                            : t.cta}
+                      {!isActive && !isAdmin && <span aria-hidden>→</span>}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <section className="mt-16">
+            <div className="text-center max-w-xl mx-auto">
+              <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-2">
+                Top-ups
+              </p>
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-[-0.02em]">
+                Need more credits this month?
+              </h2>
+              <p className="mt-2 text-[14px] text-muted-foreground">
+                Add non-expiring credits to any paid plan. One-time purchase.
+              </p>
+            </div>
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl mx-auto">
+              {TOPUP_PACKS.map((pack) => (
+                <button
+                  key={pack.key}
+                  type="button"
+                  disabled={loadingPlan !== null || !user}
+                  onClick={() => startCheckout(pack.key)}
+                  className="flex flex-col items-start gap-2 p-5 rounded-xl border border-border bg-card hover:border-ink/30 transition-colors text-left disabled:opacity-50"
+                >
+                  <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-muted-foreground">
+                    {pack.credits} credits
+                  </span>
+                  <span className="text-2xl font-semibold tracking-[-0.02em]">
+                    ${pack.priceUsd}
+                  </span>
+                  <span className="text-[12px] text-muted-foreground">
+                    {loadingPlan === pack.key ? "Redirecting…" : "Buy pack →"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <p className="mt-12 text-center text-[12px] font-mono text-muted-foreground">
+            Cancel anytime · Top-up credits never expire
+          </p>
+        </div>
       </main>
-
-      <SiteFooter />
-    </div>
+    </SidebarShell>
   );
 }

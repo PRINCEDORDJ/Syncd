@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchUserWorkspaces, type Workspace } from "@/lib/workspace-access";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useCredits } from "@/hooks/useCredits";
+import { PLAN_LABELS } from "@/lib/plans";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -30,6 +32,7 @@ import {
   Check,
   ChevronsUpDown,
   Book,
+  CreditCard,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -56,13 +59,14 @@ const NAV_LINKS: NavLink[] = [
   { to: "/app", label: "Workspace", icon: LayoutGrid },
   { to: "/drafts", label: "Drafts", icon: FileText },
   { to: "/methodology", label: "Methodology", icon: Book },
-]
+];
 
 export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarProps) {
   const { pathname } = useLocation();
   const { user, signOut } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
   const { activeWorkspaceId, setActiveWorkspace } = useWorkspace();
+  const { plan, subscriptionCredits, topupCredits, isAdmin } = useCredits();
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -86,7 +90,9 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
         setAvatarUrl(data?.avatar_url ?? null);
         setDisplayName(data?.display_name ?? null);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   useEffect(() => {
@@ -100,7 +106,9 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
         setActiveWorkspace(list[0]);
       }
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   const initials = (displayName || user?.email || "?")
@@ -324,6 +332,26 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
               >
                 <SettingsIcon className="size-4" />
                 Settings
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            {/* Billing */}
+            <DropdownMenuLabel className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground font-normal py-1">
+              Billing
+            </DropdownMenuLabel>
+
+            <div className="px-2 py-1.5 text-[12px] text-muted-foreground leading-relaxed">
+              <span className="font-medium text-ink">{PLAN_LABELS[plan]} plan</span>
+              {" · "}
+              {isAdmin ? "Unlimited" : `${subscriptionCredits + topupCredits} credits left`}
+            </div>
+
+            <DropdownMenuItem asChild>
+              <Link to="/pricing" className="cursor-pointer flex items-center gap-2">
+                <CreditCard className="size-4" />
+                {plan === "trial" ? "Upgrade plan" : "Manage billing"}
               </Link>
             </DropdownMenuItem>
 
