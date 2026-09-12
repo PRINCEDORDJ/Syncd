@@ -238,6 +238,18 @@ export function Canvas() {
           {saving && <span className="text-muted-foreground animate-pulse">Saving…</span>}
         </div>
 
+        {/* Empty state prompt when canvas is blank */}
+        {!draftId && !draft && !generating && (
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <p className="text-[15px] text-muted-foreground/60 text-center max-w-md leading-relaxed">
+              Dump a thought, a voice note transcript, or three messy bullets…
+            </p>
+            <p className="text-[12px] text-muted-foreground/40 text-center">
+              Start typing below, or use the AI chat to generate a post.
+            </p>
+          </div>
+        )}
+
         <textarea
           value={draft}
           onChange={(e) => {

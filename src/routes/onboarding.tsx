@@ -3,18 +3,18 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/lib/auth";
 import {
   completeUserOnboarding,
-  createWorkspaceWithStarterProject,
+  createWorkspaceOnboarding,
 } from "@/lib/workspace-onboarding";
 import { BrandMark } from "@/components/BrandMark";
-import { Loader2, Sparkles, FolderKanban, LayoutGrid } from "lucide-react";
+import { Loader2, Sparkles, LayoutGrid, Users } from "lucide-react";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
     meta: [
-      { title: "Set up your workspace â€” Syncd" },
+      { title: "Set up your workspace \u2014 Syncd" },
       {
         name: "description",
-        content: "Create your workspace and first project to finish onboarding.",
+        content: "Create your workspace to finish onboarding.",
       },
     ],
   }),
@@ -25,7 +25,6 @@ function OnboardingRoute() {
   const { user, loading, onboarding, refreshOnboarding } = useAuth();
   const navigate = useNavigate();
   const [workspaceName, setWorkspaceName] = useState("");
-  const [projectName, setProjectName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,10 +47,6 @@ function OnboardingRoute() {
     }
   }, [user, workspaceName]);
 
-  useEffect(() => {
-    if (!projectName) setProjectName("First project");
-  }, [projectName]);
-
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!user) return;
@@ -59,9 +54,8 @@ function OnboardingRoute() {
     setSubmitting(true);
     setError(null);
     try {
-      await createWorkspaceWithStarterProject(user.id, {
+      await createWorkspaceOnboarding(user.id, {
         workspaceName,
-        projectName,
       });
       await completeUserOnboarding();
       await refreshOnboarding();
@@ -104,14 +98,14 @@ function OnboardingRoute() {
               Create the workspace where your team will work.
             </h1>
             <p className="mt-5 max-w-lg text-[15px] leading-7 text-muted-foreground">
-              We’ll create a workspace, add your first project, and unlock access for future
-              workspace or project invites. Members will only see what they’ve been granted.
+              We'll create a workspace and unlock access for future invites. Your drafts live directly
+              inside the workspace — no extra nesting needed.
             </p>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              <Feature icon={LayoutGrid} title="Workspace" text="Shared container for access and billing." />
-              <Feature icon={FolderKanban} title="Project" text="Narrow visibility to specific deliverables." />
-              <Feature icon={Sparkles} title="Invites" text="Add teams or people at workspace or project level." />
+              <Feature icon={LayoutGrid} title="Workspace" text="Shared container for your drafts and team access." />
+              <Feature icon={Users} title="Members" text="Invite collaborators with role-based permissions." />
+              <Feature icon={Sparkles} title="Drafts" text="Write, refine, and publish posts directly." />
             </div>
 
             <div className="mt-8 rounded-2xl border border-border bg-card/90 p-4 sm:p-5 shadow-soft">
@@ -131,7 +125,7 @@ function OnboardingRoute() {
           </div>
 
           <p className="mt-8 text-[12px] text-muted-foreground">
-            Need to change something later? You can manage access and projects from Settings.
+            Need to change something later? You can manage access from Settings.
           </p>
         </section>
 
@@ -141,7 +135,7 @@ function OnboardingRoute() {
               Step 1 of 1
             </p>
             <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">
-              Name your workspace and project
+              Name your workspace
             </h2>
             <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
               This is the root space your teammates will be invited into.
@@ -154,13 +148,6 @@ function OnboardingRoute() {
                 onChange={setWorkspaceName}
                 placeholder="Marketing team"
                 autoComplete="organization"
-              />
-              <Field
-                label="First project"
-                value={projectName}
-                onChange={setProjectName}
-                placeholder="Launch campaign"
-                autoComplete="off"
               />
 
               {error && (

@@ -6,6 +6,7 @@ import { useTheme } from "@/lib/theme";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchUserWorkspaces, type Workspace } from "@/lib/workspace-access";
+import { useWorkspace } from "@/lib/workspace-context";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -57,34 +58,15 @@ const NAV_LINKS: NavLink[] = [
   { to: "/methodology", label: "Methodology", icon: Book },
 ]
 
-const ACTIVE_WORKSPACE_KEY = "syncd:active-workspace";
-
-function readStoredWorkspace(): Workspace | null {
-  try {
-    const raw = localStorage.getItem(ACTIVE_WORKSPACE_KEY);
-    return raw ? (JSON.parse(raw) as Workspace) : null;
-  } catch {
-    return null;
-  }
-}
-
-function persistActiveWorkspace(ws: Workspace) {
-  try {
-    localStorage.setItem(ACTIVE_WORKSPACE_KEY, JSON.stringify(ws));
-  } catch {
-    // storage unavailable — non-fatal
-  }
-}
-
 export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarProps) {
   const { pathname } = useLocation();
   const { user, signOut } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
+  const { activeWorkspaceId, setActiveWorkspace } = useWorkspace();
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [activeWs, setActiveWs] = useState<Workspace | null>(() => readStoredWorkspace());
   const [confirmSignOut, setConfirmSignOut] = useState(false);
 
   useEffect(() => {
@@ -113,19 +95,13 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
     void fetchUserWorkspaces(user.id).then((list) => {
       if (cancelled) return;
       setWorkspaces(list);
-      setActiveWs((prev) => {
-        const next = (prev && list.some((w) => w.id === prev.id) ? prev : list[0]) ?? null;
-        if (next) persistActiveWorkspace(next);
-        return next;
-      });
+      // Auto-select first workspace if none is active
+      if (list.length > 0 && !activeWorkspaceId) {
+        setActiveWorkspace(list[0]);
+      }
     });
     return () => { cancelled = true; };
   }, [user]);
-
-  const selectWorkspace = (ws: Workspace) => {
-    setActiveWs(ws);
-    persistActiveWorkspace(ws);
-  };
 
   const initials = (displayName || user?.email || "?")
     .split(/[\s@.]+/)
@@ -317,12 +293,12 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
               workspaces.map((ws) => (
                 <DropdownMenuItem
                   key={ws.id}
-                  onClick={() => selectWorkspace(ws)}
+                  onClick={() => setActiveWorkspace(ws)}
                   className="flex items-center gap-2 cursor-pointer"
                 >
                   <Building2 className="size-3.5 text-muted-foreground shrink-0" />
                   <span className="flex-1 truncate text-[13px]">{ws.name}</span>
-                  {ws.id === activeWs?.id && <Check className="size-3.5 text-ink shrink-0" />}
+                  {ws.id === activeWorkspaceId && <Check className="size-3.5 text-ink shrink-0" />}
                 </DropdownMenuItem>
               ))
             )}

@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { createUniqueChannel } from "@/lib/realtime";
 import type { Json } from "@/integrations/supabase/types";
+import type { Workspace } from "@/lib/workspace-access";
 import {
   MAX_IMAGES,
   MAX_ATTACHMENTS,
@@ -20,6 +21,8 @@ import {
   validateAttachmentBatch,
   type AttachmentItem,
 } from "@/lib/image-validation";
+
+const ACTIVE_WORKSPACE_KEY = "syncd:active-workspace";
 
 export const TONES = [
   "Authoritative & Warm",
@@ -39,6 +42,8 @@ export interface ChatMessage {
 }
 
 export interface WorkspaceState {
+  // Workspace
+  activeWorkspaceId: string | null;
   // Draft
   draftId: string | null;
   draft: string;
@@ -64,6 +69,7 @@ export interface WorkspaceState {
 }
 
 export interface WorkspaceActions {
+  setActiveWorkspace: (ws: Workspace) => void;
   setDraft: (d: string) => void;
   setTitle: (t: string) => void;
   setTitleEdited: (v: boolean) => void;
@@ -199,10 +205,30 @@ async function consumeSseStream(resp: Response, onChunk: (chunk: string) => void
   }
 }
 
+function readStoredWorkspaceId(): string | null {
+  try {
+    const raw = localStorage.getItem(ACTIVE_WORKSPACE_KEY);
+    if (!raw) return null;
+    const ws = JSON.parse(raw) as Workspace;
+    return ws.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function persistActiveWorkspace(ws: Workspace) {
+  try {
+    localStorage.setItem(ACTIVE_WORKSPACE_KEY, JSON.stringify(ws));
+  } catch {
+    // storage unavailable — non-fatal
+  }
+}
+
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const userId = user?.id;
 
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(() => readStoredWorkspaceId());
   const [draftId, setDraftId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [title, setTitle] = useState("Untitled draft");
@@ -360,11 +386,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   // ── Save draft ──────────────────────────────────────────────────────────────
   const saveDraft = useCallback(
     async (asPublished = false): Promise<string | null> => {
-      if (!user || !draft.trim()) return null;
+      if (!user || !draft.trim() || !activeWorkspaceId) return null;
       setSaving(true);
       try {
         const payload = {
           user_id: user.id,
+          workspace_id: activeWorkspaceId!,
           content: draft,
           raw_input: messages.filter((m) => m.role === "user")[0]?.content ?? "",
           tone,
@@ -402,7 +429,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         setSaving(false);
       }
     },
-    [user, draft, messages, tone, title, images, attachments, draftId],
+    [user, draft, messages, tone, title, images, attachments, draftId, activeWorkspaceId],
   );
 
   // ── Send message (generate / refine) ───────────────────────────────────────
@@ -602,7 +629,26 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setSuccess(null);
   }, []);
 
+  // ── Workspace switching ─────────────────────────────────────────────────────
+  const setActiveWorkspace = useCallback((ws: Workspace) => {
+    setActiveWorkspaceId(ws.id);
+    persistActiveWorkspace(ws);
+    // Clear the canvas for the new workspace
+    abortRef.current?.abort();
+    setDraftId(null);
+    setDraft("");
+    setTitle("Untitled draft");
+    setTitleEdited(false);
+    setTone("Authoritative & Warm");
+    setImages([]);
+    setAttachments([]);
+    setMessages([]);
+    setError(null);
+    setSuccess(null);
+  }, []);
+
   const ctx: WorkspaceCtx = {
+    activeWorkspaceId,
     draftId,
     draft,
     title,
@@ -620,6 +666,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     charCount,
     wordCount,
     overLimit,
+    setActiveWorkspace,
     setDraft,
     setTitle,
     setTitleEdited,

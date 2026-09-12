@@ -693,7 +693,7 @@ function SettingsPage() {
             <TabsTrigger value="profile" className="text-[13px]">Profile</TabsTrigger>
             <TabsTrigger value="linkedin" className="text-[13px]">LinkedIn</TabsTrigger>
             <TabsTrigger value="billing" className="text-[13px]">Billing</TabsTrigger>
-            <TabsTrigger value="workspaces" className="text-[13px]">Workspaces & Projects</TabsTrigger>
+            <TabsTrigger value="workspaces" className="text-[13px]">Workspaces</TabsTrigger>
             <TabsTrigger value="team" className="text-[13px]">Teams</TabsTrigger>
             <TabsTrigger value="account" className="text-[13px]">Account</TabsTrigger>
             <TabsTrigger value="danger" className="text-[13px] data-[state=active]:text-destructive">Danger</TabsTrigger>
@@ -1338,7 +1338,7 @@ const TIERS: Array<{
     description: "Get a feel for the workspace. No credit card.",
     features: [
       "30 credits per month (5/day cap)",
-      "1 Workspace & 2 Projects",
+      "1 Workspace",
       "1 LinkedIn account",
       "200 MB media storage",
     ],
@@ -1355,8 +1355,6 @@ const TIERS: Array<{
     features: [
       "100 credits per month (No daily cap)",
       "Up to 3 Workspaces",
-      "Up to 10 Projects per workspace",
-      "Direct project collaborator grants",
       "Post scheduling & Top-ups",
       "Full voice mapping",
       "5 GB media storage",
@@ -1373,7 +1371,7 @@ const TIERS: Array<{
     description: "Shared workspace for agencies, execs & collaborative teams.",
     features: [
       "350 credits per month",
-      "Unlimited Workspaces & Projects",
+      "Unlimited Workspaces",
       "Up to 5 Workspace Team seats",
       "Team-level workspace access grants",
       "Role-based permissions (Owner, Admin, Member)",

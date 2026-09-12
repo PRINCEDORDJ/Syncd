@@ -61,6 +61,7 @@ export type Database = {
           updated_at: string
           user_id: string
           videos: Json
+          workspace_id: string
         }
         Insert: {
           attachments?: Json
@@ -81,6 +82,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           videos?: Json
+          workspace_id: string
         }
         Update: {
           attachments?: Json
@@ -101,6 +103,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           videos?: Json
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -108,6 +111,13 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drafts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]

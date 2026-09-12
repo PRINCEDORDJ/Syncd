@@ -47,7 +47,7 @@ const tiers: TierDef[] = [
     description: "Test the workspace with a monthly credit allowance.",
     features: [
       "30 credits / month (5/day cap)",
-      "1 Workspace & 2 Projects",
+      "1 Workspace",
       "1 LinkedIn account",
     ],
     cta: "Start free",
@@ -58,12 +58,10 @@ const tiers: TierDef[] = [
     name: "Studio",
     monthly: 9,
     annual: 90,
-    description: "For solo writers shipping a serious cadence across multiple projects.",
+    description: "For solo writers shipping a serious cadence.",
     features: [
       "100 credits / month (No daily cap)",
       "Up to 3 Workspaces",
-      "Up to 10 Projects per workspace",
-      "Direct project collaborator grants",
       "Voice mapping & tone dial",
       "Post scheduling & Top-ups",
     ],
@@ -78,7 +76,7 @@ const tiers: TierDef[] = [
     description: "Shared workspaces for agencies, founders, execs & collaborative teams.",
     features: [
       "350 credits / month",
-      "Unlimited Workspaces & Projects",
+      "Unlimited Workspaces",
       "Up to 5 Workspace Team seats",
       "Team-level workspace access grants",
       "Role-based permissions (Owner, Admin, Member)",

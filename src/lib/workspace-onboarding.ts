@@ -5,28 +5,16 @@ export type OnboardingStatus = "pending" | "complete" | "unknown";
 export interface PostSignupContext {
   onboarding_status: OnboardingStatus;
   workspace_count: number;
-  project_count: number;
 }
 
 export interface CreateWorkspaceOnboardingInput {
   workspaceName: string;
-  projectName: string;
 }
 
 export interface WorkspaceSummary {
   id: string;
   name: string;
   owner_id: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ProjectSummary {
-  id: string;
-  workspace_id: string;
-  name: string;
-  status: string;
-  created_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -42,18 +30,14 @@ export async function completeUserOnboarding() {
   if (error) throw error;
 }
 
-export async function createWorkspaceWithStarterProject(
+export async function createWorkspaceOnboarding(
   userId: string,
   input: CreateWorkspaceOnboardingInput,
 ) {
   const workspaceName = input.workspaceName.trim();
-  const projectName = input.projectName.trim();
 
   if (!workspaceName) {
     throw new Error("Workspace name is required.");
-  }
-  if (!projectName) {
-    throw new Error("Project name is required.");
   }
 
   const { data: workspace, error: workspaceError } = await supabase
@@ -76,30 +60,7 @@ export async function createWorkspaceWithStarterProject(
 
   if (memberError) throw memberError;
 
-  const { data: project, error: projectError } = await supabase
-    .from("projects")
-    .insert({
-      workspace_id: workspace.id,
-      name: projectName,
-      status: "active",
-      created_by: userId,
-    })
-    .select("id, workspace_id, name, status, created_by, created_at, updated_at")
-    .single();
-
-  if (projectError) throw projectError;
-
-  const { error: projectMemberError } = await supabase.from("project_members").insert({
-    project_id: project.id,
-    user_id: userId,
-    access_level: "owner",
-    status: "active",
-  });
-
-  if (projectMemberError) throw projectMemberError;
-
   return {
     workspace: workspace as WorkspaceSummary,
-    project: project as ProjectSummary,
   };
 }

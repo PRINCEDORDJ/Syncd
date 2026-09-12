@@ -43,7 +43,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setOnboarding({
         onboarding_status: "unknown",
         workspace_count: 0,
-        project_count: 0,
       });
     }
   }, [session?.user]);
@@ -107,7 +106,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setOnboarding({
             onboarding_status: "unknown",
             workspace_count: 0,
-            project_count: 0,
           });
         }
       }
