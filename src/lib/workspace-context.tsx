@@ -23,6 +23,7 @@ import {
 } from "@/lib/image-validation";
 
 const ACTIVE_WORKSPACE_KEY = "syncd:active-workspace";
+const AI_MODE_KEY = "syncd:ai-mode";
 
 export const TONES = [
   "Authoritative & Warm",
@@ -31,6 +32,8 @@ export const TONES = [
   "Storytelling",
 ] as const;
 export type Tone = (typeof TONES)[number];
+
+export type AiMode = "assistant" | "post-generator";
 
 export type ChatRole = "user" | "assistant" | "system";
 export interface ChatMessage {
@@ -50,6 +53,7 @@ export interface WorkspaceState {
   title: string;
   titleEdited: boolean;
   tone: Tone;
+  aiMode: AiMode;
   images: string[];
   attachments: AttachmentItem[];
   saving: boolean;
@@ -74,6 +78,7 @@ export interface WorkspaceActions {
   setTitle: (t: string) => void;
   setTitleEdited: (v: boolean) => void;
   setTone: (t: Tone) => void;
+  setAiMode: (m: AiMode) => void;
   setImages: React.Dispatch<React.SetStateAction<string[]>>;
   setAttachments: React.Dispatch<React.SetStateAction<AttachmentItem[]>>;
   setError: (e: string | null) => void;
@@ -224,6 +229,24 @@ function persistActiveWorkspace(ws: Workspace) {
   }
 }
 
+function readStoredAiMode(): AiMode {
+  try {
+    const v = localStorage.getItem(AI_MODE_KEY);
+    if (v === "assistant" || v === "post-generator") return v;
+  } catch {
+    // storage unavailable — non-fatal
+  }
+  return "post-generator";
+}
+
+function persistAiMode(mode: AiMode) {
+  try {
+    localStorage.setItem(AI_MODE_KEY, mode);
+  } catch {
+    // storage unavailable — non-fatal
+  }
+}
+
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const userId = user?.id;
@@ -234,6 +257,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [title, setTitle] = useState("Untitled draft");
   const [titleEdited, setTitleEdited] = useState(false);
   const [tone, setTone] = useState<Tone>("Authoritative & Warm");
+  const [aiMode, setAiModeState] = useState<AiMode>(() => readStoredAiMode());
   const [images, setImages] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [saving, setSaving] = useState(false);
@@ -442,6 +466,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const userMsg: ChatMessage = { id: makeId(), role: "user", content: userInput.trim() };
       const assistantMsgId = makeId();
       const isFirstTurn = messages.length === 0;
+      const isPostMode = aiMode === "post-generator";
 
       setMessages((prev) => [
         ...prev,
@@ -464,11 +489,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const payloadInput = isFirstTurn
-          ? userInput
-          : `Current draft:\n"""\n${draft}\n"""\n\nInstruction: ${userInput}`;
+        const payloadInput = isPostMode
+          ? isFirstTurn
+            ? userInput
+            : `Current draft:\n"""\n${draft}\n"""\n\nInstruction: ${userInput}`
+          : userInput;
 
-        if (isFirstTurn) {
+        if (isPostMode && isFirstTurn) {
           setDraft("");
           setDraftId(null);
           setTitle("Untitled draft");
@@ -485,6 +512,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             input: payloadInput,
             tone,
             images,
+            mode: aiMode,
           }),
           signal: controller.signal,
         });
@@ -505,7 +533,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             );
           }
 
-          if (post !== null && !isKeepCurrent) {
+          if (isPostMode && post !== null && !isKeepCurrent) {
             setDraft(post);
             if (!titleEdited) {
               setTitle(deriveTitle(post));
@@ -524,7 +552,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           prev.map((m) => (m.id === assistantMsgId ? { ...m, content: finalThoughts } : m))
         );
 
-        if (post !== null && !isKeepCurrent) {
+        if (isPostMode && post !== null && !isKeepCurrent) {
           setDraft(post);
           if (!titleEdited) {
             setTitle(deriveTitle(post));
@@ -541,7 +569,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         setGenerating(false);
       }
     },
-    [generating, messages, draft, tone, images, titleEdited],
+    [generating, messages, draft, tone, images, titleEdited, aiMode],
   );
 
   // ── Publish ─────────────────────────────────────────────────────────────────
@@ -629,6 +657,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setSuccess(null);
   }, []);
 
+  // ── AI Mode ────────────────────────────────────────────────────────────────
+  const setAiMode = useCallback((m: AiMode) => {
+    setAiModeState(m);
+    persistAiMode(m);
+  }, []);
+
   // ── Workspace switching ─────────────────────────────────────────────────────
   const setActiveWorkspace = useCallback((ws: Workspace) => {
     setActiveWorkspaceId(ws.id);
@@ -654,6 +688,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     title,
     titleEdited,
     tone,
+    aiMode,
     images,
     attachments,
     saving,
@@ -671,6 +706,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setTitle,
     setTitleEdited,
     setTone,
+    setAiMode,
     setImages,
     setAttachments,
     setError,

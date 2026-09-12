@@ -2,22 +2,31 @@ import { useState, useRef, useEffect } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
 import { ChatInputBar } from "@/components/workspace/ChatInputBar";
 import { CreditBanner } from "@/components/CreditBanner";
-import { Sparkles, PanelRightClose, CornerDownLeft, Wand2 } from "lucide-react";
+import { Markdown } from "@/components/ui/markdown";
+import { Sparkles, PanelRightClose, Wand2 } from "lucide-react";
 
 interface AiChatPanelProps {
   onToggleCollapse?: () => void;
 }
 
-const PROMPT_SUGGESTIONS = [
+const POST_GENERATOR_SUGGESTIONS = [
   "Announce our new product feature launch",
   "3 counterintuitive lessons learned this year",
   "Why most teams get remote culture wrong",
 ];
 
+const ASSISTANT_SUGGESTIONS = [
+  "How do I hook readers in the first line?",
+  "Brainstorm 5 post ideas about remote work",
+  "What's the best posting schedule on LinkedIn?",
+];
+
 export function AiChatPanel({ onToggleCollapse }: AiChatPanelProps) {
-  const { messages, sendMessage, generating } = useWorkspace();
+  const { messages, sendMessage, generating, aiMode } = useWorkspace();
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const suggestions = aiMode === "assistant" ? ASSISTANT_SUGGESTIONS : POST_GENERATOR_SUGGESTIONS;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -60,16 +69,19 @@ export function AiChatPanel({ onToggleCollapse }: AiChatPanelProps) {
             <div className="size-9 rounded-xl bg-card border border-border flex items-center justify-center mb-3 shadow-soft">
               <Wand2 className="size-4 text-accent-cyan" />
             </div>
-            <p className="text-[13px] font-medium text-ink mb-1">Start your post</p>
+            <p className="text-[13px] font-medium text-ink mb-1">
+              {aiMode === "assistant" ? "Ask me anything" : "Start your post"}
+            </p>
             <p className="text-[11px] text-muted-foreground leading-relaxed max-w-[240px] mb-4">
-              Dump raw thoughts, bullets, or notes below to stream a LinkedIn draft directly to the
-              Canvas.
+              {aiMode === "assistant"
+                ? "Ask questions, brainstorm ideas, or get writing advice — your canvas stays untouched."
+                : "Dump raw thoughts, bullets, or notes below to stream a LinkedIn draft directly to the Canvas."}
             </p>
             <div className="w-full space-y-1.5 text-left">
               <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/70 px-1">
                 Suggestions
               </span>
-              {PROMPT_SUGGESTIONS.map((s) => (
+              {suggestions.map((s) => (
                 <button
                   key={s}
                   type="button"
@@ -106,8 +118,8 @@ export function AiChatPanel({ onToggleCollapse }: AiChatPanelProps) {
 
             return (
               <div key={m.id} className="flex flex-col items-start">
-                <div className="max-w-[88%] px-3.5 py-2.5 rounded-2xl rounded-tl-sm bg-card border border-border text-ink text-[13px] leading-relaxed shadow-soft">
-                  {m.content}
+                <div className="max-w-[88%] px-3.5 py-2.5 rounded-2xl rounded-tl-sm bg-card border border-border shadow-soft">
+                  <Markdown>{m.content}</Markdown>
                 </div>
               </div>
             );
@@ -118,7 +130,7 @@ export function AiChatPanel({ onToggleCollapse }: AiChatPanelProps) {
           <div className="flex items-center gap-2 px-1 py-2">
             <span className="size-2 rounded-full bg-accent-cyan animate-ping shrink-0" />
             <span className="text-[11px] font-mono text-muted-foreground animate-pulse">
-              Working on canvas…
+              {aiMode === "assistant" ? "Thinking…" : "Working on canvas…"}
             </span>
           </div>
         )}
