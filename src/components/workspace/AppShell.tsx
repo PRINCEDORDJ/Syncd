@@ -52,6 +52,7 @@ export function AppShell() {
     attachments,
     handleFiles,
     handleAttachFiles,
+    aiMode,
   } = useWorkspace();
 
   const [chatCollapsed, setChatCollapsed] = useState(() => readBool(CHAT_COLLAPSED_KEY, false));
@@ -68,23 +69,23 @@ export function AppShell() {
     persistBool(CHAT_COLLAPSED_KEY, chatCollapsed);
   }, [chatCollapsed]);
 
-  // Mobile: auto-switch to the Chat tab only for conversational assistant
-  // replies. Canvas-update summaries (generate / refine) keep you on Canvas.
+  // Mobile: auto-switch to the Chat tab for conversational assistant replies
+  // and always in assistant mode (canvas is never updated). Canvas-update
+  // summaries (generate / refine) in post-generator mode keep you on Canvas.
   useEffect(() => {
     const count = messages.length;
     if (count > prevMsgCountRef.current && count > 0) {
       const last = messages[count - 1];
-      if (
-        last &&
-        last.role === "assistant" &&
-        !last.isCanvasUpdate &&
-        mobileSendTabRef.current === "canvas"
-      ) {
-        setActiveTab("chat");
+      if (last && last.role === "assistant" && mobileSendTabRef.current === "canvas") {
+        // In assistant mode, always switch to chat since canvas is untouched.
+        // In post-generator mode, only switch for conversational replies (not canvas updates).
+        if (aiMode === "assistant" || !last.isCanvasUpdate) {
+          setActiveTab("chat");
+        }
       }
     }
     prevMsgCountRef.current = count;
-  }, [messages]);
+  }, [messages, aiMode]);
 
   const handleMobileSend = () => {
     if (!mobileInput.trim()) return;

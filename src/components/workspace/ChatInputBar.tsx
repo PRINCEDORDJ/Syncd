@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
-import { ImagePlus, Paperclip, ArrowUp, Square } from "lucide-react";
+import { ImagePlus, Paperclip, ArrowUp, Square, MessageSquareText, PenLine } from "lucide-react";
 import { MAX_IMAGES, MAX_ATTACHMENTS } from "@/lib/image-validation";
 import { useIsGenerationBlocked } from "@/components/CreditBanner";
 
@@ -13,16 +13,19 @@ interface ChatInputBarProps {
 }
 
 export function ChatInputBar({ variant = "full", value, onChange, onSend }: ChatInputBarProps) {
-  const { generating, images, attachments, handleFiles, handleAttachFiles, messages } =
+  const { generating, images, attachments, handleFiles, handleAttachFiles, messages, aiMode, setAiMode } =
     useWorkspace();
   const isBlocked = useIsGenerationBlocked();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachInputRef = useRef<HTMLInputElement | null>(null);
 
   const isFirstTurn = messages.length === 0;
-  const placeholder = isFirstTurn
-    ? "Dump a thought, a voice note transcript, or three messy bullets…"
-    : "Refine the draft — make it punchier, cut paragraph 2…";
+  const placeholder =
+    aiMode === "assistant"
+      ? "Ask anything about writing, strategy, or LinkedIn…"
+      : isFirstTurn
+        ? "Dump a thought, a voice note transcript, or three messy bullets…"
+        : "Refine the draft — make it punchier, cut paragraph 2…";
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -96,6 +99,36 @@ export function ChatInputBar({ variant = "full", value, onChange, onSend }: Chat
             className="h-7 w-7 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Paperclip className="size-3.5" />
+          </button>
+        </div>
+
+        {/* Mode toggle */}
+        <div className="flex items-center bg-subtle rounded-lg p-0.5 border border-border/50">
+          <button
+            type="button"
+            onClick={() => setAiMode("assistant")}
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium transition-colors ${
+              aiMode === "assistant"
+                ? "bg-ink text-surface shadow-sm"
+                : "text-muted-foreground hover:text-ink"
+            }`}
+            title="Assistant — chat without updating canvas"
+          >
+            <MessageSquareText className="size-2.5" />
+            Ask
+          </button>
+          <button
+            type="button"
+            onClick={() => setAiMode("post-generator")}
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium transition-colors ${
+              aiMode === "post-generator"
+                ? "bg-ink text-surface shadow-sm"
+                : "text-muted-foreground hover:text-ink"
+            }`}
+            title="Post Generator — generate and refine posts on canvas"
+          >
+            <PenLine className="size-2.5" />
+            Post
           </button>
         </div>
 

@@ -240,7 +240,7 @@ export function Canvas() {
 
         {/* Empty state prompt when canvas is blank */}
         {!draftId && !draft && !generating && (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <div className="flex flex-col items-center justify-center py-10 gap-3 ">
             <p className="text-[15px] text-muted-foreground/60 text-center max-w-md leading-relaxed">
               Dump a thought, a voice note transcript, or three messy bullets…
             </p>

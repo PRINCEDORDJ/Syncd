@@ -7,7 +7,7 @@ import {
   type AiImageInput,
 } from "@/lib/ai-provider.server";
 
-const SYSTEM_PROMPT = `You are Syncd, an expert AI LinkedIn writing assistant and post generator.
+const SYSTEM_PROMPT_POST = `You are Syncd, an expert AI LinkedIn writing assistant and post generator.
 
 Your role is twofold:
 1. Act as a thoughtful, insightful writing coach in the chat conversation.
@@ -34,6 +34,18 @@ If the user is ONLY asking a question, asking for advice, or chatting without re
 [Your complete helpful response to the user's question]
 <<<POST>>>
 KEEP_CURRENT`;
+
+const SYSTEM_PROMPT_ASSISTANT = `You are Syncd, an expert AI writing assistant and LinkedIn strategist.
+
+Your role is to be a helpful brainstorming partner, writing coach, and strategy advisor. You help users think through ideas, craft better hooks, understand LinkedIn best practices, and develop their content strategy.
+
+OUTPUT FORMAT RULES:
+Always structure your response using this exact delimiter:
+
+<<<THOUGHTS>>>
+[Your complete, helpful response to the user. Be concise but thorough. Use a friendly, expert tone. Give actionable advice, specific examples, or clear brainstorming output as needed.]
+
+Do NOT include a <<<POST>>> section. You are in assistant mode — just provide helpful conversational responses.`;
 
 const VALID_TONES = [
   "Authoritative & Warm",
@@ -147,10 +159,11 @@ export const Route = createFileRoute("/api/generate")({
           return jsonResponse({ error: "Invalid JSON body." }, 400);
         }
 
-        const { input, tone, images } = (body ?? {}) as {
+        const { input, tone, images, mode } = (body ?? {}) as {
           input?: unknown;
           tone?: unknown;
           images?: unknown;
+          mode?: unknown;
         };
         if (typeof input !== "string" || input.trim().length === 0) {
           return jsonResponse(
@@ -164,6 +177,9 @@ export const Route = createFileRoute("/api/generate")({
             400,
           );
         }
+
+        const isAssistantMode = mode === "assistant";
+        const systemPrompt = isAssistantMode ? SYSTEM_PROMPT_ASSISTANT : SYSTEM_PROMPT_POST;
 
         const imageInputs: AiImageInput[] = [];
         if (Array.isArray(images)) {
@@ -183,7 +199,9 @@ export const Route = createFileRoute("/api/generate")({
         const imageInstruction = imageInputs.length
           ? `\n\nThe writer attached ${imageInputs.length} image(s) as additional context. Weave relevant visual details (people, places, screenshots, products, moments) into the post naturally if they add specificity.`
           : "";
-        const userPrompt = `Tone: ${safeTone}${voiceBlock}${imageInstruction}
+        const userPrompt = isAssistantMode
+          ? `User message:\n"""\n${input.trim()}\n"""\n\nRespond helpfully as a writing and LinkedIn strategy advisor.`
+          : `Tone: ${safeTone}${voiceBlock}${imageInstruction}
 
 Raw material from the writer:
 """
@@ -195,9 +213,9 @@ Write the LinkedIn post now.`;
         let textStream: AsyncIterable<string>;
         try {
           textStream = await createAiTextStream({
-            systemPrompt: SYSTEM_PROMPT,
+            systemPrompt,
             userPrompt,
-            images: imageInputs,
+            images: isAssistantMode ? [] : imageInputs,
           });
         } catch (error) {
           console.error("[generate] AI provider request failed", error);
