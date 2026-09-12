@@ -61,7 +61,7 @@ const tiers: TierDef[] = [
     description: "For solo writers shipping a serious cadence.",
     features: [
       "100 credits / month (No daily cap)",
-      "Up to 3 Workspaces",
+      "Unlimited Workspaces",
       "Voice mapping & tone dial",
       "Post scheduling & Top-ups",
     ],

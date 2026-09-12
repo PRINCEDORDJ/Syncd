@@ -1354,7 +1354,7 @@ const TIERS: Array<{
     description: "For solo creators shipping a real cadence.",
     features: [
       "100 credits per month (No daily cap)",
-      "Up to 3 Workspaces",
+      "Unlimited Workspaces",
       "Post scheduling & Top-ups",
       "Full voice mapping",
       "5 GB media storage",

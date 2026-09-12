@@ -48,7 +48,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     dailyCap: 0,
     maxLinkedInAccounts: 1,
     teamSeats: 1,
-    maxWorkspaces: 3,
+    maxWorkspaces: 999, // Unlimited
     maxWorkspaceMembers: 1,
     allowsTeamWorkspaceAccess: false,
     voiceMapping: true,
