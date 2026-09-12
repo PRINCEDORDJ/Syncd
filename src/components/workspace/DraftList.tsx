@@ -36,14 +36,12 @@ function relativeTime(dateStr: string) {
 
 export function DraftList({ collapsed = false, onSelect }: DraftListProps) {
   const { user } = useAuth();
-  const { draftId, loadDraft, newDraft } = useWorkspace();
+  const { draftId, loadDraft, newDraft, activeWorkspaceId } = useWorkspace();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [drafts, setDrafts] = useState<DraftRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // The + button always lands on a blank canvas in /app, even when clicked
-  // from /drafts, /settings or the mobile drawer.
   const handleNewDraft = () => {
     newDraft();
     onSelect?.();
@@ -51,11 +49,16 @@ export function DraftList({ collapsed = false, onSelect }: DraftListProps) {
   };
 
   const fetchDrafts = useCallback(async () => {
-    if (!user) return;
+    if (!user || !activeWorkspaceId) {
+      setDrafts([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     const { data } = await supabase
       .from("drafts")
       .select("id, title, content, tone, updated_at, images, attachments, raw_input")
-      .eq("user_id", user.id)
+      .eq("workspace_id", activeWorkspaceId)
       .order("updated_at", { ascending: false })
       .limit(10);
     const rows = (data ?? []).map((r) => ({
@@ -65,12 +68,12 @@ export function DraftList({ collapsed = false, onSelect }: DraftListProps) {
       tone: r.tone,
       updated_at: r.updated_at,
       images: (r.images as string[] | null) ?? [],
-      attachments: (r.attachments as AttachmentItem[] | null) ?? [],
+      attachments: (r.attachments as unknown as AttachmentItem[] | null) ?? [],
       raw_input: (r.raw_input as string | null) ?? "",
     }));
     setDrafts(rows);
     setLoading(false);
-  }, [user]);
+  }, [user, activeWorkspaceId]);
 
   useEffect(() => {
     void fetchDrafts();
@@ -80,24 +83,20 @@ export function DraftList({ collapsed = false, onSelect }: DraftListProps) {
   const fetchDraftsRef = useRef(fetchDrafts);
   fetchDraftsRef.current = fetchDrafts;
 
-  // Realtime subscription to update list on draft saves.
-  // Uses a unique channel topic: reusing `draft-list-${userId}` races with the
-  // async removeChannel() cleanup (StrictMode double-mount / dep changes) and
-  // throws "cannot add postgres_changes callbacks ... after subscribe()".
-  const userId = user?.id;
+  // Realtime subscription scoped to the active workspace
   useEffect(() => {
-    if (!userId) return;
-    const ch = createUniqueChannel(`draft-list-${userId}`)
+    if (!activeWorkspaceId) return;
+    const ch = createUniqueChannel(`draft-list-${activeWorkspaceId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "drafts", filter: `user_id=eq.${userId}` },
+        { event: "*", schema: "public", table: "drafts", filter: `workspace_id=eq.${activeWorkspaceId}` },
         () => void fetchDraftsRef.current(),
       )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [userId]);
+  }, [activeWorkspaceId]);
 
   if (collapsed) {
     return (

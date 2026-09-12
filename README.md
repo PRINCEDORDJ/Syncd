@@ -49,7 +49,7 @@ Ensure you have Node.js and Bun/npm installed.
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/PRINCEDORDJ/Syncd.git
    cd ssyncd
    ```
 
