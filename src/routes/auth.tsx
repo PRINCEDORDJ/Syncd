@@ -12,7 +12,7 @@ export const Route = createFileRoute("/auth")({
   }),
   head: () => ({
     meta: [
-      { title: "Signing you in â€” Syncd" },
+      { title: "Signing you - Syncd" },
       { name: "description", content: "Completing sign-in to Syncd." },
     ],
   }),
@@ -52,7 +52,7 @@ function AuthCallback() {
       <BrandMark size={28} />
       <Skeleton className="h-1.5 w-32 rounded-full" />
       <p className="text-[13px] font-mono text-muted-foreground">
-        {timedOut ? "Redirectingâ€¦" : "Signing you inâ€¦"}
+        {timedOut ? "Redirecting" : "Signing you - Syncd"}
       </p>
     </div>
   );

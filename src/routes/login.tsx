@@ -11,7 +11,7 @@ export const Route = createFileRoute("/login")({
   }),
   head: () => ({
     meta: [
-      { title: "Sign in â€” Syncd" },
+      { title: "Sign in - Syncd" },
       { name: "description", content: "Sign in to your Syncd workspace." },
     ],
   }),
