@@ -1,4 +1,4 @@
-﻿import { Link } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { BrandMark } from "@/components/BrandMark";
 import { useEffect, useState } from "react";
@@ -22,8 +22,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function SiteNav() {
   const { user, loading, signOut, onboarding } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [displayName, setDisplayName] = useState<string | null>(null);
+
+  const metaAvatar =
+    (user?.user_metadata?.avatar_url as string | undefined) ||
+    (user?.user_metadata?.picture as string | undefined) ||
+    null;
+  const metaDisplayName =
+    (user?.user_metadata?.display_name as string | undefined) ||
+    (user?.user_metadata?.full_name as string | undefined) ||
+    (user?.user_metadata?.name as string | undefined) ||
+    null;
+
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(metaAvatar);
+  const [displayName, setDisplayName] = useState<string | null>(metaDisplayName);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const workspaceHref = onboarding?.onboarding_status === "pending" ? "/onboarding" : "/app";
@@ -34,6 +45,17 @@ export function SiteNav() {
       setDisplayName(null);
       return;
     }
+
+    const fallbackAvatar =
+      (user.user_metadata?.avatar_url as string | undefined) ||
+      (user.user_metadata?.picture as string | undefined) ||
+      null;
+    const fallbackName =
+      (user.user_metadata?.display_name as string | undefined) ||
+      (user.user_metadata?.full_name as string | undefined) ||
+      (user.user_metadata?.name as string | undefined) ||
+      null;
+
     let cancelled = false;
     supabase
       .from("profiles")
@@ -42,15 +64,18 @@ export function SiteNav() {
       .maybeSingle()
       .then(({ data }) => {
         if (cancelled) return;
-        setAvatarUrl(data?.avatar_url ?? null);
-        setDisplayName(data?.display_name ?? null);
+        setAvatarUrl(data?.avatar_url ?? fallbackAvatar);
+        setDisplayName(data?.display_name ?? fallbackName);
       });
     return () => {
       cancelled = true;
     };
   }, [user]);
 
-  const initials = (displayName || user?.email || "?")
+  const activeAvatar = avatarUrl || metaAvatar;
+  const activeDisplayName = displayName || metaDisplayName;
+
+  const initials = (activeDisplayName || user?.email || "?")
     .split(/[\s@.]+/)
     .filter(Boolean)
     .slice(0, 2)
@@ -82,8 +107,8 @@ export function SiteNav() {
                 aria-label="Account menu"
               >
                 <Avatar className="h-8 w-8 border border-border">
-                  {avatarUrl && (
-                    <AvatarImage src={avatarUrl} alt={displayName ?? "Profile"} loading="lazy" />
+                  {activeAvatar && (
+                    <AvatarImage src={activeAvatar} alt={activeDisplayName ?? "Profile"} loading="lazy" />
                   )}
                   <AvatarFallback className="text-[11px] font-medium bg-subtle text-ink">
                     {initials || "U"}
@@ -94,7 +119,7 @@ export function SiteNav() {
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-ink truncate">
-                      {displayName || "Account"}
+                      {activeDisplayName || "Account"}
                     </span>
                     <span className="text-xs text-muted-foreground truncate">{user.email}</span>
                   </div>
@@ -175,7 +200,7 @@ export function SiteNav() {
             >
               <Menu className="h-4 w-4" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-52">
               {!user && (
                 <>
                   <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
@@ -188,6 +213,25 @@ export function SiteNav() {
               )}
               {user && (
                 <>
+                  <DropdownMenuLabel className="font-normal pb-2">
+                    <div className="flex items-center gap-2.5">
+                      <Avatar className="size-8 border border-border shrink-0">
+                        {activeAvatar && (
+                          <AvatarImage src={activeAvatar} alt={activeDisplayName ?? "Profile"} loading="lazy" />
+                        )}
+                        <AvatarFallback className="text-[11px] font-semibold bg-subtle text-ink">
+                          {initials || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[13px] font-semibold text-ink truncate">
+                          {activeDisplayName || "Account"}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground truncate">{user.email}</span>
+                      </div>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
                     <Link to={workspaceHref as "/app" | "/onboarding"}>Workspace</Link>
                   </DropdownMenuItem>
@@ -244,5 +288,3 @@ export function SiteNav() {
     </nav>
   );
 }
-
-

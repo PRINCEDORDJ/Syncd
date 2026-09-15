@@ -68,8 +68,18 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
   const { activeWorkspaceId, setActiveWorkspace } = useWorkspace();
   const { plan, subscriptionCredits, topupCredits, isAdmin } = useCredits();
 
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [displayName, setDisplayName] = useState<string | null>(null);
+  const metaAvatar =
+    (user?.user_metadata?.avatar_url as string | undefined) ||
+    (user?.user_metadata?.picture as string | undefined) ||
+    null;
+  const metaDisplayName =
+    (user?.user_metadata?.display_name as string | undefined) ||
+    (user?.user_metadata?.full_name as string | undefined) ||
+    (user?.user_metadata?.name as string | undefined) ||
+    null;
+
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(metaAvatar);
+  const [displayName, setDisplayName] = useState<string | null>(metaDisplayName);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
 
@@ -79,6 +89,17 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
       setDisplayName(null);
       return;
     }
+
+    const fallbackAvatar =
+      (user.user_metadata?.avatar_url as string | undefined) ||
+      (user.user_metadata?.picture as string | undefined) ||
+      null;
+    const fallbackName =
+      (user.user_metadata?.display_name as string | undefined) ||
+      (user.user_metadata?.full_name as string | undefined) ||
+      (user.user_metadata?.name as string | undefined) ||
+      null;
+
     let cancelled = false;
     supabase
       .from("profiles")
@@ -87,8 +108,8 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
       .maybeSingle()
       .then(({ data }) => {
         if (cancelled) return;
-        setAvatarUrl(data?.avatar_url ?? null);
-        setDisplayName(data?.display_name ?? null);
+        setAvatarUrl(data?.avatar_url ?? fallbackAvatar);
+        setDisplayName(data?.display_name ?? fallbackName);
       });
     return () => {
       cancelled = true;
@@ -111,7 +132,10 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
     };
   }, [user]);
 
-  const initials = (displayName || user?.email || "?")
+  const activeAvatar = avatarUrl || metaAvatar;
+  const activeDisplayName = displayName || metaDisplayName;
+
+  const initials = (activeDisplayName || user?.email || "?")
     .split(/[\s@.]+/)
     .filter(Boolean)
     .slice(0, 2)
@@ -220,13 +244,13 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
             {collapsed ? (
               <button
                 type="button"
-                title={displayName || user?.email || "Account"}
+                title={activeDisplayName || user?.email || "Account"}
                 aria-label="Account menu"
                 className="w-full h-9 flex items-center justify-center rounded-lg hover:bg-subtle transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Avatar className="size-6 border border-border shrink-0">
-                  {avatarUrl && (
-                    <AvatarImage src={avatarUrl} alt={displayName ?? "Profile"} loading="lazy" />
+                  {activeAvatar && (
+                    <AvatarImage src={activeAvatar} alt={activeDisplayName ?? "Profile"} loading="lazy" />
                   )}
                   <AvatarFallback className="text-[9px] font-semibold bg-ink/10 text-ink">
                     {initials || "U"}
@@ -240,8 +264,8 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
                 className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-subtle transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring group"
               >
                 <Avatar className="size-6 border border-border shrink-0">
-                  {avatarUrl && (
-                    <AvatarImage src={avatarUrl} alt={displayName ?? "Profile"} loading="lazy" />
+                  {activeAvatar && (
+                    <AvatarImage src={activeAvatar} alt={activeDisplayName ?? "Profile"} loading="lazy" />
                   )}
                   <AvatarFallback className="text-[9px] font-semibold bg-ink/10 text-ink">
                     {initials || "U"}
@@ -249,7 +273,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
                 </Avatar>
                 <div className="flex flex-col min-w-0 flex-1 text-left">
                   <span className="text-[12px] font-semibold text-ink truncate leading-tight">
-                    {displayName || "Account"}
+                    {activeDisplayName || "Account"}
                   </span>
                   <span className="text-[10px] text-muted-foreground truncate leading-tight">
                     {user?.email}
@@ -270,8 +294,8 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
             <DropdownMenuLabel className="font-normal pb-2">
               <div className="flex items-center gap-2.5">
                 <Avatar className="size-8 border border-border shrink-0">
-                  {avatarUrl && (
-                    <AvatarImage src={avatarUrl} alt={displayName ?? "Profile"} loading="lazy" />
+                  {activeAvatar && (
+                    <AvatarImage src={activeAvatar} alt={activeDisplayName ?? "Profile"} loading="lazy" />
                   )}
                   <AvatarFallback className="text-[11px] font-semibold bg-ink/10 text-ink">
                     {initials || "U"}
@@ -279,7 +303,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
                 </Avatar>
                 <div className="flex flex-col min-w-0">
                   <span className="text-[13px] font-semibold text-ink truncate">
-                    {displayName || "Account"}
+                    {activeDisplayName || "Account"}
                   </span>
                   <span className="text-[11px] text-muted-foreground truncate">{user?.email}</span>
                 </div>

@@ -186,11 +186,20 @@ function SettingsPage() {
           .select("role")
           .eq("user_id", user.id),
       ]);
-      if (cancelled) return;
+      const metaAvatar =
+        (user.user_metadata?.avatar_url as string | undefined) ||
+        (user.user_metadata?.picture as string | undefined) ||
+        null;
+      const metaName =
+        (user.user_metadata?.display_name as string | undefined) ||
+        (user.user_metadata?.full_name as string | undefined) ||
+        (user.user_metadata?.name as string | undefined) ||
+        "";
+
       const p = prof ?? { display_name: null, avatar_url: null, voice_notes: null };
       setProfile(p);
-      setDisplayName(p.display_name ?? "");
-      setAvatarUrl(p.avatar_url ?? "");
+      setDisplayName(p.display_name ?? metaName);
+      setAvatarUrl(p.avatar_url ?? metaAvatar ?? "");
       setVoiceNotes(p.voice_notes ?? "");
       const isExpired = linkedin && new Date(linkedin.expires_at).getTime() <= Date.now();
       if (isExpired) {
