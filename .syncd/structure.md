@@ -17,99 +17,130 @@ Syncd is an AI-powered social media management and content orchestration platfor
 # Project Structure
 
 ```text
-social-sync-connect/
-├── .lovable/                 # Lovable development and planning
-│   ├── plan.md              # Project implementation plan
-│   └── structure.md         # This file
-├── docs/                    # Developer documentation
-│   └── ai-providers.md      # AI provider configuration guide
-├── public/                  # Static assets
-├── scripts/                 # Utility scripts
-│   └── export-db.sh         # Database export script
-├── src/                     # Main source code
-│   ├── assets/              # Images, fonts, and other assets
-│   ├── components/          # React components
-│   │   ├── ui/              # shadcn/ui shared components
-│   │   ├── skeletons/       # Loading skeleton components
+ssyncd/
+├── .syncd/                   # Syncd internal planning and documentation
+│   ├── plan/                 # Planning documents
+│   └── structure.md          # This file
+├── db-export/                # Database schema exports and restore instructions
+│   ├── schema.sql
+│   └── restore.md
+├── docs/                     # Developer documentation
+│   └── ai-providers.md       # AI provider configuration guide
+├── public/                   # Static assets
+│   ├── favicon.ico
+│   ├── favicon.png
+│   └── robots.txt
+├── scripts/                  # Utility scripts
+│   └── export-db.sh          # Database export script
+├── src/                      # Main source code
+│   ├── assets/               # Images, fonts, and other assets
+│   │   └── brand-icon.png
+│   ├── components/           # React components
+│   │   ├── ui/               # shadcn/ui shared components (47 primitives)
+│   │   ├── skeletons/        # Loading skeleton components
 │   │   │   ├── DraftsSkeleton.tsx
 │   │   │   ├── SettingsSkeleton.tsx
 │   │   │   └── WorkspaceSkeleton.tsx
-│   │   ├── BrandMark.tsx    # Brand logo component
+│   │   ├── settings/         # Settings page components
+│   │   │   ├── ui-primitives.tsx
+│   │   │   └── WorkspacesSettingsPanel.tsx
+│   │   ├── workspace/        # Workspace workspace UI
+│   │   │   ├── AiChatPanel.tsx
+│   │   │   ├── AppShell.tsx
+│   │   │   ├── Canvas.tsx
+│   │   │   ├── ChatInputBar.tsx
+│   │   │   ├── DraftList.tsx
+│   │   │   ├── MobileTabs.tsx
+│   │   │   ├── Sidebar.tsx
+│   │   │   └── SidebarShell.tsx
+│   │   ├── BrandMark.tsx     # Brand logo component
 │   │   ├── ConfirmDialog.tsx # Reusable confirmation dialog
 │   │   ├── CreditBanner.tsx  # Credit-limit banner in workspace
 │   │   ├── CreditIndicator.tsx # Nav credit balance indicator
 │   │   ├── SchedulePicker.tsx # Date/time picker for scheduling
-│   │   ├── SiteFooter.tsx   # Global site footer
-│   │   ├── SiteNav.tsx      # Main navigation header
+│   │   ├── SiteFooter.tsx    # Global site footer
+│   │   ├── SiteNav.tsx       # Main navigation header
 │   │   └── WorkspacePreview.tsx # Dashboard workspace card
-│   ├── hooks/               # Custom React hooks
-│   │   ├── useCredits.ts    # Re-exports useCredits from credits-context
-│   │   ├── useStorage.ts    # Storage usage hook
-│   │   └── use-mobile.tsx   # Mobile breakpoint hook
-│   ├── integrations/        # External service integrations
-│   │   ├── lovable/         # Lovable AI Gateway integration
-│   │   └── supabase/        # Supabase client, types, auth middleware
+│   ├── hooks/                # Custom React hooks
+│   │   ├── useCredits.ts     # Re-exports useCredits from credits-context
+│   │   ├── useStorage.ts     # Storage usage hook
+│   │   └── use-mobile.tsx    # Mobile breakpoint hook
+│   ├── integrations/         # External service integrations
+│   │   ├── lovable/          # Lovable AI Gateway integration
+│   │   │   └── index.ts
+│   │   └── supabase/         # Supabase client, types, auth middleware
 │   │       ├── auth-attacher.ts
 │   │       ├── auth-middleware.ts
-│   │       ├── client.server.ts # Server-side admin client (service role)
-│   │       ├── client.ts        # Browser client
-│   │       └── types.ts         # Generated DB types
-│   ├── lib/                 # Utility functions and shared logic
+│   │       ├── client.server.ts  # Server-side admin client (service role)
+│   │       ├── client.ts         # Browser client
+│   │       └── types.ts          # Generated DB types
+│   ├── lib/                  # Utility functions and shared logic
 │   │   ├── ai-provider.server.ts # AI provider abstraction (OpenAI/Gemini)
-│   │   ├── auth.tsx         # Authentication logic/context
-│   │   ├── avatar-upload.ts # Avatar upload/remove helpers
+│   │   ├── auth.tsx          # Authentication logic/context
+│   │   ├── avatar-upload.ts  # Avatar upload/remove helpers
 │   │   ├── credits-context.tsx # Real-time credit state provider
 │   │   ├── image-validation.ts # Media processing and validation
 │   │   ├── linkedin-publish.server.ts # LinkedIn publishing logic
-│   │   ├── plans.ts         # Subscription tier definitions
-│   │   ├── require-auth.ts  # Server-side auth middleware
+│   │   ├── plans.ts          # Subscription tier definitions
+│   │   ├── realtime.ts       # Supabase realtime subscriptions
+│   │   ├── require-auth.ts   # Server-side auth middleware
 │   │   ├── subscription.functions.ts # Subscription management server functions
 │   │   ├── supabase-admin.server.ts # Service-role Supabase client (lazy)
 │   │   ├── supabase-env.server.ts   # Server-side env resolution (APP_* overrides)
-│   │   ├── theme.ts         # Light/dark theme hook
-│   │   └── utils.ts         # Tailwind merger and helpers
-│   ├── routes/              # TanStack Router page components
-│   │   ├── __root.tsx       # Root layout wrapper
-│   │   ├── index.tsx        # Landing page
-│   │   ├── login.tsx        # Auth page (email + Google OAuth)
-│   │   ├── app.tsx          # Main workspace / AI generation
-│   │   ├── drafts.tsx       # Drafts library with preview/edit/publish
-│   │   ├── settings.tsx     # Tabbed settings (Profile, LinkedIn, Billing, Team, Account, Danger)
-│   │   ├── pricing.tsx      # Pricing table with monthly/annual toggle
-│   │   ├── methodology.tsx  # Product explanation
-│   │   ├── privacy.tsx      # Privacy policy
-│   │   ├── terms.tsx        # Terms of service
-│   │   ├── auth.tsx         # Auth callback handler
-│   │   ├── api.generate.ts  # AI generation endpoint (SSE streaming)
-│   │   ├── api.linkedin.start.ts     # LinkedIn OAuth start
-│   │   ├── api.linkedin.callback.ts  # LinkedIn OAuth callback
-│   │   ├── api.linkedin.publish.ts   # LinkedIn publish endpoint
+│   │   ├── theme.ts          # Light/dark theme hook
+│   │   ├── utils.ts          # Tailwind merger and helpers
+│   │   ├── workspace-access.ts     # Workspace access control
+│   │   ├── workspace-context.tsx    # Workspace state provider
+│   │   └── workspace-onboarding.ts  # Onboarding flow logic
+│   ├── routes/               # TanStack Router page components
+│   │   ├── __root.tsx        # Root layout wrapper
+│   │   ├── index.tsx         # Landing page
+│   │   ├── login.tsx         # Auth page (email + Google OAuth)
+│   │   ├── onboarding.tsx    # User onboarding flow
+│   │   ├── app.tsx           # Main workspace / AI generation
+│   │   ├── drafts.tsx        # Drafts library with preview/edit/publish
+│   │   ├── settings.tsx      # Tabbed settings (Profile, LinkedIn, Billing, Team, Account, Danger)
+│   │   ├── pricing.tsx       # Pricing table with monthly/annual toggle
+│   │   ├── methodology.tsx   # Product explanation
+│   │   ├── privacy.tsx       # Privacy policy
+│   │   ├── terms.tsx         # Terms of service
+│   │   ├── auth.tsx          # Auth callback handler
+│   │   ├── api.generate.ts   # AI generation endpoint (SSE streaming)
+│   │   ├── api.linkedin.start.ts      # LinkedIn OAuth start
+│   │   ├── api.linkedin.callback.ts   # LinkedIn OAuth callback
+│   │   ├── api.linkedin.publish.ts    # LinkedIn publish endpoint
 │   │   ├── api.linkedin.disconnect.ts # LinkedIn disconnect endpoint
-│   │   ├── api.polar.checkout.ts     # Polar checkout session creation
-│   │   ├── api.polar.portal.ts       # Polar customer portal session
+│   │   ├── api.polar.checkout.ts      # Polar checkout session creation
+│   │   ├── api.polar.portal.ts        # Polar customer portal session
 │   │   ├── api.public.polar.webhook.ts # Polar webhook handler
-│   │   ├── api.public.scheduler.ts   # Scheduler worker for scheduled posts
-│   │   └── sitemap[.]xml.ts          # XML sitemap endpoint
-│   ├── routeTree.gen.ts     # Auto-generated TanStack route tree
-│   ├── router.tsx           # Router instance configuration
-│   └── styles.css           # Global Tailwind & base styles
-├── supabase/                # Backend configuration
-│   ├── migrations/          # SQL database migrations
-│   └── config.toml          # Supabase project settings
-├── .env.example             # Example environment variables
-├── .gitignore               # Git ignore rules
-├── components.json          # shadcn/ui configuration
-├── eslint.config.js         # Linting rules
-├── package.json             # Dependencies and scripts
-├── tsconfig.json            # TypeScript configuration
-├── vite.config.ts           # Vite build tool configuration
-└── wrangler.jsonc           # Cloudflare Pages/Workers config
+│   │   ├── api.public.scheduler.ts    # Scheduler worker for scheduled posts
+│   │   └── sitemap[.]xml.ts           # XML sitemap endpoint
+│   ├── routeTree.gen.ts      # Auto-generated TanStack route tree
+│   ├── router.tsx            # Router instance configuration
+│   ├── start.ts              # TanStack Start entry
+│   └── styles.css            # Global Tailwind & base styles
+├── supabase/                 # Backend configuration
+│   ├── config.toml           # Supabase project settings
+│   └── migrations/           # SQL database migrations (20 files)
+├── .env                      # Environment variables (gitignored)
+├── .env.example              # Example environment variables
+├── .gitignore                # Git ignore rules
+├── .prettierignore           # Prettier ignore rules
+├── .prettierrc               # Prettier configuration
+├── bun.lockb                 # Bun lockfile
+├── bunfig.toml               # Bun configuration
+├── components.json           # shadcn/ui configuration
+├── eslint.config.js          # Linting rules
+├── package.json              # Dependencies and scripts
+├── tsconfig.json             # TypeScript configuration
+├── vite.config.ts            # Vite build tool configuration
+└── wrangler.jsonc            # Cloudflare Pages/Workers config
 ```
 
 # Database Schema Overview
 
 - **profiles**: User profiles (display name, avatar, preferences, voice style).
-- **drafts**: Generated and saved posts with title, content, media, publish status, schedule metadata, and `media_bytes`.
+- **drafts**: Generated and saved posts with title, content, media, publish status, schedule metadata, `media_bytes`, and `workspace_id`.
 - **images**: LinkedIn-ready uploaded images (legacy path + alt text).
 - **subscriptions**: User subscription records with plan, status, billing metadata, and period info.
 - **user_credits**: Per-user real-time credit balances (subscription, top-up, daily usage).
@@ -117,6 +148,7 @@ social-sync-connect/
 - **credit_transactions**: Immutable ledger of credit grants, usage, refunds, and plan changes.
 - **teams**: Team workspace metadata.
 - **team_members**: Membership rows linking users to teams with role.
+- **workspace_members**: Workspace-level membership with role-based access.
 - **user_roles**: RBAC roles (`admin`, `moderator`, `user`) for privileged access.
 - **linkedin_connections**: OAuth tokens and profile info for connected LinkedIn accounts (with expiry).
 - **linkedin_oauth_states**: CSRF state tokens for the LinkedIn OAuth flow.
@@ -127,6 +159,12 @@ social-sync-connect/
 - **publish_scheduled_post**: Scheduler RPC invoked by the public scheduler route.
 
 # Recent Changes
+
+## 2026-09-12
+- **Workspace Migration**: Removed projects table; added `workspace_id` to drafts for workspace-based organization. Fixed workspace member insert RLS policy. New migrations: `20260912000000_remove_projects_add_workspace_to_drafts.sql`, `20260908182800_fix_workspace_member_insert_rls.sql`.
+
+## 2026-08-23
+- **Daily Credits Cron**: Added daily credit allowance cron job migration (`20260823000000_daily_credits_cron.sql`).
 
 ## 2026-08-22
 - **AI Provider Abstraction**: Added `ai-provider.server.ts` supporting both OpenAI-compatible (default `gpt-5.6`) and Google Gemini (default `gemini-2.5-flash`) providers via `AI_PROVIDER` env var. Refactored `api.generate.ts` to stream SSE responses, support image inputs (up to 4), and refund credits on provider errors. Added `docs/ai-providers.md` documenting configuration.
