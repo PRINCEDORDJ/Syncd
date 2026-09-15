@@ -1,4 +1,4 @@
-﻿import {
+import {
   createContext,
   useCallback,
   useContext,
@@ -98,6 +98,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
     void (async () => {
+      // Sync Google OAuth avatar/name to profile if needed
+      await syncUserProfileMetadata(session.user);
+
       try {
         const ctx = await loadPostSignupContext();
         if (!cancelled) setOnboarding(ctx);
@@ -133,6 +136,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export async function syncUserProfileMetadata(user: User): Promise<void> {
+  const meta = user.user_metadata;
+  if (!meta) return;
+
+  const avatarUrl =
+    (meta.avatar_url as string | undefined) ||
+    (meta.picture as string | undefined) ||
+    null;
+  const displayName =
+    (meta.display_name as string | undefined) ||
+    (meta.full_name as string | undefined) ||
+    (meta.name as string | undefined) ||
+    null;
+
+  if (!avatarUrl && !displayName) return;
+
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("avatar_url, display_name")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const updates: { user_id: string; avatar_url?: string | null; display_name?: string | null } = {
+      user_id: user.id,
+    };
+    let needsUpdate = false;
+
+    if (!profile) {
+      updates.display_name = displayName || user.email?.split("@")[0] || "User";
+      if (avatarUrl) updates.avatar_url = avatarUrl;
+      needsUpdate = true;
+    } else {
+      if (!profile.avatar_url && avatarUrl) {
+        updates.avatar_url = avatarUrl;
+        needsUpdate = true;
+      }
+      if (!profile.display_name && displayName) {
+        updates.display_name = displayName;
+        needsUpdate = true;
+      }
+    }
+
+    if (needsUpdate) {
+      await supabase.from("profiles").upsert(updates, { onConflict: "user_id" });
+    }
+  } catch {
+    // Non-blocking sync safeguard
+  }
 }
 
 export function useAuth() {

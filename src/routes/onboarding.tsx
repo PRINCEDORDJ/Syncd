@@ -42,7 +42,12 @@ function OnboardingRoute() {
 
   useEffect(() => {
     if (!workspaceName && user) {
-      const fallback = user.user_metadata?.display_name || user.email?.split("@")[0] || "My workspace";
+      const fallback =
+        user.user_metadata?.display_name ||
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.email?.split("@")[0] ||
+        "My workspace";
       setWorkspaceName(`${fallback}'s workspace`);
     }
   }, [user, workspaceName]);

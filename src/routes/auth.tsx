@@ -1,7 +1,7 @@
-﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { useAuth } from "@/lib/auth";
+import { useAuth, syncUserProfileMetadata } from "@/lib/auth";
 import { BrandMark } from "@/components/BrandMark";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +28,7 @@ function AuthCallback() {
   useEffect(() => {
     if (loading) return;
     if (user) {
+      void syncUserProfileMetadata(user);
       const needsOnboarding = onboarding?.onboarding_status === "pending";
       const dest = needsOnboarding
         ? "/onboarding"
