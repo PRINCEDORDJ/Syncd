@@ -161,13 +161,14 @@ async function handleEvent(event: PolarWebhookEvent): Promise<PolarWebhookResult
     const subscriptionId = (data.id as string | undefined) ?? null;
     const cancelAtPeriodEnd = Boolean(data.cancel_at_period_end);
 
-    // Detect plan changes so we can apply grants/caps atomically.
+    // Detect plan changes and period renewals so we can apply grants/caps atomically.
     const { data: existing } = await supabaseAdmin
       .from("subscriptions")
-      .select("plan")
+      .select("plan, current_period_end, status")
       .eq("user_id", userId)
       .maybeSingle();
     const oldPlan = (existing?.plan as PlanTier | null) ?? "trial";
+    const oldPeriodEnd = existing?.current_period_end ?? null;
 
     await supabaseAdmin.from("subscriptions").upsert(
       {
@@ -191,19 +192,28 @@ async function handleEvent(event: PolarWebhookEvent): Promise<PolarWebhookResult
         _old_plan: oldPlan,
       });
     } else if ((status === "active" || status === "trialing") && plan !== "trial") {
-      // Same plan, active renewal: refresh monthly allocation.
-      const amount = PLAN_LIMITS[plan].monthlyCredits;
-      await supabaseAdmin.rpc("grant_subscription_credits", {
-        _user_id: userId,
-        _amount: amount,
-        _reason: `${plan} plan (${type})`,
-      });
+      // Refresh monthly allocation ONLY on true renewals or initial activation
+      const isPeriodRenewal = Boolean(
+        currentPeriodEnd &&
+          oldPeriodEnd &&
+          new Date(currentPeriodEnd).getTime() > new Date(oldPeriodEnd).getTime(),
+      );
+      const isInitialActivation = existing?.status !== "active" && status === "active";
+
+      if (isPeriodRenewal || isInitialActivation) {
+        const amount = PLAN_LIMITS[plan].monthlyCredits;
+        await supabaseAdmin.rpc("grant_subscription_credits", {
+          _user_id: userId,
+          _amount: amount,
+          _reason: `${plan} plan (${type})`,
+        });
+      }
     }
     return { eventId, outcome: "handled", userId };
   }
 
-  if (type === "order.paid" || type === "order.created") {
-    // One-time top-up purchase. Subscription products may also emit order events.
+  if (type === "order.paid") {
+    // One-time top-up purchase (confirmed paid).
     const productId =
       (data.product_id as string | undefined) ??
       (data.product as Record<string, unknown> | undefined)?.id?.toString() ??

@@ -84,6 +84,18 @@ function SettingsPage() {
   const [conn, setConn] = useState<LinkedInConnection | null>(null);
   const [sub, setSub] = useState<SubscriptionRow | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  const isStatusActive =
+    sub?.status === "active" ||
+    (sub?.status === "trialing" && (!sub?.trial_end || new Date(sub.trial_end) > new Date()));
+  const notExpired = !sub?.current_period_end || new Date(sub.current_period_end) > new Date();
+  const effectivePlan: PlanTier = isAdmin
+    ? "teams"
+    : (isStatusActive && notExpired ? (sub?.plan ?? "trial") : "trial");
+  const effectiveStatus = isAdmin
+    ? "active"
+    : (isStatusActive && notExpired ? (sub?.status ?? "trialing") : (sub?.status ?? "expired"));
+
   const [openingPortal, setOpeningPortal] = useState(false);
   const [billingMsg, setBillingMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -319,6 +331,10 @@ function SettingsPage() {
 
   async function createTeam() {
     if (!user) return;
+    if (!isAdmin && effectivePlan !== "teams") {
+      setTeamMsg("Creating teams and inviting members requires the Teams plan.");
+      return;
+    }
     setTeamMsg(null);
     const { data, error } = await supabase
       .from("teams")
@@ -335,6 +351,10 @@ function SettingsPage() {
 
   async function inviteMember() {
     if (!user || !team) return;
+    if (!isAdmin && effectivePlan !== "teams") {
+      setTeamMsg("Inviting team members requires the Teams plan.");
+      return;
+    }
     const email = inviteEmail.trim().toLowerCase();
     if (!/^\S+@\S+\.\S+$/.test(email)) {
       setTeamMsg("Enter a valid email address.");
@@ -821,6 +841,12 @@ function SettingsPage() {
             hint="Free-text notes the AI will read before every generation. Hedge words you avoid, examples you reuse, your point of view."
           >
             <div className="flex flex-col gap-2">
+              {!isAdmin && effectivePlan === "trial" && (
+                <div className="flex items-center justify-between gap-3 p-3 rounded-md border border-border bg-subtle text-[12px] text-muted-foreground">
+                  <span>Voice mapping is a Studio & Teams feature. Upgrade to have the AI match your unique voice on every generation.</span>
+                  <Link to="/pricing" className="underline font-medium text-ink shrink-0">Upgrade</Link>
+                </div>
+              )}
               <textarea
                 value={voiceNotes}
                 onChange={(e) => setVoiceNotes(e.target.value)}
@@ -968,8 +994,6 @@ function SettingsPage() {
             </div>
           )}
           {(() => {
-            const effectivePlan: PlanTier = isAdmin ? "teams" : (sub?.plan ?? "trial");
-            const effectiveStatus = isAdmin ? "active" : (sub?.status ?? "trialing");
             const monthlyLimit = PLAN_LIMITS[effectivePlan].monthlyCredits;
             const linkedInMax = PLAN_LIMITS[effectivePlan].maxLinkedInAccounts;
             const subCredits = isAdmin ? Infinity : (credits?.subscription ?? 0);
@@ -1025,7 +1049,7 @@ function SettingsPage() {
           })()}
 
           <PlanTiers
-            currentPlan={isAdmin ? "teams" : (sub?.plan ?? "trial")}
+            currentPlan={effectivePlan}
             isAdmin={isAdmin}
             loadingPlan={checkoutPlan}
             billingInterval={billingInterval}
@@ -1034,7 +1058,7 @@ function SettingsPage() {
             onSelect={startCheckout}
           />
 
-          {!isAdmin && (sub?.plan === "studio" || sub?.plan === "teams") && (
+          {!isAdmin && (effectivePlan === "studio" || effectivePlan === "teams") && (
             <div className="mt-6">
               <div className="mb-3 flex items-baseline justify-between">
                 <h3 className="text-[13px] font-semibold text-ink">Credit top-ups</h3>
@@ -1077,7 +1101,22 @@ function SettingsPage() {
               title="Team"
               subtitle="Invite up to 5 teammates to share this workspace's drafts."
             >
-              {!team ? (
+              {!isAdmin && effectivePlan !== "teams" ? (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border border-border rounded-md bg-subtle/40">
+                  <div>
+                    <div className="text-[14px] font-medium text-ink">Teams plan required</div>
+                    <div className="text-[12px] text-muted-foreground mt-0.5">
+                      Creating a team and inviting collaborators requires the Teams plan.
+                    </div>
+                  </div>
+                  <Link
+                    to="/pricing"
+                    className="h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium inline-flex items-center justify-center hover:bg-ink/90 shrink-0"
+                  >
+                    Upgrade to Teams
+                  </Link>
+                </div>
+              ) : !team ? (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border border-border rounded-md bg-subtle/40">
                   <div>
                     <div className="text-[14px] font-medium text-ink">No team yet</div>

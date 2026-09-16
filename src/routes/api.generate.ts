@@ -6,6 +6,7 @@ import {
   createAiTextStream,
   type AiImageInput,
 } from "@/lib/ai-provider.server";
+import { PLAN_LIMITS, type PlanTier } from "@/lib/plans";
 
 const SYSTEM_PROMPT_POST = `You are Syncd, an expert AI LinkedIn writing assistant and post generator.
 
@@ -66,10 +67,14 @@ function jsonResponse(body: Record<string, unknown>, status: number) {
   });
 }
 
-async function refundCredit(userId: string) {
+async function refundCredit(
+  userId: string,
+  creditType: "subscription" | "topup" | "auto" = "auto",
+) {
   const { error } = await supabaseAdmin.rpc("refund_credit", {
     _user_id: userId,
     _reason: "ai_provider_error",
+    _credit_type: creditType,
   });
   if (error) console.error("[generate] refund_credit failed", error);
 }
@@ -79,7 +84,11 @@ function providerErrorMessage(error: unknown): string {
   return "The AI provider is unavailable. Please try again.";
 }
 
-function toSseStream(textStream: AsyncIterable<string>, userId: string) {
+function toSseStream(
+  textStream: AsyncIterable<string>,
+  userId: string,
+  creditType: "subscription" | "topup" | "auto" = "auto",
+) {
   const encoder = new TextEncoder();
 
   return new ReadableStream<Uint8Array>({
@@ -96,7 +105,7 @@ function toSseStream(textStream: AsyncIterable<string>, userId: string) {
         controller.close();
       } catch (error) {
         console.error("[generate] AI stream failed", error);
-        await refundCredit(userId);
+        await refundCredit(userId, creditType);
         controller.enqueue(
           encoder.encode(
             `data: ${JSON.stringify({ error: providerErrorMessage(error) })}\n\n`,
@@ -126,32 +135,7 @@ export const Route = createFileRoute("/api/generate")({
         }
         const userId = userData.user.id;
 
-        const { data: prof } = await supabaseAdmin
-          .from("profiles")
-          .select("voice_notes")
-          .eq("user_id", userId)
-          .maybeSingle();
-        const voiceNotes = (prof?.voice_notes ?? "").trim();
-
-        const { data: creditRes, error: creditErr } = await supabaseAdmin.rpc(
-          "consume_credit",
-          { _user_id: userId },
-        );
-        if (creditErr) {
-          console.error("[generate] consume_credit failed", creditErr);
-          return jsonResponse({ error: "Could not verify your credit balance." }, 500);
-        }
-        const credit: any = creditRes as { success?: boolean; reason?: string } | null;
-        if (!credit?.success) {
-          const message =
-            credit.reason === "daily_limit_reached"
-              ? "You've hit today's 5-generation cap on the Free plan. Come back tomorrow or upgrade to Studio."
-              : credit.reason === "no_credits"
-                ? "You're out of credits. Upgrade or buy a top-up pack to keep generating."
-                : "You don't have enough credits for this generation.";
-          return jsonResponse({ error: message, code: "NO_CREDITS" }, 402);
-        }
-
+        // 1. Validate request payload BEFORE charging any credits
         let body: unknown;
         try {
           body = await request.json();
@@ -177,6 +161,51 @@ export const Route = createFileRoute("/api/generate")({
             400,
           );
         }
+
+        // 2. Resolve plan and check feature gating (voice notes require Studio or Teams)
+        const [planRes, profRes] = await Promise.all([
+          supabaseAdmin.rpc("get_user_plan", { _user_id: userId }),
+          supabaseAdmin
+            .from("profiles")
+            .select("voice_notes")
+            .eq("user_id", userId)
+            .maybeSingle(),
+        ]);
+        const userPlan = (planRes.data as PlanTier | null) ?? "trial";
+        const allowsVoiceMapping = PLAN_LIMITS[userPlan]?.voiceMapping ?? false;
+        const rawVoiceNotes = (profRes.data?.voice_notes ?? "").trim();
+        const voiceNotes = allowsVoiceMapping ? rawVoiceNotes : "";
+
+        // 3. Deduct credit
+        const { data: creditRes, error: creditErr } = await supabaseAdmin.rpc(
+          "consume_credit",
+          { _user_id: userId },
+        );
+        if (creditErr) {
+          console.error("[generate] consume_credit failed", creditErr);
+          return jsonResponse({ error: "Could not verify your credit balance." }, 500);
+        }
+        const credit = creditRes as {
+          success?: boolean;
+          reason?: string;
+          source?: string;
+        } | null;
+        if (!credit?.success) {
+          const message =
+            credit?.reason === "daily_limit_reached"
+              ? "You've hit today's 5-generation cap on the Free plan. Come back tomorrow or upgrade to Studio."
+              : credit?.reason === "no_credits"
+                ? "You're out of credits. Upgrade or buy a top-up pack to keep generating."
+                : "You don't have enough credits for this generation.";
+          return jsonResponse({ error: message, code: "NO_CREDITS" }, 402);
+        }
+        const creditSource = (
+          credit?.source === "topup"
+            ? "topup"
+            : credit?.source === "subscription"
+              ? "subscription"
+              : "auto"
+        ) as "subscription" | "topup" | "auto";
 
         const isAssistantMode = mode === "assistant";
         const systemPrompt = isAssistantMode ? SYSTEM_PROMPT_ASSISTANT : SYSTEM_PROMPT_POST;
@@ -219,11 +248,11 @@ Write the LinkedIn post now.`;
           });
         } catch (error) {
           console.error("[generate] AI provider request failed", error);
-          await refundCredit(userId);
+          await refundCredit(userId, creditSource);
           return jsonResponse({ error: providerErrorMessage(error) }, 502);
         }
 
-        return new Response(toSseStream(textStream, userId), {
+        return new Response(toSseStream(textStream, userId, creditSource), {
           headers: {
             "Content-Type": "text/event-stream",
             "Cache-Control": "no-cache",

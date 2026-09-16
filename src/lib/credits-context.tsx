@@ -49,7 +49,7 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
         const [creditsRes, sub] = await Promise.all([
           supabase
             .from("user_credits")
-            .select("subscription_credits, topup_credits, daily_credits_used")
+            .select("subscription_credits, topup_credits, daily_credits_used, last_daily_reset")
             .eq("user_id", user!.id)
             .maybeSingle(),
           getMySubscription().catch(() => null),
@@ -61,9 +61,11 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
         const isAdmin = sub?.isAdmin ?? false;
         const limits = PLAN_LIMITS[plan];
         const row = creditsRes.data;
+        const todayUtc = new Date().toISOString().slice(0, 10);
+        const isSameDay = !row?.last_daily_reset || row.last_daily_reset === todayUtc;
         const subscriptionCredits = row?.subscription_credits ?? limits.monthlyCredits;
         const topupCredits = row?.topup_credits ?? 0;
-        const dailyCreditsUsed = row?.daily_credits_used ?? 0;
+        const dailyCreditsUsed = isSameDay ? (row?.daily_credits_used ?? 0) : 0;
         setState({
           subscriptionCredits,
           topupCredits,
@@ -98,13 +100,18 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
             subscription_credits?: number;
             topup_credits?: number;
             daily_credits_used?: number;
+            last_daily_reset?: string;
           } | null;
           if (!row) return;
+          const todayUtc = new Date().toISOString().slice(0, 10);
+          const isSameDay = !row.last_daily_reset || row.last_daily_reset === todayUtc;
           setState((s) => ({
             ...s,
             subscriptionCredits: row.subscription_credits ?? s.subscriptionCredits,
             topupCredits: row.topup_credits ?? s.topupCredits,
-            dailyCreditsUsed: row.daily_credits_used ?? s.dailyCreditsUsed,
+            dailyCreditsUsed: isSameDay
+              ? (row.daily_credits_used ?? s.dailyCreditsUsed)
+              : 0,
             totalRemaining:
               (row.subscription_credits ?? s.subscriptionCredits) +
               (row.topup_credits ?? s.topupCredits),
