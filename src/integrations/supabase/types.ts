@@ -1031,7 +1031,7 @@ export type Database = {
         Returns: boolean
       }
       refund_credit: {
-        Args: { _reason?: string; _user_id: string }
+        Args: { _credit_type?: string; _reason?: string; _user_id: string }
         Returns: undefined
       }
       reset_daily_credits: { Args: never; Returns: undefined }

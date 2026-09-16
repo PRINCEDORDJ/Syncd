@@ -18,6 +18,8 @@ import { formatBytes, MAX_IMAGES, MAX_ATTACHMENTS } from "@/lib/image-validation
 import type { AttachmentItem } from "@/lib/image-validation";
 import { supabase } from "@/integrations/supabase/client";
 import { SchedulePicker } from "@/components/SchedulePicker";
+import { useCredits } from "@/hooks/useCredits";
+import { PLAN_LIMITS } from "@/lib/plans";
 
 function attachmentIcon(name: string, type: string) {
   const lower = name.toLowerCase();
@@ -63,6 +65,8 @@ export function Canvas() {
   const navigate = useNavigate();
   const [showScheduler, setShowScheduler] = useState(false);
   const [scheduling, setScheduling] = useState(false);
+  const credits = useCredits();
+  const allowsScheduling = credits.isAdmin || PLAN_LIMITS[credits.plan]?.scheduling;
 
   async function handleDelete() {
     if (!draftId) return;
@@ -72,12 +76,17 @@ export function Canvas() {
 
   async function handleSchedule(iso: string) {
     if (!draftId) return;
+    if (!allowsScheduling) {
+      setError("Post scheduling requires the Studio or Teams plan. Upgrade in Settings → Billing.");
+      setShowScheduler(false);
+      return;
+    }
     setScheduling(true);
     const { error: err } = await supabase
         .from("drafts")
         .update({
           scheduled_at: iso,
-          schedule_status: "pending",
+          schedule_status: "scheduled",
         })
         .eq("id", draftId);
     if (err) setError(err.message);
@@ -392,10 +401,27 @@ export function Canvas() {
 
       {showScheduler && draftId && (
         <div className="px-5 py-4 border-t border-border bg-card">
-           <SchedulePicker
-             submitting={scheduling}
-             onSchedule={handleSchedule}
-           />
+          {!allowsScheduling ? (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 rounded-md border border-border bg-subtle text-[13px]">
+              <div>
+                <div className="font-medium text-ink">Post scheduling is a Studio feature</div>
+                <div className="text-muted-foreground text-[12px] mt-0.5">
+                  Upgrade your plan to schedule drafts directly to LinkedIn.
+                </div>
+              </div>
+              <Link
+                to="/pricing"
+                className="h-8 px-3 rounded-md bg-ink text-surface text-[12px] font-medium inline-flex items-center justify-center hover:bg-ink/90 shrink-0"
+              >
+                Upgrade to Studio
+              </Link>
+            </div>
+          ) : (
+            <SchedulePicker
+              submitting={scheduling}
+              onSchedule={handleSchedule}
+            />
+          )}
         </div>
       )}
 

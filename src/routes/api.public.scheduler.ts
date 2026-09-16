@@ -26,7 +26,7 @@ export const Route = createFileRoute("/api/public/scheduler")({
         const { data: due, error } = await supabaseAdmin
           .from("drafts")
           .select("id, user_id, content, images")
-          .eq("schedule_status", "scheduled")
+          .in("schedule_status", ["scheduled", "pending"])
           .lte("scheduled_at", nowIso)
           .limit(20);
 

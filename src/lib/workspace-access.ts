@@ -83,15 +83,32 @@ export async function getUserPlanAndLimits(userId: string): Promise<{
   isAdmin: boolean;
 }> {
   const [subRes, rolesRes] = await Promise.all([
-    supabase.from("subscriptions").select("plan").eq("user_id", userId).maybeSingle(),
+    supabase
+      .from("subscriptions")
+      .select("plan, status, current_period_end, trial_end")
+      .eq("user_id", userId)
+      .maybeSingle(),
     supabase.from("user_roles").select("role").eq("user_id", userId),
   ] as const);
 
   const isAdmin = !!rolesRes.data?.some((r) => r.role === "admin");
-  const plan: PlanTier = (subRes.data?.plan as PlanTier) || "trial";
-  const limits = isAdmin ? PLAN_LIMITS.teams : PLAN_LIMITS[plan];
+  const sub = subRes.data;
 
-  return { plan, limits, isAdmin };
+  let effectivePlan: PlanTier = "trial";
+  if (isAdmin) {
+    effectivePlan = "teams";
+  } else if (sub) {
+    const isStatusActive =
+      sub.status === "active" ||
+      (sub.status === "trialing" && (!sub.trial_end || new Date(sub.trial_end) > new Date()));
+    const notExpired = !sub.current_period_end || new Date(sub.current_period_end) > new Date();
+    if (isStatusActive && notExpired) {
+      effectivePlan = (sub.plan as PlanTier) || "trial";
+    }
+  }
+
+  const limits = isAdmin ? PLAN_LIMITS.teams : PLAN_LIMITS[effectivePlan];
+  return { plan: effectivePlan, limits, isAdmin };
 }
 
 /**

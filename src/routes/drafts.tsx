@@ -19,6 +19,8 @@ import {
   MAX_ATTACHMENTS,
 } from "@/lib/image-validation";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useCredits } from "@/hooks/useCredits";
+import { PLAN_LIMITS } from "@/lib/plans";
 
 type DraftAttachment = {
   name: string;
@@ -79,6 +81,8 @@ function DraftsGate() {
 
 function DraftsList() {
   const { user } = useAuth();
+  const credits = useCredits();
+  const allowsScheduling = credits.isAdmin || PLAN_LIMITS[credits.plan]?.scheduling;
   const [rows, setRows] = useState<DraftRow[] | null>(null);
   const [filter, setFilter] = useState<"all" | "published" | "drafts">("all");
   const [error, setError] = useState<string | null>(null);
@@ -232,6 +236,9 @@ function DraftsList() {
       const nextTitle = modalTitle.trim();
       const nextContent = modalContent;
       const nextCharCount = nextContent.length;
+      const mediaBytes =
+        modalImages.reduce((s, u) => s + dataUrlByteSize(u), 0) +
+        modalAttachments.reduce((s, a) => s + (a.size || dataUrlByteSize(a.dataUrl || "")), 0);
       const { error: err } = await supabase
         .from("drafts")
         .update({
@@ -240,6 +247,7 @@ function DraftsList() {
           char_count: nextCharCount,
           images: modalImages,
           attachments: modalAttachments as any,
+          media_bytes: mediaBytes,
         })
         .eq("id", selected.id)
         .eq("user_id", user.id);
@@ -422,19 +430,28 @@ function DraftsList() {
 
   async function scheduleDraft(row: DraftRow, iso: string) {
     if (!user) return;
+    if (!allowsScheduling) {
+      setPublishMsg("Post scheduling requires the Studio or Teams plan. Upgrade in Settings → Billing.");
+      setShowScheduler(false);
+      return;
+    }
     setScheduling(true);
     setPublishMsg(null);
     try {
+      const mediaBytes =
+        modalImages.reduce((s, u) => s + dataUrlByteSize(u), 0) +
+        modalAttachments.reduce((s, a) => s + (a.size || dataUrlByteSize(a.dataUrl || "")), 0);
       const { error: err } = await supabase
         .from("drafts")
         .update({
           scheduled_at: iso,
-          schedule_status: "pending",
+          schedule_status: "scheduled",
           title: modalTitle.trim() || row.title,
           content: modalContent,
           char_count: modalContent.length,
           images: modalImages,
           attachments: modalAttachments as unknown as never,
+          media_bytes: mediaBytes,
         })
         .eq("id", row.id)
         .eq("user_id", user.id);
@@ -446,7 +463,7 @@ function DraftsList() {
         prev
           ? prev.map((r) =>
             r.id === row.id
-              ? { ...r, scheduled_at: iso, schedule_status: "pending" }
+              ? { ...r, scheduled_at: iso, schedule_status: "scheduled", media_bytes: mediaBytes }
               : r,
           )
           : prev,
@@ -556,7 +573,7 @@ function DraftsList() {
                         {r.title || "Untitled draft"}
                       </h2>
                       <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground flex-wrap">
-                        {r.scheduled_at && r.schedule_status === "pending" ? (
+                        {r.scheduled_at && (r.schedule_status === "scheduled" || r.schedule_status === "pending") ? (
                           <span className="px-1.5 py-0.5 rounded border bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 inline-flex items-center gap-1">
                             <Clock className="size-3" />
                             Scheduled

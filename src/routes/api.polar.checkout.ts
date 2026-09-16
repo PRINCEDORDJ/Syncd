@@ -54,6 +54,19 @@ export const Route = createFileRoute("/api/polar/checkout")({
         if (typeof plan !== "string" || !(plan in productMap)) {
           return json({ error: "Invalid plan." }, 400);
         }
+
+        if (plan.startsWith("topup_")) {
+          const { data: userPlan } = await supabaseAdmin.rpc("get_user_plan", {
+            _user_id: user.id,
+          });
+          if (userPlan !== "studio" && userPlan !== "teams") {
+            return json(
+              { error: "Credit top-ups are available on Studio and Teams plans only." },
+              403,
+            );
+          }
+        }
+
         const productId = productMap[plan];
         if (!productId) {
           return json({ error: `Product for "${plan}" is not configured.` }, 500);
