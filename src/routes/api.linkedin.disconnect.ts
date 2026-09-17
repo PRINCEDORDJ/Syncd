@@ -23,21 +23,42 @@ export const Route = createFileRoute("/api/linkedin/disconnect")({
         if (error || !data.user) {
           return jsonResponse({ error: "Not authenticated." }, 401);
         }
+        const userId = data.user.id;
 
-        // Fetch the connection first to get the token for revocation
-        const { data: conn } = await supabaseAdmin
+        let body: { connection_id?: string } = {};
+        try {
+          body = (await request.json()) as { connection_id?: string };
+        } catch {
+          // empty body is fine
+        }
+
+        const connectionId = body.connection_id;
+
+        // Build query — disconnect specific connection or all for this user
+        let query = supabaseAdmin
           .from("linkedin_connections")
-          .select("access_token")
-          .eq("user_id", data.user.id)
-          .maybeSingle();
+          .select("id, access_token")
+          .eq("user_id", userId);
 
-        if (conn?.access_token) {
-          const clientId = process.env.LINKEDIN_CLIENT_ID;
-          const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
+        if (connectionId) {
+          query = query.eq("id", connectionId);
+        }
 
-          if (clientId && clientSecret) {
+        const { data: conns, error: fetchErr } = await query;
+        if (fetchErr) {
+          return jsonResponse({ error: fetchErr.message }, 500);
+        }
+        if (!conns || conns.length === 0) {
+          return jsonResponse({ error: "No matching connection found." }, 404);
+        }
+
+        const clientId = process.env.LINKEDIN_CLIENT_ID;
+        const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
+
+        // Best-effort revoke each token with LinkedIn
+        for (const conn of conns) {
+          if (conn.access_token && clientId && clientSecret) {
             try {
-              // Revoke token with LinkedIn (best effort)
               await fetch("https://www.linkedin.com/oauth/v2/revoke", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -49,20 +70,26 @@ export const Route = createFileRoute("/api/linkedin/disconnect")({
               });
             } catch (revokeErr) {
               console.error("[linkedin/disconnect] revocation failed", revokeErr);
-              // We continue even if revocation fails to ensure local cleanup
             }
           }
         }
 
-        const { error: delErr } = await supabaseAdmin
+        // Delete the connection(s)
+        let deleteQuery = supabaseAdmin
           .from("linkedin_connections")
           .delete()
-          .eq("user_id", data.user.id);
+          .eq("user_id", userId);
 
+        if (connectionId) {
+          deleteQuery = deleteQuery.eq("id", connectionId);
+        }
+
+        const { error: delErr } = await deleteQuery;
         if (delErr) {
           return jsonResponse({ error: delErr.message }, 500);
         }
-        return jsonResponse({ success: true });
+
+        return jsonResponse({ success: true, disconnected: conns.length });
       },
     },
   },

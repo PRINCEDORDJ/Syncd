@@ -37,10 +37,60 @@ export const Badge = (props: React.ComponentProps<typeof UIBadge>) => (
 
 // Eyebrow Label
 export const Eyebrow = ({ className, children, ...props }: React.HTMLAttributes<HTMLSpanElement>) => (
-  <span 
-    className={cn("text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em]", className)} 
+  <span
+    className={cn("text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em]", className)}
     {...props}
   >
     {children}
   </span>
 );
+
+// Section wrapper — card-like container with title, subtitle, optional danger tone
+export function Section({
+  title,
+  subtitle,
+  tone = "default",
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  tone?: "default" | "danger";
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      className={`mb-8 rounded-xl border bg-card overflow-hidden ${
+        tone === "danger" ? "border-destructive/30" : "border-border"
+      }`}
+    >
+      <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-border">
+        <h2 className="text-[15px] font-semibold tracking-tight text-ink">{title}</h2>
+        {subtitle && (
+          <p className="text-[13px] text-muted-foreground mt-1">{subtitle}</p>
+        )}
+      </div>
+      <div className="px-4 sm:px-6 py-4 sm:py-5 flex flex-col gap-4">{children}</div>
+    </section>
+  );
+}
+
+// Field — label + hint + children form field wrapper
+export function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.12em]">
+        {label}
+      </span>
+      {children}
+      {hint && <span className="text-[12px] text-muted-foreground">{hint}</span>}
+    </label>
+  );
+}

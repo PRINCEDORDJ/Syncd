@@ -1,23 +1,20 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { createUniqueChannel } from "@/lib/realtime";
 import { SidebarShell } from "@/components/workspace/SidebarShell";
-import {
-  PLAN_LABELS,
-  PLAN_LIMITS,
-  TOPUP_PACKS,
-  type CheckoutPlan,
-  type PlanTier,
-} from "@/lib/plans";
-import { uploadAvatar as uploadAvatarFn, removeAvatar as removeAvatarFn } from "@/lib/avatar-upload";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { type PlanTier } from "@/lib/plans";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { WorkspacesSettingsPanel } from "@/components/settings/WorkspacesSettingsPanel";
+import { ProfileSettingsPanel } from "@/components/settings/ProfileSettingsPanel";
+import { LinkedInSettingsPanel } from "@/components/settings/LinkedInSettingsPanel";
+import { BillingSettingsPanel } from "@/components/settings/BillingSettingsPanel";
+import { TeamsSettingsPanel } from "@/components/settings/TeamsSettingsPanel";
+import { AccountSettingsPanel } from "@/components/settings/AccountSettingsPanel";
+import { DangerSettingsPanel } from "@/components/settings/DangerSettingsPanel";
+import { SettingsSkeleton } from "@/components/skeletons/SettingsSkeleton";
 
 export const Route = createFileRoute("/settings")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -36,7 +33,14 @@ export const Route = createFileRoute("/settings")({
   component: SettingsGate,
 });
 
-import { SettingsSkeleton } from "@/components/skeletons/SettingsSkeleton";
+interface SubscriptionRow {
+  plan: PlanTier;
+  status: string;
+  trial_end: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  polar_customer_id: string | null;
+}
 
 function SettingsGate() {
   const { user, loading } = useAuth();
@@ -52,38 +56,24 @@ function SettingsGate() {
   return <SettingsPage />;
 }
 
-interface Profile {
-  display_name: string | null;
-  avatar_url: string | null;
-  voice_notes: string | null;
-}
-
-interface LinkedInConnection {
-  linkedin_name: string | null;
-  linkedin_picture_url: string | null;
-  linkedin_member_urn: string;
-  expires_at: string;
-  scope: string | null;
-}
-
-interface SubscriptionRow {
-  plan: PlanTier;
-  status: string;
-  trial_end: string | null;
-  current_period_end: string | null;
-  cancel_at_period_end: boolean;
-  polar_customer_id: string | null;
-}
-
 function SettingsPage() {
-  const { user, session, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const search = Route.useSearch();
 
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [conn, setConn] = useState<LinkedInConnection | null>(null);
   const [sub, setSub] = useState<SubscriptionRow | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [linkedInBanner, setLinkedInBanner] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [credits, setCredits] = useState<{
+    subscription: number;
+    topup: number;
+    dailyUsed: number;
+  } | null>(null);
+  const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
 
   const isStatusActive =
     sub?.status === "active" ||
@@ -96,65 +86,7 @@ function SettingsPage() {
     ? "active"
     : (isStatusActive && notExpired ? (sub?.status ?? "trialing") : (sub?.status ?? "expired"));
 
-  const [openingPortal, setOpeningPortal] = useState(false);
-  const [billingMsg, setBillingMsg] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Editable form state
-  const [displayName, setDisplayName] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [voiceNotes, setVoiceNotes] = useState("");
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [profileMsg, setProfileMsg] = useState<string | null>(null);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
-  const [viewerOpen, setViewerOpen] = useState(false);
-  const avatarFileRef = useRef<HTMLInputElement>(null);
-
-  // Voice notes dictation
-  const [recording, setRecording] = useState(false);
-  const [voiceMsg, setVoiceMsg] = useState<string | null>(null);
-  const recognitionRef = useRef<any>(null);
-
-  // Account
-  const [newPassword, setNewPassword] = useState("");
-  const [savingPassword, setSavingPassword] = useState(false);
-  const [pwMsg, setPwMsg] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState("");
-
-  // LinkedIn flow
-  const [connectingLinkedIn, setConnectingLinkedIn] = useState(false);
-  const [disconnectingLinkedIn, setDisconnectingLinkedIn] = useState(false);
-  const [checkoutPlan, setCheckoutPlan] = useState<"studio" | "teams" | null>(null);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const [checkoutBusy, setCheckoutBusy] = useState<CheckoutPlan | null>(null);
-  const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
-  const [credits, setCredits] = useState<{
-    subscription: number;
-    topup: number;
-    dailyUsed: number;
-  } | null>(null);
-
-  // Team state
-  const [team, setTeam] = useState<{ id: string; name: string; owner_id: string } | null>(null);
-  const [teamMembers, setTeamMembers] = useState<
-    Array<{ id: string; email: string; role: string; accepted_at: string | null; user_id: string | null }>
-  >([]);
-  const [teamMsg, setTeamMsg] = useState<string | null>(null);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviting, setInviting] = useState(false);
-  const [linkedInBanner, setLinkedInBanner] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-
-  // Confirmation dialogs
-  const [confirmRemoveAvatar, setConfirmRemoveAvatar] = useState(false);
-  const [confirmDisconnectLI, setConfirmDisconnectLI] = useState(false);
-  const [confirmSignOut, setConfirmSignOut] = useState(false);
-  const [confirmWipe, setConfirmWipe] = useState(false);
-
+  // Handle OAuth/billing redirect banners
   useEffect(() => {
     if (search.linkedin_connected === "1") {
       setLinkedInBanner({ type: "success", text: "LinkedIn connected successfully." });
@@ -165,27 +97,19 @@ function SettingsPage() {
       });
     }
     if (search.billing === "success") {
-      setBillingMsg(
-        "Payment received — your subscription will activate within a few seconds.",
-      );
+      setLinkedInBanner({
+        type: "success",
+        text: "Payment received — your subscription will activate within a few seconds.",
+      });
     }
   }, [search.linkedin_connected, search.linkedin_error, search.billing]);
 
+  // Load subscription, roles, and credits
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     (async () => {
-      const [{ data: prof }, { data: linkedin }, { data: subRow }, { data: roles }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("display_name, avatar_url, voice_notes")
-          .eq("user_id", user.id)
-          .maybeSingle(),
-        supabase
-          .from("linkedin_connections")
-          .select("linkedin_name, linkedin_picture_url, linkedin_member_urn, expires_at, scope")
-          .eq("user_id", user.id)
-          .maybeSingle(),
+      const [{ data: subRow }, { data: roles }] = await Promise.all([
         supabase
           .from("subscriptions")
           .select(
@@ -198,76 +122,38 @@ function SettingsPage() {
           .select("role")
           .eq("user_id", user.id),
       ]);
-      const metaAvatar =
-        (user.user_metadata?.avatar_url as string | undefined) ||
-        (user.user_metadata?.picture as string | undefined) ||
-        null;
-      const metaName =
-        (user.user_metadata?.display_name as string | undefined) ||
-        (user.user_metadata?.full_name as string | undefined) ||
-        (user.user_metadata?.name as string | undefined) ||
-        "";
-
-      const p = prof ?? { display_name: null, avatar_url: null, voice_notes: null };
-      setProfile(p);
-      setDisplayName(p.display_name ?? metaName);
-      setAvatarUrl(p.avatar_url ?? metaAvatar ?? "");
-      setVoiceNotes(p.voice_notes ?? "");
-      const isExpired = linkedin && new Date(linkedin.expires_at).getTime() <= Date.now();
-      if (isExpired) {
-        setConn(null);
-        setLinkedInBanner({
-          type: "error",
-          text: "Your LinkedIn connection expired. Please reconnect.",
-        });
-      } else {
-        setConn(linkedin ?? null);
-      }
+      if (cancelled) return;
       setSub(subRow as SubscriptionRow | null);
       setIsAdmin(!!roles?.some((r) => r.role === "admin"));
       setLoading(false);
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [user]);
 
-  // Realtime subscription for LinkedIn connection status and auto-disconnect on expiry
+  // Realtime subscription refresh for billing state
   useEffect(() => {
     if (!user) return;
-    const channel = createUniqueChannel(`linkedin-conn-${user.id}`)
+    const refresh = async () => {
+      const { data } = await supabase
+        .from("subscriptions")
+        .select(
+          "plan, status, trial_end, current_period_end, cancel_at_period_end, polar_customer_id",
+        )
+        .eq("user_id", user.id)
+        .maybeSingle();
+      setSub((data as SubscriptionRow | null) ?? null);
+    };
+    const onFocus = () => void refresh();
+    window.addEventListener("focus", onFocus);
+    const channel = createUniqueChannel(`sub-settings-${user.id}`)
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "linkedin_connections",
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          if (payload.eventType === "DELETE") {
-            setConn(null);
-            setLinkedInBanner({
-              type: "error",
-              text: "LinkedIn connection disconnected.",
-            });
-          } else if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
-            const row = payload.new as LinkedInConnection;
-            if (new Date(row.expires_at).getTime() <= Date.now()) {
-              setConn(null);
-              setLinkedInBanner({
-                type: "error",
-                text: "LinkedIn connection expired. Please reconnect.",
-              });
-            } else {
-              setConn(row);
-            }
-          }
-        },
+        { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${user.id}` },
+        () => void refresh(),
       )
       .subscribe();
-
     return () => {
+      window.removeEventListener("focus", onFocus);
       supabase.removeChannel(channel);
     };
   }, [user]);
@@ -279,7 +165,6 @@ function SettingsPage() {
     let wsId: string | null = null;
 
     const load = async () => {
-      // Resolve the workspace for this user (owner preferred)
       if (!wsId) {
         const { data: memberWs } = await supabase
           .from("workspace_members")
@@ -319,391 +204,7 @@ function SettingsPage() {
     };
   }, [user]);
 
-  // Load team + members
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    (async () => {
-      const { data: ownedTeams } = await supabase
-        .from("teams")
-        .select("id, name, owner_id")
-        .eq("owner_id", user.id)
-        .limit(1);
-      if (cancelled) return;
-      const t = ownedTeams?.[0] ?? null;
-      setTeam(t);
-      if (t) {
-        const { data: mems } = await supabase
-          .from("team_members")
-          .select("id, email, role, accepted_at, user_id")
-          .eq("team_id", t.id);
-        if (!cancelled) setTeamMembers(mems ?? []);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
-
-  async function createTeam() {
-    if (!user) return;
-    if (!isAdmin && effectivePlan !== "teams") {
-      setTeamMsg("Creating teams and inviting members requires the Teams plan.");
-      return;
-    }
-    setTeamMsg(null);
-    const { data, error } = await supabase
-      .from("teams")
-      .insert({ owner_id: user.id, name: "My team" })
-      .select("id, name, owner_id")
-      .single();
-    if (error) {
-      setTeamMsg(error.message);
-      return;
-    }
-    setTeam(data);
-    setTeamMembers([]);
-  }
-
-  async function inviteMember() {
-    if (!user || !team) return;
-    if (!isAdmin && effectivePlan !== "teams") {
-      setTeamMsg("Inviting team members requires the Teams plan.");
-      return;
-    }
-    const email = inviteEmail.trim().toLowerCase();
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
-      setTeamMsg("Enter a valid email address.");
-      return;
-    }
-    setInviting(true);
-    setTeamMsg(null);
-    const { data, error } = await supabase
-      .from("team_members")
-      .insert({ team_id: team.id, email, role: "editor" })
-      .select("id, email, role, accepted_at, user_id")
-      .single();
-    setInviting(false);
-    if (error) {
-      setTeamMsg(error.message);
-      return;
-    }
-    setTeamMembers((prev) => [...prev, data]);
-    setInviteEmail("");
-    setTeamMsg(`Invited ${email}. They'll join automatically when they sign in.`);
-  }
-
-  async function removeMember(id: string) {
-    if (!team) return;
-    await supabase.from("team_members").delete().eq("id", id);
-    setTeamMembers((prev) => prev.filter((m) => m.id !== id));
-  }
-
-  // Live-refresh subscription on focus + realtime updates so the plan
-  // panel reflects the latest billing state without a manual reload.
-  useEffect(() => {
-    if (!user) return;
-    const refresh = async () => {
-      const { data } = await supabase
-        .from("subscriptions")
-        .select(
-          "plan, status, trial_end, current_period_end, cancel_at_period_end, polar_customer_id",
-        )
-        .eq("user_id", user.id)
-        .maybeSingle();
-      setSub((data as SubscriptionRow | null) ?? null);
-    };
-    const onFocus = () => void refresh();
-    window.addEventListener("focus", onFocus);
-    const channel = createUniqueChannel(`sub-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${user.id}` },
-        () => void refresh(),
-      )
-      .subscribe();
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
-  async function uploadAvatar(file: File) {
-    if (!user) return;
-    setUploadingAvatar(true);
-    setProfileMsg(null);
-    try {
-      const { url } = await uploadAvatarFn(user.id, file);
-      setAvatarUrl(url);
-      setProfile((prev) => ({
-        display_name: prev?.display_name ?? null,
-        voice_notes: prev?.voice_notes ?? null,
-        avatar_url: url,
-      }));
-      setProfileMsg("Avatar updated.");
-    } catch (e) {
-      setProfileMsg(e instanceof Error ? e.message : "Upload failed.");
-    } finally {
-      setUploadingAvatar(false);
-    }
-  }
-
-  async function removeAvatar() {
-    if (!user) return;
-    setUploadingAvatar(true);
-    setProfileMsg(null);
-    try {
-      await removeAvatarFn(user.id);
-      setAvatarUrl("");
-      setProfile((prev) => ({
-        display_name: prev?.display_name ?? null,
-        voice_notes: prev?.voice_notes ?? null,
-        avatar_url: null,
-      }));
-      setProfileMsg("Avatar removed.");
-    } catch (e) {
-      setProfileMsg(e instanceof Error ? e.message : "Failed.");
-    } finally {
-      setUploadingAvatar(false);
-    }
-  }
-
-  function toggleDictation() {
-    if (recording) {
-      recognitionRef.current?.stop();
-      return;
-    }
-    const SR =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) {
-      setVoiceMsg("Voice dictation isn't supported in this browser. Try Chrome or Edge.");
-      return;
-    }
-    const rec = new SR();
-    rec.continuous = true;
-    rec.interimResults = false;
-    rec.lang = navigator.language || "en-US";
-    rec.onresult = (event: any) => {
-      let transcript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) transcript += event.results[i][0].transcript;
-      }
-      if (transcript) {
-        setVoiceNotes((prev) =>
-          prev ? `${prev.replace(/\s+$/, "")} ${transcript.trim()}` : transcript.trim(),
-        );
-      }
-    };
-    rec.onerror = (e: any) => {
-      setVoiceMsg(`Mic error: ${e.error ?? "unknown"}`);
-      setRecording(false);
-    };
-    rec.onend = () => setRecording(false);
-    recognitionRef.current = rec;
-    setVoiceMsg(null);
-    setRecording(true);
-    try {
-      rec.start();
-    } catch {
-      setRecording(false);
-    }
-  }
-
-  async function openBillingPortal() {
-    setOpeningPortal(true);
-    setBillingMsg(null);
-    const { data: sess } = await supabase.auth.getSession();
-    const token = sess.session?.access_token;
-    if (!token) {
-      setBillingMsg("Session expired — please sign in again.");
-      setOpeningPortal(false);
-      return;
-    }
-    const resp = await fetch("/api/polar/portal", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = (await resp.json().catch(() => ({}))) as {
-      url?: string;
-      error?: string;
-    };
-    if (!resp.ok || !data.url) {
-      setBillingMsg(data.error ?? "Failed to open billing portal.");
-      setOpeningPortal(false);
-      return;
-    }
-    window.location.href = data.url;
-  }
-
-  async function startCheckout(plan: "studio" | "teams") {
-    setCheckoutError(null);
-    setCheckoutPlan(plan);
-    const key = (plan === "studio"
-      ? billingInterval === "year"
-        ? "studio_annual"
-        : "studio_monthly"
-      : billingInterval === "year"
-        ? "teams_annual"
-        : "teams_monthly") as CheckoutPlan;
-    setCheckoutBusy(key);
-    const { data: sess } = await supabase.auth.getSession();
-    const token = sess.session?.access_token;
-    if (!token) {
-      setCheckoutError("Session expired — please sign in again.");
-      setCheckoutPlan(null);
-      setCheckoutBusy(null);
-      return;
-    }
-    const resp = await fetch("/api/polar/checkout", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ plan: key }),
-    });
-    const data = (await resp.json().catch(() => ({}))) as { url?: string; error?: string };
-    if (!resp.ok || !data.url) {
-      setCheckoutError(data.error ?? "Failed to start checkout.");
-      setCheckoutPlan(null);
-      setCheckoutBusy(null);
-      return;
-    }
-    window.location.href = data.url;
-  }
-
-  async function buyTopup(key: CheckoutPlan) {
-    setCheckoutError(null);
-    setCheckoutBusy(key);
-    const { data: sess } = await supabase.auth.getSession();
-    const token = sess.session?.access_token;
-    if (!token) {
-      setCheckoutError("Session expired — please sign in again.");
-      setCheckoutBusy(null);
-      return;
-    }
-    const resp = await fetch("/api/polar/checkout", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ plan: key }),
-    });
-    const data = (await resp.json().catch(() => ({}))) as { url?: string; error?: string };
-    if (!resp.ok || !data.url) {
-      setCheckoutError(data.error ?? "Failed to start checkout.");
-      setCheckoutBusy(null);
-      return;
-    }
-    window.location.href = data.url;
-  }
-
-  async function saveProfile() {
-    if (!user) return;
-    setSavingProfile(true);
-    setProfileMsg(null);
-    const { error } = await supabase.from("profiles").upsert(
-      {
-        user_id: user.id,
-        display_name: displayName || null,
-        avatar_url: avatarUrl || null,
-        voice_notes: voiceNotes || null,
-      },
-      { onConflict: "user_id" },
-    );
-    setSavingProfile(false);
-    if (error) {
-      setProfileMsg(`Failed to save: ${error.message}`);
-    } else {
-      setProfileMsg("Saved.");
-      setProfile({
-        display_name: displayName || null,
-        avatar_url: avatarUrl || null,
-        voice_notes: voiceNotes || null,
-      });
-    }
-  }
-
-  async function changePassword() {
-    setSavingPassword(true);
-    setPwMsg(null);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setSavingPassword(false);
-    if (error) {
-      setPwMsg(`Failed: ${error.message}`);
-    } else {
-      setPwMsg("Password updated.");
-      setNewPassword("");
-    }
-  }
-
-  async function connectLinkedIn() {
-    setConnectingLinkedIn(true);
-    setLinkedInBanner(null);
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-    if (!token) {
-      setConnectingLinkedIn(false);
-      setLinkedInBanner({ type: "error", text: "Session expired — please sign in again." });
-      return;
-    }
-    const resp = await fetch("/api/linkedin/start", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ redirect_to: "/settings" }),
-    });
-    const data = (await resp.json().catch(() => ({}))) as { url?: string; error?: string };
-    if (!resp.ok || !data.url) {
-      setLinkedInBanner({ type: "error", text: data.error ?? "Failed to start OAuth." });
-      setConnectingLinkedIn(false);
-      return;
-    }
-    window.location.href = data.url;
-  }
-
-  async function disconnectLinkedIn() {
-    if (!session?.access_token) {
-      setLinkedInBanner({ type: "error", text: "Session expired — please sign in again." });
-      return;
-    }
-
-    setDisconnectingLinkedIn(true);
-    setLinkedInBanner(null);
-
-    try {
-      const resp = await fetch("/api/linkedin/disconnect", {
-        method: "POST",
-        headers: { 
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json"
-        },
-      });
-
-      if (resp.ok) {
-        setConn(null);
-        setLinkedInBanner({ type: "success", text: "LinkedIn disconnected successfully." });
-      } else {
-        const j = await resp.json().catch(() => ({}));
-        setLinkedInBanner({ type: "error", text: j.error ?? "Failed to disconnect." });
-      }
-    } catch (err) {
-      setLinkedInBanner({ type: "error", text: "Connection error. Please try again." });
-    } finally {
-      setDisconnectingLinkedIn(false);
-    }
-  }
-
-  async function deleteAccount() {
-    if (!user || confirmDelete !== "DELETE") return;
-    setDeleting(true);
-    // Best-effort cleanup of user-owned rows; auth user removal requires admin —
-    // we sign out and the data stays orphaned-but-protected by RLS.
-    await supabase.from("drafts").delete().eq("user_id", user.id);
-    await supabase.from("linkedin_connections").delete().eq("user_id", user.id);
-    await supabase.from("profiles").delete().eq("user_id", user.id);
-    await signOut();
-    navigate({ to: "/" });
-  }
-
-  if (loading || !profile) {
+  if (loading) {
     return <SettingsSkeleton />;
   }
 
@@ -744,532 +245,72 @@ function SettingsPage() {
             <TabsTrigger value="danger" className="text-[13px] data-[state=active]:text-destructive">Danger</TabsTrigger>
           </TabsList>
 
+          <TabsContent value="profile" className="mt-0">
+            {user && (
+              <ProfileSettingsPanel
+                user={user}
+                effectivePlan={effectivePlan}
+                isAdmin={isAdmin}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="linkedin" className="mt-0">
+            {user && (
+              <LinkedInSettingsPanel
+                user={user}
+                effectivePlan={effectivePlan}
+                isAdmin={isAdmin}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="billing" className="mt-0">
+            {user && (
+              <BillingSettingsPanel
+                user={user}
+                effectivePlan={effectivePlan}
+                effectiveStatus={effectiveStatus}
+                isAdmin={isAdmin}
+                sub={sub}
+                credits={credits}
+                billingInterval={billingInterval}
+                onIntervalChange={setBillingInterval}
+              />
+            )}
+          </TabsContent>
+
           <TabsContent value="workspaces" className="mt-0">
             <WorkspacesSettingsPanel />
           </TabsContent>
 
-          <TabsContent value="profile" className="mt-0">
-        <Section title="Profile" subtitle="How you appear inside Syncd.">
-          <Field label="Display name">
-            <input
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Jane Cooper"
-              className="h-10 w-full px-3 rounded-md border border-border bg-card text-[14px] focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
-            />
-          </Field>
-          <Field label="Avatar" hint="Click your avatar to view, upload, or change it (PNG/JPG, up to 5MB).">
-            <div className="flex items-center gap-4">
-              <Popover open={avatarMenuOpen} onOpenChange={setAvatarMenuOpen}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label="Avatar actions"
-                    disabled={uploadingAvatar}
-                    className="relative size-16 rounded-full overflow-hidden border border-border hover:ring-2 hover:ring-ink/20 transition disabled:opacity-60"
-                  >
-                    {avatarUrl ? (
-                      <img
-                        src={avatarUrl}
-                        alt="Your avatar"
-                        loading="lazy"
-                        className="size-full object-cover"
-                      />
-                    ) : (
-                      <div className="size-full bg-subtle flex items-center justify-center text-[16px] font-semibold text-muted-foreground">
-                        {(displayName || user?.email || "?")[0]?.toUpperCase()}
-                      </div>
-                    )}
-                    {uploadingAvatar && (
-                      <div className="absolute inset-0 bg-background/70 flex items-center justify-center text-[11px] font-mono">
-                        …
-                      </div>
-                    )}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-48 p-1">
-                  {avatarUrl && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAvatarMenuOpen(false);
-                        setViewerOpen(true);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-md text-[13px] hover:bg-subtle"
-                    >
-                      View photo
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAvatarMenuOpen(false);
-                      avatarFileRef.current?.click();
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-md text-[13px] hover:bg-subtle"
-                  >
-                    {avatarUrl ? "Change photo" : "Upload photo"}
-                  </button>
-                  {avatarUrl && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAvatarMenuOpen(false);
-                        setConfirmRemoveAvatar(true);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-md text-[13px] text-destructive hover:bg-destructive/10"
-                    >
-                      Remove photo
-                    </button>
-                  )}
-                </PopoverContent>
-              </Popover>
-              <input
-                ref={avatarFileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void uploadAvatar(f);
-                  e.target.value = "";
-                }}
-              />
-              <div className="text-[12px] text-muted-foreground">
-                {uploadingAvatar ? "Uploading…" : "Click the avatar for options."}
-              </div>
-            </div>
-            <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
-              <DialogContent className="max-w-[90vw] sm:max-w-2xl bg-background p-2 sm:p-4">
-                <DialogTitle className="sr-only">Profile photo</DialogTitle>
-                {avatarUrl && (
-                  <img
-                    src={avatarUrl}
-                    alt="Profile photo"
-                    className="w-full max-h-[80vh] object-contain rounded-md"
-                  />
-                )}
-              </DialogContent>
-            </Dialog>
-          </Field>
-          <Field
-            label="Voice notes"
-            hint="Free-text notes the AI will read before every generation. Hedge words you avoid, examples you reuse, your point of view."
-          >
-            <div className="flex flex-col gap-2">
-              {!isAdmin && effectivePlan === "trial" && (
-                <div className="flex items-center justify-between gap-3 p-3 rounded-md border border-border bg-subtle text-[12px] text-muted-foreground">
-                  <span>Voice mapping is a Studio & Teams feature. Upgrade to have the AI match your unique voice on every generation.</span>
-                  <Link to="/pricing" className="underline font-medium text-ink shrink-0">Upgrade</Link>
-                </div>
-              )}
-              <textarea
-                value={voiceNotes}
-                onChange={(e) => setVoiceNotes(e.target.value)}
-                placeholder="I write in short paragraphs. I avoid the words 'leverage' and 'unlock'. My recurring theme is…"
-                rows={5}
-                className="w-full px-3 py-2.5 rounded-md border border-border bg-card text-[14px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink resize-none"
-              />
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="text-[12px] text-muted-foreground">
-                  {recording
-                    ? "Listening… speak naturally, then click Stop."
-                    : voiceMsg ?? `${voiceNotes.length} characters`}
-                </div>
-                <div className="flex items-center gap-2">
-                  {voiceNotes && !recording && (
-                    <button
-                      type="button"
-                      onClick={() => setVoiceNotes("")}
-                      className="h-8 px-3 rounded-md border border-border text-[12px] text-ink hover:bg-subtle"
-                    >
-                      Clear
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={toggleDictation}
-                    className={`h-8 px-3 rounded-md text-[12px] font-medium inline-flex items-center gap-1.5 ${
-                      recording
-                        ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        : "bg-ink text-surface hover:bg-ink/90"
-                    }`}
-                  >
-                    <span
-                      className={`size-2 rounded-full ${
-                        recording ? "bg-current animate-pulse" : "bg-current/70"
-                      }`}
-                    />
-                    {recording ? "Stop recording" : "Record voice note"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </Field>
-          <div className="flex items-center justify-between pt-2">
-            <span className="text-[13px] text-muted-foreground">{profileMsg}</span>
-            <button
-              type="button"
-              onClick={saveProfile}
-              disabled={savingProfile}
-              className="h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-60"
-            >
-              {savingProfile ? "Saving…" : "Save profile"}
-            </button>
-          </div>
-        </Section>
-          </TabsContent>
-
-          <TabsContent value="linkedin" className="mt-0">
-        <Section
-          title="LinkedIn connection"
-          subtitle="Authorize once. Publish drafts straight from the workspace."
-        >
-          {conn ? (() => {
-            const expiresAt = new Date(conn.expires_at);
-            const daysUntilExpiry = Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000);
-            const isExpiringSoon = daysUntilExpiry <= 7;
-            return (
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 border border-border rounded-md bg-subtle/40">
-                <div className="flex items-center gap-3 min-w-0">
-                  {!!conn.linkedin_picture_url ? (
-                    <img
-                      src={conn.linkedin_picture_url}
-                      alt={conn.linkedin_name ?? "LinkedIn profile"}
-                      className="size-10 rounded-full border border-border"
-                    />
-                  ) : (
-                    <div className="size-10 rounded-full bg-ink text-surface flex items-center justify-center text-sm font-semibold">
-                      {conn.linkedin_name?.[0] ?? "?"}
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <div className="text-[14px] font-medium text-ink truncate">
-                      {conn.linkedin_name ?? "LinkedIn member"}
-                    </div>
-                    {isExpiringSoon ? (
-                      <div className="text-[11px] font-mono text-amber-600 dark:text-amber-400 font-semibold truncate">
-                        ⚠ Expires in {daysUntilExpiry}d — reconnect soon
-                      </div>
-                    ) : (
-                      <div className="text-[11px] font-mono text-muted-foreground truncate">
-                        Token expires {expiresAt.toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  {isExpiringSoon && (
-                    <button
-                      type="button"
-                      onClick={connectLinkedIn}
-                      disabled={connectingLinkedIn}
-                      className="h-9 px-3 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-60 flex-1 sm:flex-none"
-                    >
-                      {connectingLinkedIn ? "Redirecting…" : "Reconnect"}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDisconnectLI(true)}
-                    disabled={disconnectingLinkedIn}
-                    className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle flex-1 sm:flex-none disabled:opacity-60"
-                  >
-                    {disconnectingLinkedIn ? "Disconnecting…" : "Disconnect"}
-                  </button>
-                </div>
-              </div>
-            );
-          })() : (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 border border-border rounded-md">
-              <div className="min-w-0">
-                <div className="text-[14px] text-ink font-medium">Not connected</div>
-                <div className="text-[12px] text-muted-foreground mt-0.5">
-                  Required to publish posts directly from Syncd.
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={connectLinkedIn}
-                disabled={connectingLinkedIn}
-                className="h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-60 inline-flex items-center justify-center gap-2 w-full sm:w-auto"
-              >
-                {connectingLinkedIn ? "Redirecting…" : "Connect LinkedIn"}
-                <span aria-hidden>→</span>
-              </button>
-            </div>
-          )}
-        </Section>
-          </TabsContent>
-
-          <TabsContent value="billing" className="mt-0">
-        <Section title="Billing & plan" subtitle="Your current subscription and usage limits.">
-          {billingMsg && (
-            <div className="px-3 py-2 rounded-md border border-border bg-subtle text-[13px] text-ink">
-              {billingMsg}
-            </div>
-          )}
-          {(() => {
-            const monthlyLimit = PLAN_LIMITS[effectivePlan].monthlyCredits;
-            const linkedInMax = PLAN_LIMITS[effectivePlan].maxLinkedInAccounts;
-            const subCredits = isAdmin ? Infinity : (credits?.subscription ?? 0);
-            const topupCredits = credits?.topup ?? 0;
-            const draftStr = isAdmin
-              ? "Unlimited credits"
-              : `${subCredits} of ${monthlyLimit} monthly credits`;
-            const dailyCap = PLAN_LIMITS[effectivePlan].dailyCap;
-            return (
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 border border-border rounded-md bg-subtle/40">
-                <div className="min-w-0">
-                  <div className="text-[14px] font-medium text-ink">
-                    {PLAN_LABELS[effectivePlan]} plan
-                    <span className="ml-2 text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground">
-                      {effectiveStatus}
-                    </span>
-                  </div>
-                  <div className="text-[12px] text-muted-foreground mt-1">
-                    {draftStr}
-                    {topupCredits > 0 && !isAdmin ? ` · +${topupCredits} top-up` : ""}
-                    {" · "}{linkedInMax} LinkedIn account{linkedInMax > 1 ? "s" : ""}
-                    {dailyCap > 0 && !isAdmin ? ` · ${dailyCap}/day cap` : ""}
-                  </div>
-                  {isAdmin ? (
-                    <div className="text-[12px] text-muted-foreground mt-0.5">
-                      Admin access — all features unlocked, no billing required.
-                    </div>
-                  ) : sub?.plan === "trial" && sub.trial_end ? (
-                    <div className="text-[12px] text-muted-foreground mt-0.5">
-                      Trial ends {new Date(sub.trial_end).toLocaleDateString()}
-                    </div>
-                  ) : sub && sub.plan !== "trial" && sub.current_period_end ? (
-                    <div className="text-[12px] text-muted-foreground mt-0.5">
-                      {sub.cancel_at_period_end ? "Cancels" : "Renews"} on{" "}
-                      {new Date(sub.current_period_end).toLocaleDateString()}
-                    </div>
-                  ) : null}
-                </div>
-                <div className="flex flex-col gap-2 sm:items-end w-full sm:w-auto">
-                  {isAdmin ? null : sub?.polar_customer_id ? (
-                    <button
-                      type="button"
-                      onClick={openBillingPortal}
-                      disabled={openingPortal}
-                      className="h-9 px-3 rounded-md border border-border text-[13px] text-ink hover:bg-subtle disabled:opacity-60 w-full sm:w-auto"
-                    >
-                      {openingPortal ? "Opening…" : "Manage billing"}
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })()}
-
-          <PlanTiers
-            currentPlan={effectivePlan}
-            isAdmin={isAdmin}
-            loadingPlan={checkoutPlan}
-            billingInterval={billingInterval}
-            onIntervalChange={setBillingInterval}
-            error={checkoutError}
-            onSelect={startCheckout}
-          />
-
-          {!isAdmin && (effectivePlan === "studio" || effectivePlan === "teams") && (
-            <div className="mt-6">
-              <div className="mb-3 flex items-baseline justify-between">
-                <h3 className="text-[13px] font-semibold text-ink">Credit top-ups</h3>
-                <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.12em]">
-                  Never expire
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {TOPUP_PACKS.map((p) => (
-                  <div
-                    key={p.key}
-                    className="border border-border rounded-lg p-4 bg-card flex flex-col gap-3"
-                  >
-                    <div>
-                      <div className="text-[15px] font-semibold text-ink tabular-nums">
-                        {p.credits} credits
-                      </div>
-                      <div className="text-[12px] text-muted-foreground">
-                        ${p.priceUsd} — {(p.priceUsd / p.credits * 100).toFixed(1)}¢ per credit
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => buyTopup(p.key)}
-                      disabled={checkoutBusy !== null}
-                      className="mt-auto h-9 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-50"
-                    >
-                      {checkoutBusy === p.key ? "Redirecting…" : "Buy"}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </Section>
-          </TabsContent>
-
           <TabsContent value="team" className="mt-0">
-            <Section
-              title="Team"
-              subtitle="Invite up to 5 teammates to share this workspace's drafts."
-            >
-              {!isAdmin && effectivePlan !== "teams" ? (
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border border-border rounded-md bg-subtle/40">
-                  <div>
-                    <div className="text-[14px] font-medium text-ink">Teams plan required</div>
-                    <div className="text-[12px] text-muted-foreground mt-0.5">
-                      Creating a team and inviting collaborators requires the Teams plan.
-                    </div>
-                  </div>
-                  <Link
-                    to="/pricing"
-                    className="h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium inline-flex items-center justify-center hover:bg-ink/90 shrink-0"
-                  >
-                    Upgrade to Teams
-                  </Link>
-                </div>
-              ) : !team ? (
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border border-border rounded-md bg-subtle/40">
-                  <div>
-                    <div className="text-[14px] font-medium text-ink">No team yet</div>
-                    <div className="text-[12px] text-muted-foreground mt-0.5">
-                      Create a team to invite others. Requires the Teams plan for full access.
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={createTeam}
-                    className="h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90"
-                  >
-                    Create team
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="email"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      placeholder="teammate@company.com"
-                      className="h-10 flex-1 px-3 rounded-md border border-border bg-card text-[14px] focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
-                    />
-                    <button
-                      type="button"
-                      onClick={inviteMember}
-                      disabled={inviting || !inviteEmail.trim()}
-                      className="h-10 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-50"
-                    >
-                      {inviting ? "Inviting…" : "Invite"}
-                    </button>
-                  </div>
-                  {teamMsg && (
-                    <div className="text-[12px] text-muted-foreground">{teamMsg}</div>
-                  )}
-                  <ul className="divide-y divide-border border border-border rounded-md bg-card">
-                    <li className="px-3 py-2 flex items-center justify-between text-[13px]">
-                      <div>
-                        <span className="font-medium text-ink">{user?.email}</span>
-                        <span className="ml-2 text-[11px] font-mono uppercase text-muted-foreground">
-                          Owner
-                        </span>
-                      </div>
-                    </li>
-                    {teamMembers.map((m) => (
-                      <li key={m.id} className="px-3 py-2 flex items-center justify-between text-[13px]">
-                        <div className="min-w-0">
-                          <span className="text-ink truncate">{m.email}</span>
-                          <span className="ml-2 text-[11px] font-mono uppercase text-muted-foreground">
-                            {m.accepted_at ? m.role : "invited"}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeMember(m.id)}
-                          className="text-[12px] text-destructive hover:underline"
-                        >
-                          Remove
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </Section>
+            {user && (
+              <TeamsSettingsPanel
+                user={user}
+                effectivePlan={effectivePlan}
+                isAdmin={isAdmin}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="account" className="mt-0">
-        <Section title="Account" subtitle="Email, password, and session.">
-          <Field label="Email">
-            <input
-              value={user?.email ?? ""}
-              readOnly
-              className="h-10 w-full px-3 rounded-md border border-border bg-subtle text-[14px] text-muted-foreground"
-            />
-          </Field>
-          <Field label="New password" hint="At least 6 characters.">
-            <div className="flex gap-2">
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="••••••••"
-                className="h-10 flex-1 px-3 rounded-md border border-border bg-card text-[14px] focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+            {user && (
+              <AccountSettingsPanel
+                user={user}
+                signOut={signOut}
               />
-              <button
-                type="button"
-                onClick={changePassword}
-                disabled={savingPassword || newPassword.length < 6}
-                className="h-10 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-60"
-              >
-                {savingPassword ? "Updating…" : "Update"}
-              </button>
-            </div>
-          </Field>
-          {pwMsg && <p className="text-[13px] text-muted-foreground">{pwMsg}</p>}
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => setConfirmSignOut(true)}
-              className="h-9 px-4 rounded-md border border-border text-[13px] text-ink hover:bg-subtle"
-            >
-              Sign out
-            </button>
-          </div>
-        </Section>
+            )}
           </TabsContent>
 
           <TabsContent value="danger" className="mt-0">
-        <Section
-          title="Danger zone"
-          subtitle="Permanent actions. Type DELETE to confirm."
-          tone="danger"
-        >
-          <Field label="Confirm">
-            <input
-              value={confirmDelete}
-              onChange={(e) => setConfirmDelete(e.target.value)}
-              placeholder="DELETE"
-              className="h-10 w-full px-3 rounded-md border border-destructive/30 bg-card text-[14px] focus:outline-none focus:ring-2 focus:ring-destructive/30"
-            />
-          </Field>
-          <button
-            type="button"
-            onClick={() => setConfirmWipe(true)}
-            disabled={deleting || confirmDelete !== "DELETE"}
-            className="h-9 px-4 rounded-md bg-destructive text-destructive-foreground text-[13px] font-medium hover:bg-destructive/90 disabled:opacity-60"
-          >
-            {deleting ? "Deleting…" : "Delete all my data"}
-          </button>
-          <p className="text-[12px] text-muted-foreground">
-            Removes drafts, profile, and LinkedIn token. Your auth account stays — contact support
-            to fully erase it.
-          </p>
-        </Section>
+            {user && (
+              <DangerSettingsPanel
+                user={user}
+                signOut={signOut}
+                navigate={navigate}
+              />
+            )}
           </TabsContent>
         </Tabs>
 
@@ -1280,306 +321,7 @@ function SettingsPage() {
           </Link>
         </p>
       </main>
-
-      <ConfirmDialog
-        open={confirmRemoveAvatar}
-        onOpenChange={setConfirmRemoveAvatar}
-        title="Remove profile photo?"
-        description="Your avatar will revert to your initials until you upload a new photo."
-        confirmText="Remove photo"
-        variant="destructive"
-        onConfirm={() => {
-          setConfirmRemoveAvatar(false);
-          void removeAvatar();
-        }}
-      />
-      <ConfirmDialog
-        open={confirmDisconnectLI}
-        onOpenChange={setConfirmDisconnectLI}
-        title="Disconnect LinkedIn?"
-        description="You won't be able to publish directly to LinkedIn until you reconnect."
-        confirmText="Disconnect"
-        variant="destructive"
-        onConfirm={() => {
-          setConfirmDisconnectLI(false);
-          void disconnectLinkedIn();
-        }}
-      />
-      <ConfirmDialog
-        open={confirmSignOut}
-        onOpenChange={setConfirmSignOut}
-        title="Sign out?"
-        description="You'll need to sign in again to access your workspace, drafts, and settings."
-        confirmText="Sign out"
-        onConfirm={() => {
-          setConfirmSignOut(false);
-          void signOut();
-        }}
-      />
-      <ConfirmDialog
-        open={confirmWipe}
-        onOpenChange={setConfirmWipe}
-        title="Delete all your data?"
-        description="This permanently removes your drafts, profile, and LinkedIn connection. This cannot be undone."
-        confirmText="Delete everything"
-        variant="destructive"
-        onConfirm={() => {
-          setConfirmWipe(false);
-          void deleteAccount();
-        }}
-      />
       </div>
     </SidebarShell>
-  );
-}
-
-function Section({
-  title,
-  subtitle,
-  tone = "default",
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  tone?: "default" | "danger";
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      className={`mb-8 rounded-xl border bg-card overflow-hidden ${
-        tone === "danger" ? "border-destructive/30" : "border-border"
-      }`}
-    >
-      <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-border">
-        <h2 className="text-[15px] font-semibold tracking-tight text-ink">{title}</h2>
-        {subtitle && (
-          <p className="text-[13px] text-muted-foreground mt-1">{subtitle}</p>
-        )}
-      </div>
-      <div className="px-4 sm:px-6 py-4 sm:py-5 flex flex-col gap-4">{children}</div>
-    </section>
-  );
-}
-
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.12em]">
-        {label}
-      </span>
-      {children}
-      {hint && <span className="text-[12px] text-muted-foreground">{hint}</span>}
-    </label>
-  );
-}
-
-const TIERS: Array<{
-  id: "trial" | "studio" | "teams";
-  name: string;
-  priceMonthly: string;
-  priceAnnual: string;
-  cadenceMonthly: string;
-  cadenceAnnual: string;
-  description: string;
-  features: string[];
-  highlighted: boolean;
-}> = [
-  {
-    id: "trial",
-    name: "Free",
-    priceMonthly: "$0",
-    priceAnnual: "$0",
-    cadenceMonthly: "forever",
-    cadenceAnnual: "forever",
-    description: "Try it — no card needed.",
-    features: [
-      "30 credits every month",
-      "Solo workspace",
-      "1 LinkedIn account",
-      "200 MB media storage",
-    ],
-    highlighted: false,
-  },
-  {
-    id: "studio",
-    name: "Studio",
-    priceMonthly: "$12",
-    priceAnnual: "$115",
-    cadenceMonthly: "per month",
-    cadenceAnnual: "per year",
-    description: "For creators who post weekly.",
-    features: [
-      "150 credits every month",
-      "Voice profile — Syncd learns your writing",
-      "Scheduling — queue posts for the perfect moment",
-      "Priority generation",
-      "5 GB media storage",
-    ],
-    highlighted: true,
-  },
-  {
-    id: "teams",
-    name: "Teams",
-    priceMonthly: "$15 / seat",
-    priceAnnual: "$144 / seat",
-    cadenceMonthly: "per month · 2 seat min",
-    cadenceAnnual: "per year · 2 seat min",
-    description: "For teams who ship together.",
-    features: [
-      "150 credits per seat, pooled",
-      "Shared draft library",
-      "Review before publish",
-      "Team voice consistency",
-      "20 GB media storage",
-    ],
-    highlighted: false,
-  },
-];
-
-function PlanTiers({
-  currentPlan,
-  isAdmin,
-  loadingPlan,
-  error,
-  onSelect,
-  billingInterval,
-  onIntervalChange,
-}: {
-  currentPlan: PlanTier;
-  isAdmin: boolean;
-  loadingPlan: "studio" | "teams" | null;
-  error: string | null;
-  onSelect: (plan: "studio" | "teams") => void;
-  billingInterval: "month" | "year";
-  onIntervalChange: (i: "month" | "year") => void;
-}) {
-  return (
-    <div className="mt-6">
-      <div className="mb-3 flex items-baseline justify-between">
-        <h3 className="text-[13px] font-semibold text-ink">Change plan</h3>
-        <div className="inline-flex items-center gap-0 rounded-md border border-border p-0.5 bg-card">
-          {(["month", "year"] as const).map((i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => onIntervalChange(i)}
-              className={`h-6 px-2 rounded text-[11px] font-medium transition-colors ${
-                billingInterval === i ? "bg-ink text-surface" : "text-muted-foreground"
-              }`}
-            >
-              {i === "month" ? "Monthly" : "Yearly · save 17%"}
-            </button>
-          ))}
-        </div>
-      </div>
-      {error && (
-        <div className="mb-3 px-3 py-2 rounded-md bg-destructive/5 border border-destructive/20 text-destructive text-[12px]">
-          {error}
-        </div>
-      )}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {TIERS.map((t) => {
-          const isCurrent = currentPlan === t.id;
-          const adminOwned = isAdmin && t.id === "teams";
-          const active = isCurrent || adminOwned;
-          const price = billingInterval === "year" ? t.priceAnnual : t.priceMonthly;
-          const cadence = billingInterval === "year" ? t.cadenceAnnual : t.cadenceMonthly;
-          return (
-            <div
-              key={t.id}
-              className={`relative flex flex-col gap-4 p-4 rounded-lg border ${
-                t.highlighted
-                  ? "bg-ink text-surface border-ink"
-                  : "bg-card text-ink border-border"
-              }`}
-            >
-              <div>
-                <div className="flex items-center justify-between">
-                  <h4 className="text-[14px] font-semibold">{t.name}</h4>
-                  {active && (
-                    <span
-                      className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                        t.highlighted
-                          ? "bg-surface/10 border-surface/20 text-surface"
-                          : "bg-subtle border-border text-muted-foreground"
-                      }`}
-                    >
-                      {adminOwned ? "Admin" : "Current"}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-2 flex items-baseline gap-1.5">
-                  <span className="text-2xl font-semibold tracking-[-0.02em] tabular-nums">
-                    {price}
-                  </span>
-                  <span
-                    className={`text-[12px] ${
-                      t.highlighted ? "text-surface/60" : "text-muted-foreground"
-                    }`}
-                  >
-                    {cadence}
-                  </span>
-                </div>
-                <p
-                  className={`mt-2 text-[12px] ${
-                    t.highlighted ? "text-surface/70" : "text-muted-foreground"
-                  }`}
-                >
-                  {t.description}
-                </p>
-              </div>
-              <ul className="space-y-1.5 text-[12px]">
-                {t.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2">
-                    <span
-                      className={`mt-1.5 size-1 rounded-full shrink-0 ${
-                        t.highlighted ? "bg-surface/60" : "bg-ink/40"
-                      }`}
-                    />
-                    <span className={t.highlighted ? "text-surface/85" : "text-ink/80"}>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              {t.id === "trial" ? (
-                <div
-                  className={`mt-auto text-center text-[12px] ${
-                    t.highlighted ? "text-surface/60" : "text-muted-foreground"
-                  }`}
-                >
-                  {active ? "You're on the trial" : "Included by default"}
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => onSelect(t.id as "studio" | "teams")}
-                  disabled={loadingPlan !== null || active}
-                  className={`mt-auto h-9 px-3 rounded-md text-[13px] font-medium transition-colors disabled:opacity-50 ${
-                    t.highlighted
-                      ? "bg-surface text-ink hover:bg-surface/90"
-                      : "bg-ink text-surface hover:bg-ink/90"
-                  }`}
-                >
-                  {loadingPlan === t.id
-                    ? "Redirecting…"
-                    : active
-                      ? adminOwned
-                        ? "Included"
-                        : "Current plan"
-                      : "Choose plan"}
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
   );
 }
