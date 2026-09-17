@@ -276,11 +276,27 @@ function SettingsPage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+    let wsId: string | null = null;
+
     const load = async () => {
+      // Resolve the workspace for this user (owner preferred)
+      if (!wsId) {
+        const { data: memberWs } = await supabase
+          .from("workspace_members")
+          .select("workspace_id")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        wsId = memberWs?.workspace_id ?? null;
+      }
+      if (!wsId || cancelled) return;
+
       const { data } = await supabase
         .from("user_credits")
         .select("subscription_credits, topup_credits, daily_credits_used")
-        .eq("user_id", user.id)
+        .eq("workspace_id", wsId)
         .maybeSingle();
       if (cancelled) return;
       setCredits({
@@ -290,10 +306,10 @@ function SettingsPage() {
       });
     };
     void load();
-    const channel = createUniqueChannel(`credits-${user.id}`)
+    const channel = createUniqueChannel(`credits-settings-${user.id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "user_credits", filter: `user_id=eq.${user.id}` },
+        { event: "*", schema: "public", table: "user_credits" },
         () => void load(),
       )
       .subscribe();
@@ -1383,10 +1399,10 @@ const TIERS: Array<{
     priceAnnual: "$0",
     cadenceMonthly: "forever",
     cadenceAnnual: "forever",
-    description: "Get a feel for the workspace. No credit card.",
+    description: "Try it — no card needed.",
     features: [
-      "30 credits per month (5/day cap)",
-      "1 Workspace",
+      "30 credits every month",
+      "Solo workspace",
       "1 LinkedIn account",
       "200 MB media storage",
     ],
@@ -1395,16 +1411,16 @@ const TIERS: Array<{
   {
     id: "studio",
     name: "Studio",
-    priceMonthly: "$9",
-    priceAnnual: "$90",
+    priceMonthly: "$12",
+    priceAnnual: "$115",
     cadenceMonthly: "per month",
     cadenceAnnual: "per year",
-    description: "For solo creators shipping a real cadence.",
+    description: "For creators who post weekly.",
     features: [
-      "100 credits per month (No daily cap)",
-      "Unlimited Workspaces",
-      "Post scheduling & Top-ups",
-      "Full voice mapping",
+      "150 credits every month",
+      "Voice profile — Syncd learns your writing",
+      "Scheduling — queue posts for the perfect moment",
+      "Priority generation",
       "5 GB media storage",
     ],
     highlighted: true,
@@ -1412,18 +1428,16 @@ const TIERS: Array<{
   {
     id: "teams",
     name: "Teams",
-    priceMonthly: "$29",
-    priceAnnual: "$290",
-    cadenceMonthly: "per month",
-    cadenceAnnual: "per year",
-    description: "Shared workspace for agencies, execs & collaborative teams.",
+    priceMonthly: "$15 / seat",
+    priceAnnual: "$144 / seat",
+    cadenceMonthly: "per month · 2 seat min",
+    cadenceAnnual: "per year · 2 seat min",
+    description: "For teams who ship together.",
     features: [
-      "350 credits per month",
-      "Unlimited Workspaces",
-      "Up to 5 Workspace Team seats",
-      "Team-level workspace access grants",
-      "Role-based permissions (Owner, Admin, Member)",
-      "Up to 10 LinkedIn accounts",
+      "150 credits per seat, pooled",
+      "Shared draft library",
+      "Review before publish",
+      "Team voice consistency",
       "20 GB media storage",
     ],
     highlighted: false,

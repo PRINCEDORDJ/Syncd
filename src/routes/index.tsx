@@ -21,12 +21,12 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Voice-matched AI drafts, native scheduling, shared team libraries, and one-click LinkedIn publishing. 30 free credits every month.",
+          "Write, schedule & ship LinkedIn posts as a team. AI drafts in your voice, 30 free credits every month.",
       },
       { property: "og:title", content: "Syncd — AI LinkedIn posts, scheduling & team drafts" },
       {
         property: "og:description",
-        content: "Voice-matched AI drafts, scheduling, team libraries, and one-click LinkedIn publishing.",
+        content: "AI drafts in your voice. Scheduling. Shared team libraries. One-click LinkedIn publishing.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: `${BASE_URL}/` },
@@ -34,7 +34,7 @@ export const Route = createFileRoute("/")({
       { name: "twitter:title", content: "Syncd — AI LinkedIn posts, scheduling & team drafts" },
       {
         name: "twitter:description",
-        content: "Voice-matched AI drafts, scheduling, team libraries, and one-click LinkedIn publishing.",
+        content: "AI drafts in your voice. Scheduling. Shared team libraries. One-click LinkedIn publishing.",
       },
     ],
     links: [{ rel: "canonical", href: `${BASE_URL}/` }],
@@ -56,7 +56,7 @@ function LandingPage() {
         <div className="max-w-4xl mx-auto text-center flex flex-col items-center gap-7">
           <div className="inline-flex items-center gap-2 h-7 px-3 rounded-full border border-border bg-card text-[12px] font-mono text-muted-foreground">
             <span className="size-1.5 rounded-full bg-ink" />
-            v1.2 · Teams, scheduling & credit-based generation
+            v1.3 · Workspace-scoped credits &amp; team billing
           </div>
 
           <h1 className="text-5xl sm:text-6xl md:text-7xl tracking-[-0.03em] font-semibold leading-[1.02] text-balance">
@@ -67,7 +67,7 @@ function LandingPage() {
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-[56ch] text-pretty leading-relaxed">
             Dump a half-formed thought. Syncd drafts it in your voice, attaches your
-            media, and publishes — now, or on a schedule — straight to LinkedIn.
+            media, and publishes — now or on a schedule — straight to LinkedIn.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 mt-2">
@@ -128,12 +128,12 @@ function LandingPage() {
           <Bento
             icon={<Users className="size-4" />}
             title="Team workspaces"
-            body="Invite up to 5 seats. Share drafts, media, and schedules across a single library your whole team can edit."
+            body="Invite up to 5 seats. Share drafts, media, and schedules in a pooled credit workspace your whole team can edit."
           />
           <Bento
             icon={<Coins className="size-4" />}
             title="Credits, no surprises"
-            body="Monthly credits with a daily cap on Free. Failed generations refund automatically. Top up any time."
+            body="Workspace-scoped credits. Failed generations refund automatically. Top up any time — credits never expire."
           />
           <Bento
             icon={<Linkedin className="size-4" />}
@@ -200,14 +200,14 @@ function LandingPage() {
           />
           <PlanCard
             name="Studio"
-            price="$9"
-            highlights={["100 credits / month", "5 GB media storage", "Scheduling", "Priority generation"]}
+            price="$12"
+            highlights={["150 credits / month", "Voice profile", "Scheduling", "Priority generation", "5 GB media storage"]}
             featured
           />
           <PlanCard
             name="Teams"
-            price="$29"
-            highlights={["350 credits / month", "20 GB media storage", "Up to 5 seats", "Shared draft library"]}
+            price="$15 / seat"
+            highlights={["150 credits / seat, pooled", "20 GB media storage", "Shared draft library", "Review before publish"]}
           />
         </div>
       </section>
@@ -219,7 +219,7 @@ function LandingPage() {
             Stop drafting in the LinkedIn composer.
           </h2>
           <p className="text-muted-foreground mt-4 max-w-[48ch] mx-auto text-[15px]">
-            Connect once. Generate with credits, schedule for later, and collaborate with your team — all in one canvas.
+            Connect once. Generate in your voice with credits, schedule for later, and collaborate with your team — all in one canvas.
           </p>
           <Link
             to={user ? "/app" : "/login"}

@@ -19,12 +19,12 @@ export const Route = createFileRoute("/pricing")({
       { title: "Pricing — Syncd" },
       {
         name: "description",
-        content: "Simple pricing. One free trial week, unlimited drafts on Studio.",
+        content: "Priced like a tool, not a tax. Start free. Upgrade when Syncd is doing the writing you used to dread.",
       },
       { property: "og:title", content: "Pricing — Syncd" },
       {
         property: "og:description",
-        content: "One plan, one price, unlimited LinkedIn drafts.",
+        content: "Start free. Upgrade when Syncd is doing the writing you used to dread.",
       },
     ],
   }),
@@ -50,41 +50,46 @@ const tiers: TierDef[] = [
     name: "Free",
     monthly: 0,
     annual: 0,
-    description: "Test the workspace with a monthly credit allowance.",
-    features: ["30 credits / month (5/day cap)", "1 Workspace", "1 LinkedIn account"],
-    cta: "Start free",
+    description: "Try it — no card needed.",
+    features: [
+      "30 credits every month",
+      "200 MB media storage",
+      "Solo workspace",
+      "Connect LinkedIn in 30 seconds",
+    ],
+    cta: "Start drafting free",
     highlighted: false,
   },
   {
     id: "studio",
     name: "Studio",
-    monthly: 9,
-    annual: 90,
-    description: "For solo writers shipping a serious cadence.",
+    monthly: 12,
+    annual: 115,
+    description: "For creators who post weekly.",
     features: [
-      "100 credits / month (No daily cap)",
-      "Unlimited Workspaces",
-      "Voice mapping & tone dial",
-      "Post scheduling & Top-ups",
+      "150 credits every month",
+      "Voice profile — Syncd learns your writing style",
+      "Scheduling — queue posts for the perfect moment",
+      "Priority generation — no waiting in line",
+      "5 GB media storage",
     ],
-    cta: "Choose Studio",
+    cta: "Start with Studio",
     highlighted: true,
   },
   {
     id: "teams",
     name: "Teams",
-    monthly: 29,
-    annual: 290,
-    description: "Shared workspaces for agencies, founders, execs & collaborative teams.",
+    monthly: 15,
+    annual: 144,
+    description: "For teams who ship together.",
     features: [
-      "350 credits / month",
-      "Unlimited Workspaces",
-      "Up to 5 Workspace Team seats",
-      "Team-level workspace access grants",
-      "Role-based permissions (Owner, Admin, Member)",
-      "Up to 10 LinkedIn accounts",
+      "150 credits per seat, pooled across the team",
+      "Shared draft library — everyone drafts in one place",
+      "Review before publish — nothing goes live unvetted",
+      "Team voice consistency",
+      "20 GB media storage",
     ],
-    cta: "Choose Teams",
+    cta: "Get Teams",
     highlighted: false,
   },
 ];
@@ -164,10 +169,10 @@ function PricingPage() {
               Pricing
             </p>
             <h1 className="text-4xl md:text-5xl tracking-[-0.02em] font-semibold leading-[1.05] text-balance">
-              One honest price for serious writers.
+              Priced like a tool, not a tax.
             </h1>
             <p className="mt-4 text-[16px] text-muted-foreground">
-              Credit-based generations. Top up anytime. Cancel anytime.
+              Start free. Upgrade when Syncd is doing the writing you used to dread.
             </p>
 
             <div className="mt-6 inline-flex items-center gap-1 p-1 rounded-full border border-border bg-card text-[12px] font-mono">
@@ -235,7 +240,11 @@ function PricingPage() {
               const priceLabel =
                 t.id === "trial" ? "Free" : priceNum == null ? "—" : `$${priceNum}`;
               const cadence =
-                t.id === "trial" ? "forever" : interval === "year" ? "per year" : "per month";
+                t.id === "trial"
+                  ? "forever"
+                  : t.id === "teams"
+                    ? interval === "year" ? "/ seat / year" : "/ seat / month"
+                    : interval === "year" ? "per year" : "per month";
               const planKey =
                 t.id === "studio"
                   ? interval === "year"
@@ -258,7 +267,7 @@ function PricingPage() {
                 >
                   {t.highlighted && (
                     <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-surface text-ink text-[10px] font-mono uppercase tracking-[0.12em] border border-border">
-                      Most chosen
+                      Most popular
                     </div>
                   )}
                   <div>
@@ -288,6 +297,11 @@ function PricingPage() {
                         {cadence}
                       </span>
                     </div>
+                    {t.id === "teams" && (
+                      <p className="mt-1.5 text-[11px] font-mono text-muted-foreground">
+                        2 seat minimum · e.g. 3 seats = $45/mo
+                      </p>
+                    )}
                     <p
                       className={`mt-3 text-[13px] ${
                         t.highlighted ? "text-surface/70" : "text-muted-foreground"
@@ -353,6 +367,45 @@ function PricingPage() {
             })}
           </div>
 
+          <p className="mt-8 text-center text-[13px] text-muted-foreground">
+            Free forever for solo drafts. Pay only when you need scheduling, voice matching, or a team to draft alongside you.
+          </p>
+
+          {/* Trust & FAQ */}
+          <section className="mt-14 max-w-2xl mx-auto">
+            <h2 className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-6 text-center">
+              Good to know
+            </h2>
+            <div className="divide-y divide-border border border-border rounded-xl overflow-hidden">
+              {([
+                [
+                  "What happens if a generation fails?",
+                  "If any AI generation fails or encounters an error, your credit is immediately restored to your workspace balance — automatically, no need to contact support.",
+                ],
+                [
+                  "How do pooled credits work for Teams?",
+                  "Your workspace has one shared credit pool. Any team member spending a credit draws from that pool. Buy more seats, get more pooled credits (150 per seat).",
+                ],
+                [
+                  "Do top-up credits expire?",
+                  "No. Top-up credits never expire and roll over month to month indefinitely. Subscription credits reset monthly.",
+                ],
+                [
+                  "Can I own multiple workspaces?",
+                  "Each account owns one workspace. You can join teammates' workspaces as a member on the Teams plan — your own workspace stays separate.",
+                ],
+              ] as [string, string][]).map(([q, a]) => (
+                <details key={q} className="group px-5 py-4 cursor-pointer">
+                  <summary className="flex items-center justify-between text-[13px] font-medium text-ink list-none select-none">
+                    {q}
+                    <span className="ml-4 shrink-0 text-muted-foreground text-[16px] leading-none group-open:rotate-45 transition-transform">+</span>
+                  </summary>
+                  <p className="mt-2.5 text-[13px] text-muted-foreground leading-relaxed">{a}</p>
+                </details>
+              ))}
+            </div>
+          </section>
+
           <section className="mt-16">
             <div className="text-center max-w-xl mx-auto">
               <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-2">
@@ -389,7 +442,7 @@ function PricingPage() {
           </section>
 
           <p className="mt-12 text-center text-[12px] font-mono text-muted-foreground">
-            Cancel anytime · Top-up credits never expire
+            Cancel anytime · Top-up credits never expire · Failed generations refund automatically
           </p>
         </div>
       </main>

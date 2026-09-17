@@ -76,13 +76,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   return (
     <AuthProvider>
-      <CreditsProvider>
-        {/* Global so the persistent sidebar's draft list shares one workspace
-            state with the canvas across /app, /drafts and /settings. */}
-        <WorkspaceProvider>
+      {/* Global so the persistent sidebar's draft list shares one workspace
+          state with the canvas across /app, /drafts and /settings. */}
+      <WorkspaceProvider>
+        <CreditsProvider>
           <Outlet />
-        </WorkspaceProvider>
-      </CreditsProvider>
+        </CreditsProvider>
+      </WorkspaceProvider>
     </AuthProvider>
   );
 }

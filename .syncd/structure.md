@@ -110,7 +110,7 @@ ssyncd/
 │   │   ├── api.linkedin.callback.ts   # LinkedIn OAuth callback
 │   │   ├── api.linkedin.publish.ts    # LinkedIn publish endpoint
 │   │   ├── api.linkedin.disconnect.ts # LinkedIn disconnect endpoint
-│   │   ├── api.polar.checkout.ts      # Polar checkout session creation
+│   │   ├── api.polar.checkout.ts      # Polar checkout session creation (product_id format)
 │   │   ├── api.polar.portal.ts        # Polar customer portal session
 │   │   ├── api.public.polar.webhook.ts # Polar webhook handler
 │   │   ├── api.public.scheduler.ts    # Scheduler worker for scheduled posts
@@ -121,7 +121,7 @@ ssyncd/
 │   └── styles.css            # Global Tailwind & base styles
 ├── supabase/                 # Backend configuration
 │   ├── config.toml           # Supabase project settings
-│   └── migrations/           # SQL database migrations (20 files)
+│   └── migrations/           # SQL database migrations (22 files)
 ├── .env                      # Environment variables (gitignored)
 ├── .env.example              # Example environment variables
 ├── .gitignore                # Git ignore rules
@@ -144,7 +144,9 @@ ssyncd/
 - **images**: LinkedIn-ready uploaded images (legacy path + alt text).
 - **subscriptions**: User subscription records with plan, status, billing metadata, and period info.
 - **user_credits**: Per-user real-time credit balances (subscription, top-up, daily usage).
+- **workspace_credits**: Workspace-level credit balances and usage tracking.
 - **user_storage**: Cumulative media storage usage per user.
+- **workspace_storage**: Workspace-level storage usage tracking.
 - **credit_transactions**: Immutable ledger of credit grants, usage, refunds, and plan changes.
 - **teams**: Team workspace metadata.
 - **team_members**: Membership rows linking users to teams with role.
@@ -159,6 +161,11 @@ ssyncd/
 - **publish_scheduled_post**: Scheduler RPC invoked by the public scheduler route.
 
 # Recent Changes
+
+## 2026-09-17
+- **Workspace-Scoped Credits & Storage**: Added workspace-level credit tracking and storage accounting. Credits are now tracked per-workspace, and storage quotas are workspace-scoped. New migrations: `20260917100000_workspace_scoped_credits_and_storage.sql`, `20260917110000_update_handle_plan_change_workspace_scoped.sql`.
+- **Pricing Update**: Revised pricing — Studio $12/month ($115/year), Teams $15/seat/month ($144/seat/year). Studio: 150 credits/month, single workspace. Teams: 150 credits/seat (pooled), 1 workspace per user. Top-up packs unchanged ($4/50, $10/150, $25/500).
+- **Plan Limits Update**: Studio `monthlyCredits` 100→150, `maxWorkspaces` 999→1. Teams `maxWorkspaces` 999→1. Both plans now limited to 1 workspace per user.
 
 ## 2026-09-12
 - **Workspace Migration**: Removed projects table; added `workspace_id` to drafts for workspace-based organization. Fixed workspace member insert RLS policy. New migrations: `20260912000000_remove_projects_add_workspace_to_drafts.sql`, `20260908182800_fix_workspace_member_insert_rls.sql`.

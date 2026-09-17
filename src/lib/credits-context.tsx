@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PLAN_LIMITS, type PlanTier } from "@/lib/plans";
 import { getMySubscription } from "@/lib/subscription.functions";
 import { createUniqueChannel } from "@/lib/realtime";
+import { useWorkspace } from "@/lib/workspace-context";
 
 export interface CreditsState {
   subscriptionCredits: number;
@@ -35,6 +36,7 @@ const CreditsContext = createContext<CreditsState | undefined>(undefined);
 
 export function CreditsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const { activeWorkspaceId } = useWorkspace();
   const [state, setState] = useState<CreditsState>(DEFAULT);
 
   useEffect(() => {
@@ -46,26 +48,49 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
 
     async function load() {
       try {
-        const [creditsRes, sub] = await Promise.all([
+        let wsId = activeWorkspaceId;
+        if (!wsId) {
+          const { data: memberWs } = await supabase
+            .from("workspace_members")
+            .select("workspace_id")
+            .eq("user_id", user!.id)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          wsId = memberWs?.workspace_id ?? null;
+        }
+
+        if (!wsId) {
+          if (cancelled) return;
+          setState((s) => ({ ...s, isLoading: false }));
+          return;
+        }
+
+        const [creditsRes, sub, planRes] = await Promise.all([
           supabase
             .from("user_credits")
             .select("subscription_credits, topup_credits, daily_credits_used, last_daily_reset")
-            .eq("user_id", user!.id)
+            .eq("workspace_id", wsId)
             .maybeSingle(),
           getMySubscription().catch(() => null),
+          supabase.rpc("get_workspace_plan", { p_workspace_id: wsId }),
         ]);
+
         if (cancelled) return;
         if (creditsRes.error) throw creditsRes.error;
-        const plan = (sub?.plan ?? "trial") as PlanTier;
-        // Admin flag comes straight from user_roles via getMySubscription.
+
         const isAdmin = sub?.isAdmin ?? false;
-        const limits = PLAN_LIMITS[plan];
+        const plan = isAdmin
+          ? "teams"
+          : ((planRes.data as PlanTier | null) ?? sub?.plan ?? "trial");
+        const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.trial;
         const row = creditsRes.data;
         const todayUtc = new Date().toISOString().slice(0, 10);
         const isSameDay = !row?.last_daily_reset || row.last_daily_reset === todayUtc;
         const subscriptionCredits = row?.subscription_credits ?? limits.monthlyCredits;
         const topupCredits = row?.topup_credits ?? 0;
         const dailyCreditsUsed = isSameDay ? (row?.daily_credits_used ?? 0) : 0;
+
         setState({
           subscriptionCredits,
           topupCredits,
@@ -84,16 +109,19 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
         setState((s) => ({ ...s, isLoading: false, error: err as Error }));
       }
     }
+
     void load();
 
-    const channel = createUniqueChannel(`user_credits:${user.id}`)
+    if (!activeWorkspaceId) return;
+
+    const channel = createUniqueChannel(`workspace_credits:${activeWorkspaceId}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "user_credits",
-          filter: `user_id=eq.${user.id}`,
+          filter: `workspace_id=eq.${activeWorkspaceId}`,
         },
         (payload) => {
           const row = payload.new as {
@@ -124,7 +152,7 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [user?.id, activeWorkspaceId]);
 
   return <CreditsContext.Provider value={state}>{children}</CreditsContext.Provider>;
 }

@@ -70,11 +70,13 @@ function jsonResponse(body: Record<string, unknown>, status: number) {
 async function refundCredit(
   userId: string,
   creditType: "subscription" | "topup" | "auto" = "auto",
+  workspaceId?: string,
 ) {
   const { error } = await supabaseAdmin.rpc("refund_credit", {
     _user_id: userId,
     _reason: "ai_provider_error",
     _credit_type: creditType,
+    _workspace_id: workspaceId,
   });
   if (error) console.error("[generate] refund_credit failed", error);
 }
@@ -88,6 +90,7 @@ function toSseStream(
   textStream: AsyncIterable<string>,
   userId: string,
   creditType: "subscription" | "topup" | "auto" = "auto",
+  workspaceId?: string,
 ) {
   const encoder = new TextEncoder();
 
@@ -105,7 +108,7 @@ function toSseStream(
         controller.close();
       } catch (error) {
         console.error("[generate] AI stream failed", error);
-        await refundCredit(userId, creditType);
+        await refundCredit(userId, creditType, workspaceId);
         controller.enqueue(
           encoder.encode(
             `data: ${JSON.stringify({ error: providerErrorMessage(error) })}\n\n`,
@@ -143,12 +146,14 @@ export const Route = createFileRoute("/api/generate")({
           return jsonResponse({ error: "Invalid JSON body." }, 400);
         }
 
-        const { input, tone, images, mode } = (body ?? {}) as {
+        const { input, tone, images, mode, workspaceId } = (body ?? {}) as {
           input?: unknown;
           tone?: unknown;
           images?: unknown;
           mode?: unknown;
+          workspaceId?: unknown;
         };
+        const resolvedWsId = typeof workspaceId === "string" ? workspaceId : undefined;
         if (typeof input !== "string" || input.trim().length === 0) {
           return jsonResponse(
             { error: "Please provide some raw material to work from." },
@@ -164,7 +169,9 @@ export const Route = createFileRoute("/api/generate")({
 
         // 2. Resolve plan and check feature gating (voice notes require Studio or Teams)
         const [planRes, profRes] = await Promise.all([
-          supabaseAdmin.rpc("get_user_plan", { _user_id: userId }),
+          resolvedWsId
+            ? supabaseAdmin.rpc("get_workspace_plan", { p_workspace_id: resolvedWsId })
+            : supabaseAdmin.rpc("get_user_plan", { _user_id: userId }),
           supabaseAdmin
             .from("profiles")
             .select("voice_notes")
@@ -176,10 +183,10 @@ export const Route = createFileRoute("/api/generate")({
         const rawVoiceNotes = (profRes.data?.voice_notes ?? "").trim();
         const voiceNotes = allowsVoiceMapping ? rawVoiceNotes : "";
 
-        // 3. Deduct credit
+        // 3. Deduct credit from workspace
         const { data: creditRes, error: creditErr } = await supabaseAdmin.rpc(
           "consume_credit",
-          { _user_id: userId },
+          { _user_id: userId, _workspace_id: resolvedWsId },
         );
         if (creditErr) {
           console.error("[generate] consume_credit failed", creditErr);
@@ -248,11 +255,11 @@ Write the LinkedIn post now.`;
           });
         } catch (error) {
           console.error("[generate] AI provider request failed", error);
-          await refundCredit(userId, creditSource);
+          await refundCredit(userId, creditSource, resolvedWsId);
           return jsonResponse({ error: providerErrorMessage(error) }, 502);
         }
 
-        return new Response(toSseStream(textStream, userId, creditSource), {
+        return new Response(toSseStream(textStream, userId, creditSource, resolvedWsId), {
           headers: {
             "Content-Type": "text/event-stream",
             "Cache-Control": "no-cache",

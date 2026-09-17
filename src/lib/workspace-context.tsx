@@ -286,6 +286,41 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setSuccess(null);
   }, [userId]);
 
+  // Ensure active workspace is resolved and valid for current user
+  useEffect(() => {
+    if (!user) {
+      setActiveWorkspaceId(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      if (activeWorkspaceId) {
+        const { data: hasAccess } = await supabase.rpc("has_workspace_access", {
+          _user_id: user.id,
+          _workspace_id: activeWorkspaceId,
+        });
+        if (hasAccess) return;
+      }
+      const { data: memberRows } = await supabase
+        .from("workspace_members")
+        .select("workspace:workspaces(id, name, owner_id, created_at, updated_at)")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: true })
+        .limit(1);
+
+      if (cancelled) return;
+      const ws = memberRows?.[0]?.workspace as unknown as Workspace | undefined;
+      if (ws) {
+        setActiveWorkspaceId(ws.id);
+        persistActiveWorkspace(ws);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
   // ── LinkedIn connection check ───────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
