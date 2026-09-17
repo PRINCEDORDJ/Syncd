@@ -44,11 +44,11 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     maxFileSizeBytes: 10_485_760, // 10 MB
   },
   studio: {
-    monthlyCredits: 100,
+    monthlyCredits: 150,
     dailyCap: 0,
     maxLinkedInAccounts: 1,
     teamSeats: 1,
-    maxWorkspaces: 999, // Unlimited
+    maxWorkspaces: 1,
     maxWorkspaceMembers: 1,
     allowsTeamWorkspaceAccess: false,
     voiceMapping: true,
@@ -62,7 +62,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     dailyCap: 0,
     maxLinkedInAccounts: 10,
     teamSeats: 5,
-    maxWorkspaces: 999, // Unlimited
+    maxWorkspaces: 1,
     maxWorkspaceMembers: 5,
     allowsTeamWorkspaceAccess: true,
     voiceMapping: true,

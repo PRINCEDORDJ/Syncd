@@ -101,7 +101,7 @@ function DraftsList() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileAttachInputRef = useRef<HTMLInputElement | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const { loadDraft } = useWorkspace();
+  const { loadDraft, activeWorkspaceId } = useWorkspace();
   const navigate = useNavigate();
 
   function openDraft(r: DraftRow) {
@@ -286,7 +286,10 @@ function DraftsList() {
   }
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !activeWorkspaceId) {
+      setRows([]);
+      return;
+    }
     let cancelled = false;
     (async () => {
       const { data, error: err } = await supabase
@@ -294,7 +297,7 @@ function DraftsList() {
         .select(
           "id, title, content, tone, char_count, published, updated_at, images, attachments, scheduled_at, schedule_status",
         )
-        .eq("user_id", user.id)
+        .eq("workspace_id", activeWorkspaceId)
         .order("updated_at", { ascending: false });
       if (cancelled) return;
       if (err) {
@@ -318,7 +321,7 @@ function DraftsList() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, activeWorkspaceId]);
 
   async function remove(id: string) {
     if (!user) return;

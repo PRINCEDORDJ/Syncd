@@ -117,12 +117,13 @@ export async function getUserPlanAndLimits(userId: string): Promise<{
  */
 export async function fetchUserWorkspaces(userId: string): Promise<Workspace[]> {
   const { data: viewData, error: viewErr } = await supabase
-    .from("my_workspaces")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .from("my_workspaces" as any)
     .select("id, name, owner_id, created_at, updated_at")
     .order("created_at", { ascending: false });
 
   if (!viewErr && viewData && viewData.length > 0) {
-    return viewData.map((w) => ({
+    return (viewData as unknown as { id: string; name: string; owner_id: string; created_at: string; updated_at: string }[]).map((w) => ({
       id: w.id ?? "",
       name: w.name ?? "",
       owner_id: w.owner_id ?? userId,
@@ -235,13 +236,9 @@ export async function createWorkspace(
 
   if (countErr) throw countErr;
 
-  if (!isAdmin && count !== null && count >= limits.maxWorkspaces) {
+  if (!isAdmin && count !== null && count >= 1) {
     throw new Error(
-      `You have reached the limit of ${limits.maxWorkspaces} workspace${
-        limits.maxWorkspaces === 1 ? "" : "s"
-      } on the ${PLAN_LABELS[plan]} plan. Upgrade to ${
-        plan === "trial" ? "Studio or Teams" : "Teams"
-      } in Settings → Billing to create more workspaces.`,
+      "Each account includes one dedicated workspace. To collaborate with teammates, invite them into your workspace under Teams.",
     );
   }
 

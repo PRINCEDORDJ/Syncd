@@ -215,221 +215,6 @@ export type Database = {
         }
         Relationships: []
       }
-      project_invites: {
-        Row: {
-          access_level: Database["public"]["Enums"]["project_access_level"]
-          created_at: string
-          email: string | null
-          expires_at: string
-          id: string
-          invited_by: string | null
-          project_id: string
-          status: Database["public"]["Enums"]["invite_status"]
-          team_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          access_level?: Database["public"]["Enums"]["project_access_level"]
-          created_at?: string
-          email?: string | null
-          expires_at?: string
-          id?: string
-          invited_by?: string | null
-          project_id: string
-          status?: Database["public"]["Enums"]["invite_status"]
-          team_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          access_level?: Database["public"]["Enums"]["project_access_level"]
-          created_at?: string
-          email?: string | null
-          expires_at?: string
-          id?: string
-          invited_by?: string | null
-          project_id?: string
-          status?: Database["public"]["Enums"]["invite_status"]
-          team_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_invites_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "my_projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "project_invites_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "project_invites_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      project_members: {
-        Row: {
-          accepted_at: string | null
-          access_level: Database["public"]["Enums"]["project_access_level"]
-          created_at: string
-          id: string
-          invited_by: string | null
-          project_id: string
-          status: Database["public"]["Enums"]["grant_status"]
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          accepted_at?: string | null
-          access_level?: Database["public"]["Enums"]["project_access_level"]
-          created_at?: string
-          id?: string
-          invited_by?: string | null
-          project_id: string
-          status?: Database["public"]["Enums"]["grant_status"]
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          accepted_at?: string | null
-          access_level?: Database["public"]["Enums"]["project_access_level"]
-          created_at?: string
-          id?: string
-          invited_by?: string | null
-          project_id?: string
-          status?: Database["public"]["Enums"]["grant_status"]
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_members_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "my_projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "project_members_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      project_team_access: {
-        Row: {
-          accepted_at: string | null
-          access_level: Database["public"]["Enums"]["project_access_level"]
-          created_at: string
-          id: string
-          invited_by: string | null
-          project_id: string
-          status: Database["public"]["Enums"]["grant_status"]
-          team_id: string
-          updated_at: string
-        }
-        Insert: {
-          accepted_at?: string | null
-          access_level?: Database["public"]["Enums"]["project_access_level"]
-          created_at?: string
-          id?: string
-          invited_by?: string | null
-          project_id: string
-          status?: Database["public"]["Enums"]["grant_status"]
-          team_id: string
-          updated_at?: string
-        }
-        Update: {
-          accepted_at?: string | null
-          access_level?: Database["public"]["Enums"]["project_access_level"]
-          created_at?: string
-          id?: string
-          invited_by?: string | null
-          project_id?: string
-          status?: Database["public"]["Enums"]["grant_status"]
-          team_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_team_access_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "my_projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "project_team_access_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "project_team_access_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      projects: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: string
-          name: string
-          status: string
-          updated_at: string
-          workspace_id: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          name: string
-          status?: string
-          updated_at?: string
-          workspace_id: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          name?: string
-          status?: string
-          updated_at?: string
-          workspace_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "projects_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "my_workspaces"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "projects_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean
@@ -545,7 +330,7 @@ export type Database = {
           subscription_credits: number
           topup_credits: number
           updated_at: string
-          user_id: string
+          workspace_id: string
         }
         Insert: {
           daily_credits_used?: number
@@ -554,7 +339,7 @@ export type Database = {
           subscription_credits?: number
           topup_credits?: number
           updated_at?: string
-          user_id: string
+          workspace_id: string
         }
         Update: {
           daily_credits_used?: number
@@ -563,9 +348,17 @@ export type Database = {
           subscription_credits?: number
           topup_credits?: number
           updated_at?: string
-          user_id?: string
+          workspace_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_credits_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_onboarding: {
         Row: {
@@ -625,19 +418,27 @@ export type Database = {
         Row: {
           bytes_used: number
           updated_at: string
-          user_id: string
+          workspace_id: string
         }
         Insert: {
           bytes_used?: number
           updated_at?: string
-          user_id: string
+          workspace_id: string
         }
         Update: {
           bytes_used?: number
           updated_at?: string
-          user_id?: string
+          workspace_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_storage_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workspace_invites: {
         Row: {
@@ -688,13 +489,6 @@ export type Database = {
             foreignKeyName: "workspace_invites_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
-            referencedRelation: "my_workspaces"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workspace_invites_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -735,13 +529,6 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "workspace_members_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "my_workspaces"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "workspace_members_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -797,13 +584,6 @@ export type Database = {
             foreignKeyName: "workspace_team_access_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
-            referencedRelation: "my_workspaces"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workspace_team_access_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -835,103 +615,9 @@ export type Database = {
       }
     }
     Views: {
-      my_projects: {
-        Row: {
-          access_source: string | null
-          created_at: string | null
-          created_by: string | null
-          id: string | null
-          name: string | null
-          status: string | null
-          updated_at: string | null
-          workspace_id: string | null
-        }
-        Insert: {
-          access_source?: never
-          created_at?: string | null
-          created_by?: string | null
-          id?: string | null
-          name?: string | null
-          status?: string | null
-          updated_at?: string | null
-          workspace_id?: string | null
-        }
-        Update: {
-          access_source?: never
-          created_at?: string | null
-          created_by?: string | null
-          id?: string | null
-          name?: string | null
-          status?: string | null
-          updated_at?: string | null
-          workspace_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "projects_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "my_workspaces"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "projects_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      my_workspaces: {
-        Row: {
-          access_source: string | null
-          created_at: string | null
-          id: string | null
-          name: string | null
-          owner_id: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          access_source?: never
-          created_at?: string | null
-          id?: string | null
-          name?: string | null
-          owner_id?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          access_source?: never
-          created_at?: string | null
-          id?: string | null
-          name?: string | null
-          owner_id?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
-      accept_project_invite: {
-        Args: { p_invite_id: string }
-        Returns: {
-          accepted_at: string | null
-          access_level: Database["public"]["Enums"]["project_access_level"]
-          created_at: string
-          id: string
-          invited_by: string | null
-          project_id: string
-          status: Database["public"]["Enums"]["grant_status"]
-          updated_at: string
-          user_id: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "project_members"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
       accept_workspace_invite: {
         Args: { p_invite_id: string }
         Returns: {
@@ -951,10 +637,6 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
-      }
-      can_manage_project: {
-        Args: { _project_id: string; _user_id: string }
-        Returns: boolean
       }
       can_manage_workspace: {
         Args: { _user_id: string; _workspace_id: string }
@@ -984,7 +666,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      consume_credit: { Args: { _user_id: string }; Returns: Json }
+      consume_credit: {
+        Args: { _user_id: string; _workspace_id?: string }
+        Returns: Json
+      }
       expire_linkedin_connections: { Args: never; Returns: number }
       get_post_signup_context: { Args: never; Returns: Json }
       get_team_role: {
@@ -993,6 +678,10 @@ export type Database = {
       }
       get_user_plan: {
         Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["plan_tier"]
+      }
+      get_workspace_plan: {
+        Args: { p_workspace_id: string }
         Returns: Database["public"]["Enums"]["plan_tier"]
       }
       grant_subscription_credits: {
@@ -1011,10 +700,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      has_project_access: {
-        Args: { _project_id: string; _user_id: string }
-        Returns: boolean
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1031,7 +716,12 @@ export type Database = {
         Returns: boolean
       }
       refund_credit: {
-        Args: { _credit_type?: string; _reason?: string; _user_id: string }
+        Args: {
+          _credit_type?: string
+          _reason?: string
+          _user_id: string
+          _workspace_id?: string
+        }
         Returns: undefined
       }
       reset_daily_credits: { Args: never; Returns: undefined }
@@ -1042,7 +732,6 @@ export type Database = {
       invite_status: "pending" | "accepted" | "declined" | "revoked" | "expired"
       onboarding_status: "pending" | "in_progress" | "complete"
       plan_tier: "trial" | "studio" | "teams"
-      project_access_level: "owner" | "admin" | "editor" | "viewer"
       subscription_status:
         | "active"
         | "canceled"
@@ -1183,7 +872,6 @@ export const Constants = {
       invite_status: ["pending", "accepted", "declined", "revoked", "expired"],
       onboarding_status: ["pending", "in_progress", "complete"],
       plan_tier: ["trial", "studio", "teams"],
-      project_access_level: ["owner", "admin", "editor", "viewer"],
       subscription_status: [
         "active",
         "canceled",

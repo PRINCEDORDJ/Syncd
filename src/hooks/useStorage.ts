@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PLAN_LIMITS, type PlanTier } from "@/lib/plans";
 import { getMySubscription } from "@/lib/subscription.functions";
 import { createUniqueChannel } from "@/lib/realtime";
+import { useWorkspace } from "@/lib/workspace-context";
 
 export interface StorageState {
   bytesUsed: number;
@@ -29,8 +30,16 @@ const DEFAULT: StorageState = {
   error: null,
 };
 
-export function useStorage(): StorageState {
+export function useStorage(overrideWorkspaceId?: string): StorageState {
   const { user } = useAuth();
+  let contextWsId: string | null = null;
+  try {
+    const wsCtx = useWorkspace();
+    contextWsId = wsCtx.activeWorkspaceId;
+  } catch {
+    contextWsId = null;
+  }
+  const activeWorkspaceId = overrideWorkspaceId ?? contextWsId;
   const [state, setState] = useState<StorageState>(DEFAULT);
 
   useEffect(() => {
@@ -41,18 +50,41 @@ export function useStorage(): StorageState {
     let cancelled = false;
     async function load() {
       try {
-        const [storageRes, sub] = await Promise.all([
+        let wsId = activeWorkspaceId;
+        if (!wsId) {
+          const { data: memberWs } = await supabase
+            .from("workspace_members")
+            .select("workspace_id")
+            .eq("user_id", user!.id)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          wsId = memberWs?.workspace_id ?? null;
+        }
+
+        if (!wsId) {
+          if (cancelled) return;
+          setState((s) => ({ ...s, isLoading: false }));
+          return;
+        }
+
+        const [storageRes, sub, planRes] = await Promise.all([
           supabase
             .from("user_storage")
             .select("bytes_used")
-            .eq("user_id", user!.id)
+            .eq("workspace_id", wsId)
             .maybeSingle(),
           getMySubscription().catch(() => null),
+          supabase.rpc("get_workspace_plan", { p_workspace_id: wsId }),
         ]);
         if (cancelled) return;
         if (storageRes.error) throw storageRes.error;
-        const plan = (sub?.plan ?? "trial") as PlanTier;
-        const limits = PLAN_LIMITS[plan];
+
+        const isAdmin = sub?.isAdmin ?? false;
+        const plan = isAdmin
+          ? "teams"
+          : ((planRes.data as PlanTier | null) ?? sub?.plan ?? "trial");
+        const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.trial;
         const bytesUsed = storageRes.data?.bytes_used ?? 0;
         const pct = limits.storageBytes
           ? (bytesUsed / limits.storageBytes) * 100
@@ -76,14 +108,16 @@ export function useStorage(): StorageState {
     }
     void load();
 
-    const channel = createUniqueChannel(`user_storage:${user.id}`)
+    if (!activeWorkspaceId) return;
+
+    const channel = createUniqueChannel(`workspace_storage:${activeWorkspaceId}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
-          table: "drafts",
-          filter: `user_id=eq.${user.id}`,
+          table: "user_storage",
+          filter: `workspace_id=eq.${activeWorkspaceId}`,
         },
         () => {
           void load();
@@ -95,7 +129,7 @@ export function useStorage(): StorageState {
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user?.id, activeWorkspaceId]);
 
   return state;
 }

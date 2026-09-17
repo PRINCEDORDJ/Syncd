@@ -35,6 +35,6 @@ dist-ssr
 .env.local
 .env
 
-
+nul
 .agents/
 .claude/

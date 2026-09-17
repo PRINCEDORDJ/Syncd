@@ -40,6 +40,21 @@ export async function createWorkspaceOnboarding(
     throw new Error("Workspace name is required.");
   }
 
+  // Enforce single-workspace per account: reuse existing owned workspace if found
+  const { data: existingWorkspace } = await supabase
+    .from("workspaces")
+    .select("id, name, owner_id, created_at, updated_at")
+    .eq("owner_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingWorkspace) {
+    return {
+      workspace: existingWorkspace as WorkspaceSummary,
+    };
+  }
+
   const { data: workspace, error: workspaceError } = await supabase
     .from("workspaces")
     .insert({

@@ -24,7 +24,7 @@ function LoginPage() {
   const navigate = useNavigate();
   const { user, loading, onboarding } = useAuth();
   const search = Route.useSearch();
-  const redirectTo = search.redirect ?? "/onboarding";
+  const redirectTo = search.redirect ?? "/app";
 
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
