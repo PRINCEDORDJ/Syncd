@@ -66,8 +66,11 @@ function LandingPage() {
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-[56ch] text-pretty leading-relaxed">
-            Dump a half-formed thought. Syncd drafts it in your voice, attaches your
-            media, and publishes — now or on a schedule — straight to LinkedIn.
+            Dump a half-formed thought. Syncd drafts it in your voice and
+            attaches your media.
+          </p>
+          <p className="text-lg md:text-xl text-muted-foreground max-w-[56ch] text-pretty leading-relaxed">
+            Publish now, or schedule — straight to LinkedIn.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 mt-2">
@@ -89,6 +92,9 @@ function LandingPage() {
 
           <p className="text-[12px] font-mono text-muted-foreground mt-3">
             30 free credits every month · No credit card · Connect LinkedIn in 30 seconds
+          </p>
+          <p className="text-[12px] font-mono text-muted-foreground">
+            Official LinkedIn OAuth — we never see your password.
           </p>
         </div>
       </header>
@@ -140,6 +146,18 @@ function LandingPage() {
             title="Native publishing"
             body="Official LinkedIn OAuth. Line breaks, spacing, and media preserved exactly — one click from draft to feed."
           />
+        </div>
+      </section>
+
+      {/* Social proof */}
+      <section className="max-w-6xl mx-auto px-6 pb-24">
+        <div className="border border-border rounded-xl p-8 md:p-10 bg-card">
+          <blockquote className="text-[15px] md:text-base text-muted-foreground leading-relaxed italic">
+            "[Placeholder quote — replace once we have a real user testimonial]"
+          </blockquote>
+          <p className="mt-4 text-[13px] font-mono text-muted-foreground">
+            — [Name], [Title/Role]
+          </p>
         </div>
       </section>
 
@@ -302,12 +320,6 @@ function PlanCard({
           </li>
         ))}
       </ul>
-      <Link
-        to="/pricing"
-        className="mt-auto inline-flex items-center gap-2 h-9 px-3 rounded-md border border-border text-ink text-[13px] font-medium hover:bg-subtle transition-colors self-start"
-      >
-        See full pricing →
-      </Link>
     </div>
   );
 }
