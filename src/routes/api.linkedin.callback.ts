@@ -105,7 +105,10 @@ export const Route = createFileRoute("/api/linkedin/callback")({
         ).toISOString();
         const memberUrn = `urn:li:person:${userinfo.sub}`;
 
-        // Upsert connection
+        // Upsert connection — supports multiple accounts per user.
+        // onConflict targets (user_id, linkedin_member_urn) so re-authorizing
+        // the same LinkedIn profile updates the existing row while connecting
+        // a different profile creates a new one.
         const { error: upsertErr } = await supabaseAdmin
           .from("linkedin_connections")
           .upsert(
@@ -119,7 +122,7 @@ export const Route = createFileRoute("/api/linkedin/callback")({
               expires_at: expiresAt,
               scope: tokenJson.scope ?? null,
             },
-            { onConflict: "user_id" },
+            { onConflict: "user_id,linkedin_member_urn" },
           );
         if (upsertErr) {
           console.error("[linkedin/callback] upsert failed", upsertErr);

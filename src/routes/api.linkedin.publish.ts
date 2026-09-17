@@ -30,9 +30,9 @@ export const Route = createFileRoute("/api/linkedin/publish")({
         const auth = await authenticate();
         if ("error" in auth) return auth.error;
 
-        let body: { content?: unknown; images?: unknown };
+        let body: { content?: unknown; images?: unknown; connection_id?: unknown };
         try {
-          body = (await request.json()) as { content?: unknown; images?: unknown };
+          body = (await request.json()) as { content?: unknown; images?: unknown; connection_id?: unknown };
         } catch {
           return jsonResponse({ error: "Invalid JSON body." }, 400);
         }
@@ -53,12 +53,23 @@ export const Route = createFileRoute("/api/linkedin/publish")({
           .filter((v): v is string => typeof v === "string" && v.startsWith("data:image/"))
           .slice(0, 9);
 
-        // Load connection
-        const { data: conn, error: connErr } = await supabaseAdmin
+        // Load connection — supports multi-account via optional connection_id
+        const connectionId = typeof body.connection_id === "string" ? body.connection_id : null;
+        let connQuery = supabaseAdmin
           .from("linkedin_connections")
-          .select("access_token, expires_at, linkedin_member_urn")
-          .eq("user_id", auth.userId)
-          .maybeSingle();
+          .select("id, access_token, expires_at, linkedin_member_urn")
+          .eq("user_id", auth.userId);
+
+        if (connectionId) {
+          connQuery = connQuery.eq("id", connectionId);
+        } else {
+          // Default to first active connection
+          connQuery = connQuery.order("created_at", { ascending: false }).limit(1);
+        }
+
+        const { data: connRows, error: connErr } = await connQuery;
+        const conn = connRows?.[0] ?? null;
+
         if (connErr || !conn) {
           return jsonResponse(
             { error: "Connect LinkedIn in Settings before publishing." },
