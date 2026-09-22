@@ -9,76 +9,31 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as PricingRouteImport } from './routes/pricing'
-import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as MethodologyRouteImport } from './routes/methodology'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as DraftsRouteImport } from './routes/drafts'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as DraftsRouteImport } from './routes/drafts'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as MethodologyRouteImport } from './routes/methodology'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ApiGenerateRouteImport } from './routes/api.generate'
-import { Route as ApiPublicSchedulerRouteImport } from './routes/api.public.scheduler'
-import { Route as ApiPolarPortalRouteImport } from './routes/api.polar.portal'
-import { Route as ApiPolarCheckoutRouteImport } from './routes/api.polar.checkout'
-import { Route as ApiLinkedinStartRouteImport } from './routes/api.linkedin.start'
-import { Route as ApiLinkedinPublishRouteImport } from './routes/api.linkedin.publish'
-import { Route as ApiLinkedinDisconnectRouteImport } from './routes/api.linkedin.disconnect'
 import { Route as ApiLinkedinCallbackRouteImport } from './routes/api.linkedin.callback'
+import { Route as ApiLinkedinDisconnectRouteImport } from './routes/api.linkedin.disconnect'
+import { Route as ApiLinkedinPublishRouteImport } from './routes/api.linkedin.publish'
+import { Route as ApiLinkedinStartRouteImport } from './routes/api.linkedin.start'
+import { Route as ApiPolarCheckoutRouteImport } from './routes/api.polar.checkout'
+import { Route as ApiPolarPortalRouteImport } from './routes/api.polar.portal'
+import { Route as ApiPublicSchedulerRouteImport } from './routes/api.public.scheduler'
 import { Route as ApiPublicPolarWebhookRouteImport } from './routes/api.public.polar.webhook'
 
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PricingRoute = PricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OnboardingRoute = OnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MethodologyRoute = MethodologyRouteImport.update({
-  id: '/methodology',
-  path: '/methodology',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DraftsRoute = DraftsRouteImport.update({
-  id: '/drafts',
-  path: '/drafts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -86,9 +41,54 @@ const AppRoute = AppRouteImport.update({
   path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DraftsRoute = DraftsRouteImport.update({
+  id: '/drafts',
+  path: '/drafts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MethodologyRoute = MethodologyRouteImport.update({
+  id: '/methodology',
+  path: '/methodology',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGenerateRoute = ApiGenerateRouteImport.update({
@@ -96,29 +96,9 @@ const ApiGenerateRoute = ApiGenerateRouteImport.update({
   path: '/api/generate',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicSchedulerRoute = ApiPublicSchedulerRouteImport.update({
-  id: '/api/public/scheduler',
-  path: '/api/public/scheduler',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPolarPortalRoute = ApiPolarPortalRouteImport.update({
-  id: '/api/polar/portal',
-  path: '/api/polar/portal',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPolarCheckoutRoute = ApiPolarCheckoutRouteImport.update({
-  id: '/api/polar/checkout',
-  path: '/api/polar/checkout',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiLinkedinStartRoute = ApiLinkedinStartRouteImport.update({
-  id: '/api/linkedin/start',
-  path: '/api/linkedin/start',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiLinkedinPublishRoute = ApiLinkedinPublishRouteImport.update({
-  id: '/api/linkedin/publish',
-  path: '/api/linkedin/publish',
+const ApiLinkedinCallbackRoute = ApiLinkedinCallbackRouteImport.update({
+  id: '/api/linkedin/callback',
+  path: '/api/linkedin/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiLinkedinDisconnectRoute = ApiLinkedinDisconnectRouteImport.update({
@@ -126,9 +106,29 @@ const ApiLinkedinDisconnectRoute = ApiLinkedinDisconnectRouteImport.update({
   path: '/api/linkedin/disconnect',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiLinkedinCallbackRoute = ApiLinkedinCallbackRouteImport.update({
-  id: '/api/linkedin/callback',
-  path: '/api/linkedin/callback',
+const ApiLinkedinPublishRoute = ApiLinkedinPublishRouteImport.update({
+  id: '/api/linkedin/publish',
+  path: '/api/linkedin/publish',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLinkedinStartRoute = ApiLinkedinStartRouteImport.update({
+  id: '/api/linkedin/start',
+  path: '/api/linkedin/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPolarCheckoutRoute = ApiPolarCheckoutRouteImport.update({
+  id: '/api/polar/checkout',
+  path: '/api/polar/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPolarPortalRoute = ApiPolarPortalRouteImport.update({
+  id: '/api/polar/portal',
+  path: '/api/polar/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSchedulerRoute = ApiPublicSchedulerRouteImport.update({
+  id: '/api/public/scheduler',
+  path: '/api/public/scheduler',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicPolarWebhookRoute = ApiPublicPolarWebhookRouteImport.update({
@@ -305,74 +305,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pricing': {
-      id: '/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof PricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding': {
-      id: '/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/methodology': {
-      id: '/methodology'
-      path: '/methodology'
-      fullPath: '/methodology'
-      preLoaderRoute: typeof MethodologyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/drafts': {
-      id: '/drafts'
-      path: '/drafts'
-      fullPath: '/drafts'
-      preLoaderRoute: typeof DraftsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -382,11 +319,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/drafts': {
+      id: '/drafts'
+      path: '/drafts'
+      fullPath: '/drafts'
+      preLoaderRoute: typeof DraftsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/methodology': {
+      id: '/methodology'
+      path: '/methodology'
+      fullPath: '/methodology'
+      preLoaderRoute: typeof MethodologyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/generate': {
@@ -396,39 +396,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGenerateRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/scheduler': {
-      id: '/api/public/scheduler'
-      path: '/api/public/scheduler'
-      fullPath: '/api/public/scheduler'
-      preLoaderRoute: typeof ApiPublicSchedulerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/polar/portal': {
-      id: '/api/polar/portal'
-      path: '/api/polar/portal'
-      fullPath: '/api/polar/portal'
-      preLoaderRoute: typeof ApiPolarPortalRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/polar/checkout': {
-      id: '/api/polar/checkout'
-      path: '/api/polar/checkout'
-      fullPath: '/api/polar/checkout'
-      preLoaderRoute: typeof ApiPolarCheckoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/linkedin/start': {
-      id: '/api/linkedin/start'
-      path: '/api/linkedin/start'
-      fullPath: '/api/linkedin/start'
-      preLoaderRoute: typeof ApiLinkedinStartRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/linkedin/publish': {
-      id: '/api/linkedin/publish'
-      path: '/api/linkedin/publish'
-      fullPath: '/api/linkedin/publish'
-      preLoaderRoute: typeof ApiLinkedinPublishRouteImport
+    '/api/linkedin/callback': {
+      id: '/api/linkedin/callback'
+      path: '/api/linkedin/callback'
+      fullPath: '/api/linkedin/callback'
+      preLoaderRoute: typeof ApiLinkedinCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/linkedin/disconnect': {
@@ -438,11 +410,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLinkedinDisconnectRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/linkedin/callback': {
-      id: '/api/linkedin/callback'
-      path: '/api/linkedin/callback'
-      fullPath: '/api/linkedin/callback'
-      preLoaderRoute: typeof ApiLinkedinCallbackRouteImport
+    '/api/linkedin/publish': {
+      id: '/api/linkedin/publish'
+      path: '/api/linkedin/publish'
+      fullPath: '/api/linkedin/publish'
+      preLoaderRoute: typeof ApiLinkedinPublishRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/linkedin/start': {
+      id: '/api/linkedin/start'
+      path: '/api/linkedin/start'
+      fullPath: '/api/linkedin/start'
+      preLoaderRoute: typeof ApiLinkedinStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/polar/checkout': {
+      id: '/api/polar/checkout'
+      path: '/api/polar/checkout'
+      fullPath: '/api/polar/checkout'
+      preLoaderRoute: typeof ApiPolarCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/polar/portal': {
+      id: '/api/polar/portal'
+      path: '/api/polar/portal'
+      fullPath: '/api/polar/portal'
+      preLoaderRoute: typeof ApiPolarPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/scheduler': {
+      id: '/api/public/scheduler'
+      path: '/api/public/scheduler'
+      fullPath: '/api/public/scheduler'
+      preLoaderRoute: typeof ApiPublicSchedulerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/polar/webhook': {
