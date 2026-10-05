@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { useAuth, syncUserProfileMetadata } from "@/lib/auth";
+import { resolvePostAuthDestination } from "@/lib/workspace-onboarding";
 import { BrandMark } from "@/components/BrandMark";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,12 +30,7 @@ function AuthCallback() {
     if (loading) return;
     if (user) {
       void syncUserProfileMetadata(user);
-      const needsOnboarding = onboarding?.onboarding_status === "pending";
-      const dest = needsOnboarding
-        ? "/onboarding"
-        : redirect && redirect.startsWith("/")
-          ? redirect
-          : "/app";
+      const dest = resolvePostAuthDestination(onboarding?.onboarding_status, redirect);
       navigate({ to: dest, replace: true });
       return;
     }

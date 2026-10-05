@@ -19,6 +19,18 @@ export interface WorkspaceSummary {
   updated_at: string;
 }
 
+export function resolvePostAuthDestination(
+  status: OnboardingStatus | undefined | null,
+  redirect: string | undefined,
+): string {
+  if (status === "pending") return "/onboarding";
+  const safe = redirect && redirect.startsWith("/") ? redirect : "/app";
+  if (status === "complete" && (safe === "/onboarding" || safe.startsWith("/onboarding?"))) {
+    return "/app";
+  }
+  return safe;
+}
+
 export async function loadPostSignupContext() {
   const { data, error } = await supabase.rpc("get_post_signup_context");
   if (error) throw error;

@@ -184,7 +184,7 @@ export function SiteNav() {
               </Link>
               <Link
                 to="/login"
-                search={{ redirect: "/onboarding" }}
+                search={{ redirect: "/app" }}
                 className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 transition-colors"
               >
                 Get started
