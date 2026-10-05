@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { resolvePostAuthDestination } from "@/lib/workspace-onboarding";
 import { BrandMark } from "@/components/BrandMark";
 
 export const Route = createFileRoute("/login")({
@@ -37,9 +38,9 @@ function LoginPage() {
 
   useEffect(() => {
     if (loading || !user) return;
-    const needsOnboarding = onboarding?.onboarding_status === "pending";
-    navigate({ to: needsOnboarding ? "/onboarding" : redirectTo, replace: true });
-  }, [user, loading, onboarding?.onboarding_status, navigate, redirectTo]);
+    const dest = resolvePostAuthDestination(onboarding?.onboarding_status, search.redirect);
+    navigate({ to: dest, replace: true });
+  }, [user, loading, onboarding?.onboarding_status, navigate, search.redirect]);
 
   async function handleGoogle() {
     setError(null);
@@ -71,7 +72,7 @@ function LoginPage() {
       if (mode === "signup") {
         const origin = typeof window !== "undefined" ? window.location.origin : "";
         const redirectParam = encodeURIComponent(redirectTo);
-        const { error: err } = await supabase.auth.signUp({
+        const { data, error: err } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -79,6 +80,18 @@ function LoginPage() {
             data: { display_name: displayName || email.split("@")[0] },
           },
         });
+
+        const isDuplicate =
+          err?.code === "user_already_exists" ||
+          err?.code === "email_exists" ||
+          (err ? /already (registered|exists)/i.test(err.message) : false) ||
+          (!err && data.user && (data.user.identities?.length ?? 0) === 0);
+
+        if (isDuplicate) {
+          setMode("signin");
+          setError("An account with this email already exists. Sign in instead.");
+          return;
+        }
         if (err) throw err;
         setInfo("Account created. We’ll finish setup after you confirm your email.");
       } else {
