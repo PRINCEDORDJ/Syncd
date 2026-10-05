@@ -5,25 +5,25 @@ export function WorkspacePreview() {
 
       <div className="bg-card rounded-xl border border-border shadow-pop overflow-hidden">
         {/* App chrome */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-subtle/60">
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1.5">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-subtle/60">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex gap-1.5 shrink-0">
               <div className="size-2.5 rounded-full bg-border" />
               <div className="size-2.5 rounded-full bg-border" />
               <div className="size-2.5 rounded-full bg-border" />
             </div>
-            <div className="ml-3 text-[11px] font-mono text-muted-foreground">
+            <div className="ml-3 text-[11px] font-mono text-muted-foreground truncate">
               syncd.app/app
             </div>
           </div>
-          <div className="text-[11px] font-mono text-muted-foreground">
+          <div className="hidden sm:block text-[11px] font-mono text-muted-foreground shrink-0">
             Tone: authoritative · warm
           </div>
         </div>
 
         <div className="grid grid-cols-12">
           {/* Left: input */}
-          <div className="col-span-12 md:col-span-4 border-r border-border p-5 flex flex-col gap-4 bg-subtle/30">
+          <div className="col-span-12 md:col-span-4 border-b md:border-b-0 md:border-r border-border p-5 flex flex-col gap-4 bg-subtle/30">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
                 Raw input
@@ -43,12 +43,12 @@ export function WorkspacePreview() {
           </div>
 
           {/* Right: canvas */}
-          <div className="col-span-12 md:col-span-8 p-7 md:p-10">
-            <div className="flex items-center justify-between mb-5">
+          <div className="col-span-12 md:col-span-8 p-5 sm:p-7 md:p-10">
+            <div className="flex items-center justify-between mb-5 gap-3">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
                 Canvas
               </span>
-              <span className="text-[10px] font-mono text-muted-foreground">
+              <span className="text-[10px] font-mono text-muted-foreground text-right">
                 286 words · 1,742 / 3,000
               </span>
             </div>
@@ -79,11 +79,11 @@ export function WorkspacePreview() {
               </div>
             </div>
 
-            <div className="mt-7 pt-5 border-t border-border flex items-center justify-between">
+            <div className="mt-7 pt-5 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <span className="text-[11px] font-mono text-muted-foreground uppercase">
                 Tone · authoritative
               </span>
-              <div className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-ink text-surface text-[13px] font-medium">
+              <div className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-ink text-surface text-[13px] font-medium shrink-0">
                 Publish to LinkedIn
                 <span aria-hidden className="text-surface/60">
                   →

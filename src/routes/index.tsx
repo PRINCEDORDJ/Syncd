@@ -50,16 +50,22 @@ function LandingPage() {
       <SiteNav />
 
       {/* Hero */}
-      <header className="relative px-6 pt-20 md:pt-28 pb-20">
+      <header className="relative px-6 md:px-8 pt-20 md:pt-28 pb-20">
         <div className="absolute inset-0 bg-grid opacity-40 [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)] -z-10" />
 
         <div className="max-w-4xl mx-auto text-center flex flex-col items-center gap-7">
-          <div className="inline-flex items-center gap-2 h-7 px-3 rounded-full border border-border bg-card text-[12px] font-mono text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-ink" />
-            v1.3 · Workspace-scoped credits &amp; team billing
+          <div className="inline-flex max-w-full items-center gap-2 h-7 px-3 rounded-full border border-border bg-card text-[12px] font-mono text-muted-foreground">
+            <span className="size-1.5 rounded-full bg-ink shrink-0" />
+            <span className="truncate">
+              v1.3
+              <span className="hidden sm:inline">
+                {" "}
+                · Workspace-scoped credits &amp; team billing
+              </span>
+            </span>
           </div>
 
-          <h1 className="text-5xl sm:text-6xl md:text-7xl tracking-[-0.03em] font-semibold leading-[1.02] text-balance">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl tracking-[-0.03em] font-semibold leading-[1.02] text-balance">
             Write, schedule &amp; ship
             <br />
             LinkedIn posts as a team.
@@ -90,22 +96,22 @@ function LandingPage() {
             </Link>
           </div>
 
-          <p className="text-[12px] font-mono text-muted-foreground mt-3">
+          <p className="text-[12px] font-mono text-muted-foreground mt-3 mx-auto max-w-[48ch] text-center leading-relaxed">
             30 free credits every month · No credit card · Connect LinkedIn in 30 seconds
           </p>
-          <p className="text-[12px] font-mono text-muted-foreground">
+          <p className="text-[12px] font-mono text-muted-foreground mx-auto max-w-[48ch] text-center leading-relaxed">
             Official LinkedIn OAuth — we never see your password.
           </p>
         </div>
       </header>
 
       {/* Preview */}
-      <section className="px-6 pb-24 max-w-6xl mx-auto">
+      <section className="px-6 md:px-8 pb-24 max-w-6xl mx-auto">
         <WorkspacePreview />
       </section>
 
       {/* Feature bento */}
-      <section className="max-w-6xl mx-auto px-6 pb-24">
+      <section className="max-w-6xl mx-auto px-6 md:px-8 pb-24">
         <div className="mb-12 max-w-2xl">
           <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-3">
             What&apos;s inside
@@ -115,7 +121,7 @@ function LandingPage() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 border border-border rounded-xl overflow-hidden divide-y sm:divide-y-0 sm:divide-x lg:divide-x divide-border [&>*:nth-child(-n+3)]:lg:border-b [&>*:nth-child(-n+3)]:lg:border-border">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border border border-border rounded-xl overflow-hidden">
           <Bento
             icon={<Sparkles className="size-4" />}
             title="Generate in your voice"
@@ -149,20 +155,10 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* Social proof */}
-      <section className="max-w-6xl mx-auto px-6 pb-24">
-        <div className="border border-border rounded-xl p-8 md:p-10 bg-card">
-          <blockquote className="text-[15px] md:text-base text-muted-foreground leading-relaxed italic">
-            "[Placeholder quote — replace once we have a real user testimonial]"
-          </blockquote>
-          <p className="mt-4 text-[13px] font-mono text-muted-foreground">
-            — [Name], [Title/Role]
-          </p>
-        </div>
-      </section>
+     
 
       {/* Features */}
-      <section className="max-w-6xl mx-auto px-6 pb-24">
+      <section className="max-w-6xl mx-auto px-6 md:px-8 pb-24">
         <div className="mb-12 max-w-2xl">
           <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-3">
             How it works
@@ -172,7 +168,7 @@ function LandingPage() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 border border-border rounded-xl overflow-hidden divide-y md:divide-y-0 md:divide-x divide-border">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-border border border-border rounded-xl overflow-hidden">
           <FeatureCard
             n="01"
             title="Connect LinkedIn"
@@ -192,8 +188,8 @@ function LandingPage() {
       </section>
 
       {/* Plans strip */}
-      <section className="max-w-6xl mx-auto px-6 pb-24">
-        <div className="mb-10 max-w-2xl flex items-end justify-between gap-6 flex-wrap">
+      <section className="max-w-6xl mx-auto px-6 md:px-8 pb-24">
+        <div className="mb-10 max-w-2xl flex items-start sm:items-end justify-between gap-6 flex-wrap">
           <div>
             <p className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em] mb-3">
               Plans
@@ -231,8 +227,8 @@ function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="max-w-4xl mx-auto px-6 pb-24">
-        <div className="border border-border rounded-xl p-10 md:p-14 bg-subtle/40 text-center">
+      <section className="max-w-4xl mx-auto px-6 md:px-8 pb-24">
+        <div className="border border-border rounded-xl p-8 sm:p-10 md:p-14 bg-subtle/40 text-center">
           <h2 className="text-3xl md:text-4xl tracking-[-0.02em] font-semibold leading-tight text-balance">
             Stop drafting in the LinkedIn composer.
           </h2>
@@ -257,7 +253,7 @@ function LandingPage() {
 
 function FeatureCard({ n, title, body }: { n: string; title: string; body: string }) {
   return (
-    <div className="p-8 flex flex-col gap-3 bg-card hover:bg-subtle/40 transition-colors">
+    <div className="p-6 sm:p-8 flex flex-col gap-3 bg-card hover:bg-subtle/40 transition-colors">
       <div className="text-[11px] font-mono text-muted-foreground">{n}</div>
       <h3 className="text-lg font-semibold text-ink tracking-tight">{title}</h3>
       <p className="text-[14px] text-muted-foreground leading-relaxed">{body}</p>
@@ -275,7 +271,7 @@ function Bento({
   body: string;
 }) {
   return (
-    <div className="p-8 flex flex-col gap-3 bg-card hover:bg-subtle/40 transition-colors">
+    <div className="p-6 sm:p-8 flex flex-col gap-3 bg-card hover:bg-subtle/40 transition-colors">
       <div className="inline-flex items-center justify-center size-8 rounded-md border border-border bg-background text-ink">
         {icon}
       </div>
