@@ -84,7 +84,7 @@ export function SiteNav() {
 
   return (
     <nav className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
-      <div className="flex items-center justify-between px-4 sm:px-6 md:px-8 h-14 w-full max-w-7xl mx-auto gap-3">
+      <div className="flex items-center justify-between px-6 md:px-8 h-14 w-full max-w-6xl mx-auto gap-3">
         <Link to={workspaceHref as "/app" | "/onboarding"} className="flex items-center gap-2 group">
           <BrandMark size={22} />
           <span className="font-semibold tracking-tight text-[15px] text-ink">Syncd</span>
@@ -185,7 +185,7 @@ export function SiteNav() {
               <Link
                 to="/login"
                 search={{ redirect: "/app" }}
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 transition-colors"
+                className="inline-flex items-center gap-1.5 h-9 sm:h-8 px-3.5 sm:px-3 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 transition-colors"
               >
                 Get started
               </Link>
@@ -195,7 +195,7 @@ export function SiteNav() {
           {/* Mobile menu */}
           <DropdownMenu open={mobileOpen} onOpenChange={setMobileOpen}>
             <DropdownMenuTrigger
-              className="md:hidden h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-subtle transition-colors"
+              className="md:hidden h-9 w-9 inline-flex items-center justify-center rounded-md hover:bg-subtle transition-colors"
               aria-label="Open menu"
             >
               <Menu className="h-4 w-4" />
