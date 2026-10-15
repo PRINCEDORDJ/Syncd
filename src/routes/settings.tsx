@@ -16,13 +16,28 @@ import { AccountSettingsPanel } from "@/components/settings/AccountSettingsPanel
 import { DangerSettingsPanel } from "@/components/settings/DangerSettingsPanel";
 import { SettingsSkeleton } from "@/components/skeletons/SettingsSkeleton";
 
+const SETTINGS_TABS = [
+  "profile",
+  "linkedin",
+  "billing",
+  "workspaces",
+  "team",
+  "account",
+  "danger",
+] as const;
+type SettingsTab = (typeof SETTINGS_TABS)[number];
+
 export const Route = createFileRoute("/settings")({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { linkedin_connected?: string; linkedin_error?: string; billing?: string; tab?: SettingsTab } => ({
     linkedin_connected:
       search.linkedin_connected != null ? String(search.linkedin_connected) : undefined,
     linkedin_error:
       search.linkedin_error != null ? String(search.linkedin_error) : undefined,
     billing: search.billing != null ? String(search.billing) : undefined,
+    tab:
+      search.tab != null && (SETTINGS_TABS as readonly string[]).includes(String(search.tab))
+        ? (String(search.tab) as SettingsTab)
+        : undefined,
   }),
   head: () => ({
     meta: [
@@ -234,7 +249,20 @@ function SettingsPage() {
           </div>
         )}
 
-        <Tabs defaultValue="profile" className="w-full">
+        <Tabs
+          value={search.tab ?? "profile"}
+          onValueChange={(value) =>
+            navigate({
+              to: "/settings",
+              search: {
+                ...search,
+                tab: value === "profile" ? undefined : (value as SettingsTab),
+              },
+              replace: true,
+            })
+          }
+          className="w-full"
+        >
           <TabsList className="mb-6 flex w-full overflow-x-auto no-scrollbar bg-subtle/60 p-1 rounded-lg h-auto justify-start">
             <TabsTrigger value="profile" className="text-[13px]">Profile</TabsTrigger>
             <TabsTrigger value="linkedin" className="text-[13px]">LinkedIn</TabsTrigger>

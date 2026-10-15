@@ -518,3 +518,70 @@ export async function fetchUserTeams(userId: string): Promise<TeamOption[]> {
     owner_id: t.owner_id,
   }));
 }
+
+export type TeamMemberRole = "editor" | "viewer";
+
+export interface TeamMembership {
+  id: string;
+  team_id: string;
+  role: TeamMemberRole;
+  accepted_at: string | null;
+  team_name: string;
+}
+
+/**
+ * Teams the user belongs to as an accepted member (not owned teams).
+ */
+export async function fetchUserTeamMemberships(userId: string): Promise<TeamMembership[]> {
+  const { data, error } = await supabase
+    .from("team_members")
+    .select("id, team_id, role, accepted_at, teams(name)")
+    .eq("user_id", userId)
+    .not("accepted_at", "is", null);
+
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    team_id: row.team_id,
+    role: row.role as TeamMemberRole,
+    accepted_at: row.accepted_at,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    team_name: ((row as any).teams?.name as string) ?? "Team",
+  }));
+}
+
+export interface TeamInvitePreview {
+  found: boolean;
+  team_id?: string;
+  team_name?: string;
+  email?: string;
+  role?: TeamMemberRole;
+  email_matches?: boolean;
+  accepted?: boolean;
+  expired?: boolean;
+}
+
+/**
+ * Reads an invite preview by one-time token (requires sign-in; email must match).
+ */
+export async function getTeamInvite(token: string): Promise<TeamInvitePreview> {
+  const { data, error } = await supabase.rpc("get_team_invite", { p_token: token });
+  if (error) throw new Error(error.message);
+  return (data ?? { found: false }) as unknown as TeamInvitePreview;
+}
+
+/**
+ * Accepts a team invite for the signed-in user (must match invite email).
+ */
+export async function acceptTeamInvite(token: string): Promise<void> {
+  const { error } = await supabase.rpc("accept_team_invite", { p_token: token });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Leaves a team the user was accepted into (deletes own team_members row).
+ */
+export async function leaveTeam(membershipId: string): Promise<void> {
+  const { error } = await supabase.from("team_members").delete().eq("id", membershipId);
+  if (error) throw error;
+}

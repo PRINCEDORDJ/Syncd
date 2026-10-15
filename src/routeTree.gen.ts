@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DraftsRouteImport } from './routes/drafts'
+import { Route as InviteRouteImport } from './routes/invite'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
@@ -49,6 +50,11 @@ const AuthRoute = AuthRouteImport.update({
 const DraftsRoute = DraftsRouteImport.update({
   id: '/drafts',
   path: '/drafts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRoute
   '/auth': typeof AuthRoute
   '/drafts': typeof DraftsRoute
+  '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
   '/onboarding': typeof OnboardingRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppRoute
   '/auth': typeof AuthRoute
   '/drafts': typeof DraftsRoute
+  '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
   '/onboarding': typeof OnboardingRoute
@@ -189,6 +197,7 @@ export interface FileRoutesById {
   '/app': typeof AppRoute
   '/auth': typeof AuthRoute
   '/drafts': typeof DraftsRoute
+  '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
   '/onboarding': typeof OnboardingRoute
@@ -214,6 +223,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/auth'
     | '/drafts'
+    | '/invite'
     | '/login'
     | '/methodology'
     | '/onboarding'
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/auth'
     | '/drafts'
+    | '/invite'
     | '/login'
     | '/methodology'
     | '/onboarding'
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/auth'
     | '/drafts'
+    | '/invite'
     | '/login'
     | '/methodology'
     | '/onboarding'
@@ -284,6 +296,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRoute
   AuthRoute: typeof AuthRoute
   DraftsRoute: typeof DraftsRoute
+  InviteRoute: typeof InviteRoute
   LoginRoute: typeof LoginRoute
   MethodologyRoute: typeof MethodologyRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -331,6 +344,13 @@ declare module '@tanstack/react-router' {
       path: '/drafts'
       fullPath: '/drafts'
       preLoaderRoute: typeof DraftsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -460,6 +480,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRoute,
   AuthRoute: AuthRoute,
   DraftsRoute: DraftsRoute,
+  InviteRoute: InviteRoute,
   LoginRoute: LoginRoute,
   MethodologyRoute: MethodologyRoute,
   OnboardingRoute: OnboardingRoute,

@@ -1,6 +1,8 @@
 import { useRef, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useWorkspace, TONES, type Tone } from "@/lib/workspace-context";
+import { useAuth } from "@/lib/auth";
+import { useWorkspaceCanEdit } from "@/lib/workspace-permissions";
 import {
   X,
   ChevronLeft,
@@ -61,7 +63,11 @@ export function Canvas() {
     publish,
     draftId,
     threadId,
+    activeWorkspaceId,
   } = useWorkspace();
+
+  const { user } = useAuth();
+  const canEdit = useWorkspaceCanEdit(activeWorkspaceId, user?.id);
 
   const navigate = useNavigate();
   const [showScheduler, setShowScheduler] = useState(false);
@@ -122,12 +128,13 @@ export function Canvas() {
           <input
             type="text"
             value={title}
+            readOnly={!canEdit}
             onChange={(e) => {
               setTitle(e.target.value);
               setTitleEdited(true);
             }}
             placeholder="Untitled draft"
-            className="text-[13px] font-medium text-ink bg-transparent border-0 focus:outline-none focus:ring-0 px-1 -mx-1 rounded hover:bg-card focus:bg-card transition-colors min-w-0 flex-1 max-w-[280px]"
+            className="text-[13px] font-medium text-ink bg-transparent border-0 focus:outline-none focus:ring-0 px-1 -mx-1 rounded hover:bg-card focus:bg-card transition-colors min-w-0 flex-1 max-w-[280px] disabled:cursor-default"
             aria-label="Draft title"
           />
           {saving && (
@@ -165,7 +172,7 @@ export function Canvas() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={images.length >= MAX_IMAGES}
+              disabled={!canEdit || images.length >= MAX_IMAGES}
               title={images.length >= MAX_IMAGES ? "Image limit reached" : "Upload images"}
               aria-label="Upload images"
               className="h-6 px-2 inline-flex items-center gap-1.5 rounded text-[11px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -182,7 +189,7 @@ export function Canvas() {
             <button
               type="button"
               onClick={() => attachInputRef.current?.click()}
-              disabled={attachments.length >= MAX_ATTACHMENTS}
+              disabled={!canEdit || attachments.length >= MAX_ATTACHMENTS}
               title={
                 attachments.length >= MAX_ATTACHMENTS ? "Attachment limit reached" : "Attach file"
               }
@@ -203,7 +210,7 @@ export function Canvas() {
 
           {/* Tone pills */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {draftId && (
+            {draftId && canEdit && (
               <button
                 type="button"
                 onClick={() => setShowScheduler(!showScheduler)}
@@ -212,7 +219,7 @@ export function Canvas() {
                 <CalendarClock className="size-3" />
               </button>
             )}
-            {draftId && (
+            {draftId && canEdit && (
               <button
                 type="button"
                 onClick={handleDelete}
@@ -228,8 +235,9 @@ export function Canvas() {
               <button
                 key={t}
                 type="button"
+                disabled={!canEdit}
                 onClick={() => setTone(t)}
-                className={`h-6 px-2 rounded text-[11px] font-medium border transition-colors shrink-0 ${
+                className={`h-6 px-2 rounded text-[11px] font-medium border transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
                   tone === t
                     ? "bg-ink text-surface border-ink"
                     : "bg-card text-ink border-border hover:bg-subtle"
@@ -267,16 +275,21 @@ export function Canvas() {
 
         <textarea
           value={draft}
+          readOnly={!canEdit}
           onChange={(e) => {
             setDraft(e.target.value);
             setSuccess(null);
           }}
           placeholder={
-            generating ? "Generating…" : "Your post will appear here. Edit freely — it's yours."
+            !canEdit
+              ? "Viewers have read-only access to this draft."
+              : generating
+                ? "Generating…"
+                : "Your post will appear here. Edit freely — it's yours."
           }
           className={`w-full resize-none bg-transparent text-ink text-[15px] leading-[1.7] focus:outline-none placeholder:text-muted-foreground/40 flex-1 min-h-[40vh] ${
             generating ? "animate-pulse" : ""
-          }`}
+          } ${!canEdit ? "cursor-default" : ""}`}
         />
 
         {/* Streaming cursor when generating */}
@@ -306,14 +319,16 @@ export function Canvas() {
                     alt={`Attachment ${i + 1}`}
                     className="w-full h-auto max-h-[400px] object-contain"
                   />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(i)}
-                    className="absolute top-2 right-2 size-7 rounded-full bg-ink/80 text-surface hover:bg-ink flex items-center justify-center transition-colors"
-                    aria-label="Remove image"
-                  >
-                    <X className="size-3.5" />
-                  </button>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => removeImage(i)}
+                      className="absolute top-2 right-2 size-7 rounded-full bg-ink/80 text-surface hover:bg-ink flex items-center justify-center transition-colors"
+                      aria-label="Remove image"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -377,14 +392,16 @@ export function Canvas() {
                   <span className="text-[11px] font-mono text-muted-foreground tabular-nums shrink-0">
                     {formatBytes(a.size)}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => removeAttachment(i)}
-                    className="p-1 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover/attach:opacity-100 shrink-0"
-                    aria-label={`Remove ${a.name}`}
-                  >
-                    <X className="size-3.5" />
-                  </button>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(i)}
+                      className="p-1 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover/attach:opacity-100 shrink-0"
+                      aria-label={`Remove ${a.name}`}
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -435,10 +452,15 @@ export function Canvas() {
             {tone.split(" ")[0]}
           </span>
           {overLimit && <span className="text-destructive font-semibold">Over LinkedIn limit</span>}
+          {!canEdit && (
+            <span className="px-2 py-0.5 rounded bg-subtle border border-border uppercase tracking-[0.1em] text-muted-foreground">
+              Read-only
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
-          {draftId && (
+          {draftId && canEdit && (
             <button
               type="button"
               onClick={() => setShowScheduler(!showScheduler)}
@@ -447,7 +469,7 @@ export function Canvas() {
               <CalendarClock className="size-4" />
             </button>
           )}
-          {draftId && (
+          {draftId && canEdit && (
             <button
               type="button"
               onClick={handleDelete}
@@ -464,34 +486,35 @@ export function Canvas() {
           >
             Copy
           </button>
-          {linkedinConnected ? (
-            <button
-              type="button"
-              onClick={() => void publish()}
-              disabled={!draft.trim() || overLimit || publishing}
-              className="h-8 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
-            >
-              {publishing ? "Publishing…" : "Publish"}
-              <span aria-hidden className="text-surface/60">
-                ↗
-              </span>
-            </button>
-          ) : (
-            <Link
-              to="/settings"
-              search={{
-                linkedin_connected: undefined,
-                linkedin_error: undefined,
-                billing: undefined,
-              }}
-              className="h-8 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 inline-flex items-center gap-1.5"
-            >
-              Connect LinkedIn
-              <span aria-hidden className="text-surface/60">
-                →
-              </span>
-            </Link>
-          )}
+          {canEdit &&
+            (linkedinConnected ? (
+              <button
+                type="button"
+                onClick={() => void publish()}
+                disabled={!draft.trim() || overLimit || publishing}
+                className="h-8 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
+              >
+                {publishing ? "Publishing…" : "Publish"}
+                <span aria-hidden className="text-surface/60">
+                  ↗
+                </span>
+              </button>
+            ) : (
+              <Link
+                to="/settings"
+                search={{
+                  linkedin_connected: undefined,
+                  linkedin_error: undefined,
+                  billing: undefined,
+                }}
+                className="h-8 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 inline-flex items-center gap-1.5"
+              >
+                Connect LinkedIn
+                <span aria-hidden className="text-surface/60">
+                  →
+                </span>
+              </Link>
+            ))}
         </div>
       </div>
     </div>

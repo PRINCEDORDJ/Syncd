@@ -5,23 +5,17 @@ import {
   fetchAccessibleWorkspaces,
   fetchWorkspaceMembers,
   fetchWorkspaceInvites,
-  fetchWorkspaceTeamAccess,
-  fetchUserTeams,
   getUserPlanAndLimits,
   createWorkspace,
   updateWorkspace,
   deleteWorkspace,
   inviteToWorkspace,
-  grantTeamWorkspaceAccess,
   removeWorkspaceMember,
   revokeWorkspaceInvite,
-  revokeWorkspaceTeamAccess,
   type AccessibleWorkspace,
   type WorkspaceMember,
   type WorkspaceInvite,
-  type WorkspaceTeamAccess,
   type WorkspaceRole,
-  type TeamOption,
 } from "@/lib/workspace-access";
 import {
   LayoutGrid,
@@ -31,7 +25,6 @@ import {
   Trash2,
   Edit2,
   Mail,
-  Building,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -61,7 +54,6 @@ export function WorkspacesSettingsPanel() {
   const { user } = useAuth();
   const [workspaces, setWorkspaces] = useState<AccessibleWorkspace[] | null>(null);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"members" | "teams">("members");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -74,8 +66,6 @@ export function WorkspacesSettingsPanel() {
   // Sub-data for selected workspace
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [invites, setInvites] = useState<WorkspaceInvite[]>([]);
-  const [teamAccess, setTeamAccess] = useState<WorkspaceTeamAccess[]>([]);
-  const [userTeams, setUserTeams] = useState<TeamOption[]>([]);
   const [subLoading, setSubLoading] = useState(false);
 
   // Modals state
@@ -94,23 +84,16 @@ export function WorkspacesSettingsPanel() {
   const [inviteWsRole, setInviteWsRole] = useState<WorkspaceRole>("member");
   const [invitingWs, setInvitingWs] = useState(false);
 
-  // Grant Team Workspace Access
-  const [selectedTeamId, setSelectedTeamId] = useState("");
-  const [teamWsRole, setTeamWsRole] = useState<WorkspaceRole>("member");
-  const [grantingTeamWs, setGrantingTeamWs] = useState(false);
-
   const loadData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     setError(null);
     try {
-      const [wsList, teams, planData] = await Promise.all([
+      const [wsList, planData] = await Promise.all([
         fetchAccessibleWorkspaces(user.id),
-        fetchUserTeams(user.id),
         getUserPlanAndLimits(user.id),
       ]);
       setWorkspaces(wsList);
-      setUserTeams(teams);
       setPlanTier(planData.plan);
       setPlanLimits(planData.limits);
       setIsAdmin(planData.isAdmin);
@@ -136,14 +119,12 @@ export function WorkspacesSettingsPanel() {
   const loadWorkspaceSubData = useCallback(async (wsId: string) => {
     setSubLoading(true);
     try {
-      const [mems, invs, tAccess] = await Promise.all([
+      const [mems, invs] = await Promise.all([
         fetchWorkspaceMembers(wsId),
         fetchWorkspaceInvites(wsId),
-        fetchWorkspaceTeamAccess(wsId),
       ]);
       setMembers(mems);
       setInvites(invs);
-      setTeamAccess(tAccess);
     } catch (err) {
       console.error(err);
     } finally {
@@ -167,7 +148,6 @@ export function WorkspacesSettingsPanel() {
 
   const isAtWorkspaceLimit = !isAdmin && ownedWorkspacesCount >= planLimits.maxWorkspaces;
   const canInviteWorkspaceMembers = isAdmin || planLimits.maxWorkspaceMembers > 1;
-  const canGrantTeamWorkspace = isAdmin || planLimits.allowsTeamWorkspaceAccess;
 
   // Flash message helper
   const showSuccess = (msg: string) => {
@@ -238,26 +218,6 @@ export function WorkspacesSettingsPanel() {
     }
   }
 
-  async function handleGrantTeamWorkspace() {
-    if (!selectedWorkspaceId || !selectedTeamId || !user) return;
-    setGrantingTeamWs(true);
-    setError(null);
-    try {
-      await grantTeamWorkspaceAccess(
-        selectedWorkspaceId,
-        selectedTeamId,
-        teamWsRole,
-        user.id,
-      );
-      setSelectedTeamId("");
-      showSuccess("Team access granted to workspace.");
-      if (selectedWorkspaceId) await loadWorkspaceSubData(selectedWorkspaceId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to grant team access.");
-    } finally {
-      setGrantingTeamWs(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -391,8 +351,8 @@ export function WorkspacesSettingsPanel() {
         </div>
       </div>
 
-      {/* Tab content: Members & Teams */}
-      {currentWorkspace && activeTab === "members" && (
+      {/* Members */}
+      {currentWorkspace && (
         <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 space-y-6">
           {!canInviteWorkspaceMembers ? (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-border bg-subtle/40 p-4">
@@ -543,114 +503,6 @@ export function WorkspacesSettingsPanel() {
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {currentWorkspace && activeTab === "teams" && (
-        <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 space-y-6">
-          {!canGrantTeamWorkspace ? (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-border bg-subtle/40 p-4">
-              <div className="flex items-start gap-3">
-                <Lock className="size-5 text-muted-foreground shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-[14px] font-semibold text-ink">Team-Level Sharing is a Teams Plan feature</h4>
-                  <p className="text-[12px] text-muted-foreground mt-0.5">
-                    Upgrade to the Teams plan to grant entire teams full access to this workspace.
-                  </p>
-                </div>
-              </div>
-              <Link
-                to="/pricing"
-                className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg bg-ink text-surface text-[12px] font-medium hover:bg-ink/90 shrink-0"
-              >
-                Upgrade to Teams
-                <ArrowUpRight className="size-3.5" />
-              </Link>
-            </div>
-          ) : isManager && (
-            <div className="rounded-xl border border-border bg-subtle/30 p-4">
-              <h4 className="text-[13px] font-semibold text-ink mb-1">Grant Team Workspace Access</h4>
-              <p className="text-[12px] text-muted-foreground mb-3">
-                Grant an entire team access to this workspace. All members in the team will inherit access.
-              </p>
-              {userTeams.length === 0 ? (
-                <p className="text-[12px] text-muted-foreground italic">
-                  You don't have any teams created yet. Create a team in Settings → Teams first to grant team access.
-                </p>
-              ) : (
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <select
-                    value={selectedTeamId}
-                    onChange={(e) => setSelectedTeamId(e.target.value)}
-                    className="h-9 flex-1 rounded-lg border border-border bg-background px-3 text-[13px] text-ink outline-none focus:border-ink"
-                  >
-                    <option value="">Select a team…</option>
-                    {userTeams.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={teamWsRole}
-                    onChange={(e) => setTeamWsRole(e.target.value as WorkspaceRole)}
-                    className="h-9 rounded-lg border border-border bg-background px-3 text-[13px] text-ink outline-none focus:border-ink"
-                  >
-                    <option value="member">Member Access</option>
-                    <option value="admin">Admin Access</option>
-                    <option value="viewer">Viewer Access</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={handleGrantTeamWorkspace}
-                    disabled={grantingTeamWs || !selectedTeamId}
-                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-ink px-4 text-[13px] font-medium text-surface hover:bg-ink/90 disabled:opacity-50"
-                  >
-                    {grantingTeamWs ? <Loader2 className="size-3.5 animate-spin" /> : <Building className="size-3.5" />}
-                    Grant access
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div>
-            <h4 className="text-[14px] font-semibold text-ink mb-2">Teams with Workspace Access ({teamAccess.length})</h4>
-            {teamAccess.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border bg-subtle/20 p-6 text-center text-[13px] text-muted-foreground">
-                No external teams have been granted workspace access.
-              </div>
-            ) : (
-              <div className="divide-y divide-border rounded-xl border border-border bg-background">
-                {teamAccess.map((ta) => (
-                  <div key={ta.id} className="flex items-center justify-between p-3.5 text-[13px]">
-                    <div className="flex items-center gap-3">
-                      <Building className="size-4 text-muted-foreground" />
-                      <div>
-                        <div className="font-medium text-ink">{ta.team_name || "Team"}</div>
-                        <div className="text-[11px] font-mono text-muted-foreground">
-                          Access level: {ta.access_level}
-                        </div>
-                      </div>
-                    </div>
-                    {isManager && (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          await revokeWorkspaceTeamAccess(ta.id);
-                          if (selectedWorkspaceId) await loadWorkspaceSubData(selectedWorkspaceId);
-                          showSuccess("Team access revoked.");
-                        }}
-                        className="text-[12px] text-destructive hover:underline"
-                      >
-                        Revoke
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       )}
 
