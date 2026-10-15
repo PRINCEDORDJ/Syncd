@@ -188,7 +188,19 @@ export const Route = createFileRoute("/api/generate")({
           history?: unknown;
           currentDraft?: unknown;
         };
-        const resolvedWsId = typeof workspaceId === "string" ? workspaceId : undefined;
+        let resolvedWsId = typeof workspaceId === "string" ? workspaceId : undefined;
+        // When the client doesn't send a workspace, resolve the caller's owned
+        // workspace server-side so the charge always hits a deterministic pool.
+        if (!resolvedWsId) {
+          const { data: ownedWs } = await supabaseAdmin
+            .from("workspaces")
+            .select("id")
+            .eq("owner_id", userId)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          resolvedWsId = ownedWs?.id;
+        }
         const conversationHistory = sanitizeHistory(history);
         const canvasText =
           typeof currentDraft === "string" && currentDraft.trim().length > 0

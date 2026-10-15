@@ -9,6 +9,7 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { linkPendingInvites } from "@/lib/workspace-access";
 import {
   loadPostSignupContext,
   type PostSignupContext,
@@ -100,6 +101,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void (async () => {
       // Sync Google OAuth avatar/name to profile if needed
       await syncUserProfileMetadata(session.user);
+
+      // Attach any pending workspace invites addressed to this account so
+      // they show up in the notifications inbox. Idempotent; safe to re-run.
+      try {
+        await linkPendingInvites();
+      } catch {
+        // Non-blocking — invites will link on the next sign-in
+      }
 
       try {
         const ctx = await loadPostSignupContext();

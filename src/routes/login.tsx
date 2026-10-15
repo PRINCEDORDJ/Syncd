@@ -9,6 +9,7 @@ import { BrandMark } from "@/components/BrandMark";
 export const Route = createFileRoute("/login")({
   validateSearch: z.object({
     redirect: z.string().optional(),
+    invite: z.string().optional(),
   }),
   head: () => ({
     meta: [
@@ -25,7 +26,9 @@ function LoginPage() {
   const navigate = useNavigate();
   const { user, loading, onboarding } = useAuth();
   const search = Route.useSearch();
-  const redirectTo = search.redirect ?? "/app";
+  // A workspace invite link (/login?invite=…) lands the user in their
+  // notifications inbox so they can accept it; otherwise the normal redirect.
+  const redirectTo = search.redirect ?? (search.invite ? "/notifications" : "/app");
 
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");

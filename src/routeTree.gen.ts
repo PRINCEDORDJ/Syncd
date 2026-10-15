@@ -16,6 +16,7 @@ import { Route as DraftsRouteImport } from './routes/drafts'
 import { Route as InviteRouteImport } from './routes/invite'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MethodologyRouteImport } from './routes/methodology'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -31,6 +32,7 @@ import { Route as ApiLinkedinStartRouteImport } from './routes/api.linkedin.star
 import { Route as ApiPolarCheckoutRouteImport } from './routes/api.polar.checkout'
 import { Route as ApiPolarPortalRouteImport } from './routes/api.polar.portal'
 import { Route as ApiPublicSchedulerRouteImport } from './routes/api.public.scheduler'
+import { Route as ApiWorkspaceInviteRouteImport } from './routes/api.workspace.invite'
 import { Route as ApiPublicPolarWebhookRouteImport } from './routes/api.public.polar.webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -66,6 +68,11 @@ const LoginRoute = LoginRouteImport.update({
 const MethodologyRoute = MethodologyRouteImport.update({
   id: '/methodology',
   path: '/methodology',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -143,6 +150,11 @@ const ApiPublicSchedulerRoute = ApiPublicSchedulerRouteImport.update({
   path: '/api/public/scheduler',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWorkspaceInviteRoute = ApiWorkspaceInviteRouteImport.update({
+  id: '/api/workspace/invite',
+  path: '/api/workspace/invite',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPolarWebhookRoute = ApiPublicPolarWebhookRouteImport.update({
   id: '/api/public/polar/webhook',
   path: '/api/public/polar/webhook',
@@ -157,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
+  '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -172,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/api/polar/checkout': typeof ApiPolarCheckoutRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
   '/api/public/scheduler': typeof ApiPublicSchedulerRoute
+  '/api/workspace/invite': typeof ApiWorkspaceInviteRoute
   '/api/public/polar/webhook': typeof ApiPublicPolarWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -182,6 +196,7 @@ export interface FileRoutesByTo {
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
+  '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -197,6 +212,7 @@ export interface FileRoutesByTo {
   '/api/polar/checkout': typeof ApiPolarCheckoutRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
   '/api/public/scheduler': typeof ApiPublicSchedulerRoute
+  '/api/workspace/invite': typeof ApiWorkspaceInviteRoute
   '/api/public/polar/webhook': typeof ApiPublicPolarWebhookRoute
 }
 export interface FileRoutesById {
@@ -208,6 +224,7 @@ export interface FileRoutesById {
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/methodology': typeof MethodologyRoute
+  '/notifications': typeof NotificationsRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -223,6 +240,7 @@ export interface FileRoutesById {
   '/api/polar/checkout': typeof ApiPolarCheckoutRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
   '/api/public/scheduler': typeof ApiPublicSchedulerRoute
+  '/api/workspace/invite': typeof ApiWorkspaceInviteRoute
   '/api/public/polar/webhook': typeof ApiPublicPolarWebhookRoute
 }
 export interface FileRouteTypes {
@@ -235,6 +253,7 @@ export interface FileRouteTypes {
     | '/invite'
     | '/login'
     | '/methodology'
+    | '/notifications'
     | '/onboarding'
     | '/pricing'
     | '/privacy'
@@ -250,6 +269,7 @@ export interface FileRouteTypes {
     | '/api/polar/checkout'
     | '/api/polar/portal'
     | '/api/public/scheduler'
+    | '/api/workspace/invite'
     | '/api/public/polar/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -260,6 +280,7 @@ export interface FileRouteTypes {
     | '/invite'
     | '/login'
     | '/methodology'
+    | '/notifications'
     | '/onboarding'
     | '/pricing'
     | '/privacy'
@@ -275,6 +296,7 @@ export interface FileRouteTypes {
     | '/api/polar/checkout'
     | '/api/polar/portal'
     | '/api/public/scheduler'
+    | '/api/workspace/invite'
     | '/api/public/polar/webhook'
   id:
     | '__root__'
@@ -285,6 +307,7 @@ export interface FileRouteTypes {
     | '/invite'
     | '/login'
     | '/methodology'
+    | '/notifications'
     | '/onboarding'
     | '/pricing'
     | '/privacy'
@@ -300,6 +323,7 @@ export interface FileRouteTypes {
     | '/api/polar/checkout'
     | '/api/polar/portal'
     | '/api/public/scheduler'
+    | '/api/workspace/invite'
     | '/api/public/polar/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -311,6 +335,7 @@ export interface RootRouteChildren {
   InviteRoute: typeof InviteRoute
   LoginRoute: typeof LoginRoute
   MethodologyRoute: typeof MethodologyRoute
+  NotificationsRoute: typeof NotificationsRoute
   OnboardingRoute: typeof OnboardingRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -326,6 +351,7 @@ export interface RootRouteChildren {
   ApiPolarCheckoutRoute: typeof ApiPolarCheckoutRoute
   ApiPolarPortalRoute: typeof ApiPolarPortalRoute
   ApiPublicSchedulerRoute: typeof ApiPublicSchedulerRoute
+  ApiWorkspaceInviteRoute: typeof ApiWorkspaceInviteRoute
   ApiPublicPolarWebhookRoute: typeof ApiPublicPolarWebhookRoute
 }
 
@@ -378,6 +404,13 @@ declare module '@tanstack/react-router' {
       path: '/methodology'
       fullPath: '/methodology'
       preLoaderRoute: typeof MethodologyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -485,6 +518,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSchedulerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/workspace/invite': {
+      id: '/api/workspace/invite'
+      path: '/api/workspace/invite'
+      fullPath: '/api/workspace/invite'
+      preLoaderRoute: typeof ApiWorkspaceInviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/polar/webhook': {
       id: '/api/public/polar/webhook'
       path: '/api/public/polar/webhook'
@@ -503,6 +543,7 @@ const rootRouteChildren: RootRouteChildren = {
   InviteRoute: InviteRoute,
   LoginRoute: LoginRoute,
   MethodologyRoute: MethodologyRoute,
+  NotificationsRoute: NotificationsRoute,
   OnboardingRoute: OnboardingRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
@@ -518,6 +559,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPolarCheckoutRoute: ApiPolarCheckoutRoute,
   ApiPolarPortalRoute: ApiPolarPortalRoute,
   ApiPublicSchedulerRoute: ApiPublicSchedulerRoute,
+  ApiWorkspaceInviteRoute: ApiWorkspaceInviteRoute,
   ApiPublicPolarWebhookRoute: ApiPublicPolarWebhookRoute,
 }
 export const routeTree = rootRouteImport

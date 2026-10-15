@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { PLAN_LIMITS, PLAN_LABELS, type PlanTier, type PlanLimits } from "@/lib/plans";
+import { PLAN_LIMITS, type PlanTier, type PlanLimits } from "@/lib/plans";
 import type { AttachmentItem } from "@/lib/image-validation";
 
 export type WorkspaceRole = "owner" | "admin" | "member";
@@ -361,60 +361,41 @@ export async function fetchWorkspaceTeamAccess(
   }));
 }
 
+/**
+ * Sends a workspace invite via the server API route (which calls the
+ * `create_workspace_invite` RPC and sends the email when the invitee has no
+ * account). The response is identical either way.
+ */
 export async function inviteToWorkspace(
   workspaceId: string,
   email: string,
-  role: WorkspaceRole = "member",
-): Promise<WorkspaceInvite> {
+  role: Exclude<WorkspaceRole, "owner"> = "member",
+): Promise<void> {
   const cleanEmail = email.trim().toLowerCase();
   if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
     throw new Error("Please enter a valid email address.");
   }
 
-  const { data: ws } = await supabase
-    .from("workspaces")
-    .select("owner_id")
-    .eq("id", workspaceId)
-    .single();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error("Not authenticated.");
 
-  const ownerId = ws?.owner_id || "";
-  const { plan, limits, isAdmin } = await getUserPlanAndLimits(ownerId);
+  const res = await fetch("/api/workspace/invite", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ workspace_id: workspaceId, email: cleanEmail, role }),
+  });
 
-  if (!isAdmin && limits.maxWorkspaceMembers <= 1) {
-    throw new Error(
-      `Inviting workspace collaborators requires the Teams plan. Upgrade in Settings → Billing to invite up to 5 team members with role controls.`,
-    );
-  }
-
-  const { count: memCount } = await supabase
-    .from("workspace_members")
-    .select("id", { count: "exact", head: true })
-    .eq("workspace_id", workspaceId)
-    .eq("status", "active");
-
-  if (!isAdmin && memCount !== null && memCount >= limits.maxWorkspaceMembers) {
-    throw new Error(
-      `Workspace member limit reached (${limits.maxWorkspaceMembers} seats on the ${PLAN_LABELS[plan]} plan).`,
-    );
-  }
-
-  const { data, error } = await supabase
-    .from("workspace_invites")
-    .insert({
-      workspace_id: workspaceId,
-      email: cleanEmail,
-      role,
-      status: "pending",
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return {
-    ...data,
-    role: data.role as WorkspaceRole,
-    status: data.status as InviteStatus,
+  const payload = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    success?: boolean;
   };
+  if (!res.ok || !payload.success) {
+    throw new Error(payload.error || "Failed to send the invite.");
+  }
 }
 
 export async function grantTeamWorkspaceAccess(
@@ -467,8 +448,84 @@ export async function removeWorkspaceMember(memberId: string): Promise<void> {
 }
 
 export async function revokeWorkspaceInvite(inviteId: string): Promise<void> {
-  const { error } = await supabase.from("workspace_invites").delete().eq("id", inviteId);
+  const { data, error } = await supabase.rpc("revoke_workspace_invite", {
+    p_invite_id: inviteId,
+  });
   if (error) throw error;
+  if (data && (data as { success?: boolean }).success === false) {
+    throw new Error("Could not revoke the invite.");
+  }
+}
+
+export interface WorkspaceInviteActionResult {
+  success: boolean;
+  reason?: string;
+  workspace_id?: string;
+  workspace_name?: string;
+  role?: WorkspaceRole;
+}
+
+const INVITE_REASON_MESSAGES: Record<string, string> = {
+  invite_not_found: "This invite no longer exists.",
+  invite_not_pending: "This invite has already been handled.",
+  invite_expired: "This invite has expired. Ask for a new one.",
+  email_mismatch: "This invite was sent to a different email address. Switch accounts to accept it.",
+  email_not_verified: "Please verify your email address first.",
+  seat_limit_reached: "This workspace is already full.",
+  not_authenticated: "Not authenticated.",
+};
+
+function inviteErrorMessage(reason?: string): string {
+  return (reason && INVITE_REASON_MESSAGES[reason]) || "Something went wrong. Try again.";
+}
+
+/**
+ * Accepts a workspace invite for the signed-in user. The RPC also sets
+ * `profiles.active_workspace_id` to the new workspace.
+ */
+export async function acceptWorkspaceInvite(
+  inviteId: string,
+): Promise<WorkspaceInviteActionResult> {
+  const { data, error } = await supabase.rpc("accept_workspace_invite", {
+    p_invite_id: inviteId,
+  });
+  if (error) throw new Error(error.message);
+  const result = (data ?? {}) as unknown as WorkspaceInviteActionResult;
+  if (!result.success) throw new Error(inviteErrorMessage(result.reason));
+  return result;
+}
+
+/** Declines a workspace invite for the signed-in user. */
+export async function declineWorkspaceInvite(inviteId: string): Promise<void> {
+  const { data, error } = await supabase.rpc("decline_workspace_invite", {
+    p_invite_id: inviteId,
+  });
+  if (error) throw new Error(error.message);
+  if (data && (data as { success?: boolean }).success === false) {
+    throw new Error(inviteErrorMessage((data as { reason?: string }).reason));
+  }
+}
+
+/**
+ * Links pending invites addressed to the signed-in user's verified email to
+ * their account and creates the in-app notification rows. Safe to call on
+ * every sign-in — idempotent.
+ */
+export async function linkPendingInvites(): Promise<number> {
+  const { data, error } = await supabase.rpc("link_pending_invites");
+  if (error) throw new Error(error.message);
+  return (data as { linked?: number } | null)?.linked ?? 0;
+}
+
+/** Persists the active workspace choice server-side (profiles.active_workspace_id). */
+export async function setActiveWorkspaceServer(workspaceId: string): Promise<void> {
+  const { data, error } = await supabase.rpc("set_active_workspace", {
+    p_workspace_id: workspaceId,
+  });
+  if (error) throw new Error(error.message);
+  if (data && (data as { success?: boolean }).success === false) {
+    throw new Error("Could not switch workspace.");
+  }
 }
 
 export async function revokeWorkspaceTeamAccess(accessId: string): Promise<void> {

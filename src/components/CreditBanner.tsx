@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { useCredits } from "@/hooks/useCredits";
+import { useWorkspace } from "@/lib/workspace-context";
 
 /**
  * Inline upgrade / low-credit banner rendered above the generate button.
@@ -8,11 +9,15 @@ import { useCredits } from "@/hooks/useCredits";
  */
 export function CreditBanner() {
   const c = useCredits();
+  const { activeWorkspaceId } = useWorkspace();
   if (c.isLoading || c.error || c.isAdmin) return null;
 
   const isTrial = c.plan === "trial";
   const monthly = c.subscriptionCredits;
   const dailyLeft = Math.max(0, c.dailyLimit - c.dailyCreditsUsed);
+  // Qualify which pool the shortfall belongs to when the user has more than
+  // one workspace.
+  const poolSuffix = activeWorkspaceId ? " in this workspace" : "";
 
   let tone: "warn" | "block" | null = null;
   let message: React.ReactNode = null;
@@ -22,21 +27,21 @@ export function CreditBanner() {
       tone = "block";
       message =
         c.dailyCreditsUsed >= 5
-          ? "You've hit today's limit. Come back tomorrow or "
-          : "You're out of credits for this month. ";
+          ? `You've hit today's limit${poolSuffix}. Come back tomorrow or `
+          : `You're out of credits for this month${poolSuffix}. `;
     } else if (c.dailyCreditsUsed >= 4) {
       tone = "warn";
-      message = `You've used ${c.dailyCreditsUsed} of your ${c.dailyLimit} daily generations. `;
+      message = `You've used ${c.dailyCreditsUsed} of your ${c.dailyLimit} daily generations${poolSuffix}. `;
     } else if (monthly <= 8) {
       tone = "warn";
-      message = `You have ${monthly} generation${monthly === 1 ? "" : "s"} left this month. `;
+      message = `You have ${monthly} generation${monthly === 1 ? "" : "s"} left this month${poolSuffix}. `;
     }
   } else if (monthly + c.topupCredits <= 0) {
     tone = "block";
-    message = "You're out of credits. ";
+    message = `You're out of credits${poolSuffix}. `;
   } else if (monthly <= 20) {
     tone = "warn";
-    message = `Running low — ${monthly} credits left. `;
+    message = `Running low — ${monthly} credits left${poolSuffix}. `;
   }
 
   if (!tone) return null;

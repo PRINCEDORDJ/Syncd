@@ -16,6 +16,8 @@ import { LogOut, Settings as SettingsIcon, LayoutGrid, FileText, Menu, Moon, Sun
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useTheme } from "@/lib/theme";
 import { CreditIndicator } from "@/components/CreditIndicator";
+import { NotificationBell } from "@/components/NotificationBell";
+import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -98,9 +100,11 @@ export function SiteNav() {
             </div>
           ) : user ? (
             <>
-            <div className="hidden max-lg:flex sm:flex">
+            <div className="hidden max-lg:flex sm:flex items-center gap-2">
+              <WorkspaceSwitcher />
               <CreditIndicator />
             </div>
+            <NotificationBell />
             <DropdownMenu>
               <DropdownMenuTrigger
                 className="hidden md:flex items-center gap-2 rounded-full p-0.5 hover:bg-subtle transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
