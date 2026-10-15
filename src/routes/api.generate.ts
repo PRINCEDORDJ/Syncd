@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin.server";
 import {
   AiConfigurationError,
   createAiTextStream,
+  type AiChatMessage,
   type AiImageInput,
 } from "@/lib/ai-provider.server";
 import { PLAN_LIMITS, type PlanTier } from "@/lib/plans";
@@ -19,6 +20,10 @@ Always structure your response using these exact delimiters:
 
 <<<THOUGHTS>>>
 [1 to 3 friendly, expert sentences to the writer in chat. Explain your strategic angle, hook rationale, what you changed, or answer any specific questions/brainstorming prompts.]
+<<<POST>>> or <<<EDIT>>>
+[Exactly one of the two sections below — never both.]
+
+FULL POST (use when generating from scratch, when the writer asks for a full rewrite, or when the canvas is empty):
 <<<POST>>>
 [The full polished LinkedIn post text to appear on the Canvas.
 Rules for the post:
@@ -29,6 +34,17 @@ Rules for the post:
 - End with a quiet payoff or one natural open question — never cliché "What do you think?" or "Let me know in the comments".
 - Strictly match the requested tone.
 - Stay under 2,800 characters.]
+
+TARGETED EDIT (use for refinement turns when the canvas already has text — "make it punchier", "cut paragraph 2", "swap the hook"):
+<<<EDIT>>>
+<<<OLD>>>
+[An exact, verbatim substring copied from the current canvas — the precise text you want to replace. Copy it character-for-character, including line breaks and punctuation. Never paraphrase, never elide with "...".]
+<<<END_OLD>>>
+<<<NEW>>>
+[Your replacement text for that span only.]
+<<<END_NEW>>>
+<<<END_EDIT>>>
+[Repeat the OLD/NEW pair inside the single EDIT block for each separate spot you want to change. Only touch the spans the writer asked to change — leave every other part of the canvas untouched. Quote text only when you are replacing it.]
 
 If the user is ONLY asking a question, asking for advice, or chatting without requesting a post draft creation or change:
 <<<THOUGHTS>>>
@@ -86,6 +102,26 @@ function providerErrorMessage(error: unknown): string {
   return "The AI provider is unavailable. Please try again.";
 }
 
+const MAX_HISTORY_MESSAGES = 12;
+const MAX_HISTORY_MESSAGE_CHARS = 4000;
+
+/** Validates and trims the client-supplied conversation history (oldest first). */
+function sanitizeHistory(raw: unknown): AiChatMessage[] {
+  if (!Array.isArray(raw)) return [];
+  const cleaned: AiChatMessage[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const { role, content } = entry as { role?: unknown; content?: unknown };
+    if (role !== "user" && role !== "assistant") continue;
+    if (typeof content !== "string") continue;
+    const trimmed = content.trim();
+    if (!trimmed) continue;
+    cleaned.push({ role, content: trimmed.slice(0, MAX_HISTORY_MESSAGE_CHARS) });
+  }
+  // Keep only the most recent turns if the client overshoots.
+  return cleaned.slice(-MAX_HISTORY_MESSAGES);
+}
+
 function toSseStream(
   textStream: AsyncIterable<string>,
   userId: string,
@@ -110,9 +146,7 @@ function toSseStream(
         console.error("[generate] AI stream failed", error);
         await refundCredit(userId, creditType, workspaceId);
         controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ error: providerErrorMessage(error) })}\n\n`,
-          ),
+          encoder.encode(`data: ${JSON.stringify({ error: providerErrorMessage(error) })}\n\n`),
         );
         controller.close();
       }
@@ -124,8 +158,7 @@ export const Route = createFileRoute("/api/generate")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const authHeader =
-          getRequestHeader("authorization") ?? getRequestHeader("Authorization");
+        const authHeader = getRequestHeader("authorization") ?? getRequestHeader("Authorization");
         if (!authHeader?.startsWith("Bearer ")) {
           return jsonResponse({ error: "Not authenticated." }, 401);
         }
@@ -146,25 +179,26 @@ export const Route = createFileRoute("/api/generate")({
           return jsonResponse({ error: "Invalid JSON body." }, 400);
         }
 
-        const { input, tone, images, mode, workspaceId } = (body ?? {}) as {
+        const { input, tone, images, mode, workspaceId, history, currentDraft } = (body ?? {}) as {
           input?: unknown;
           tone?: unknown;
           images?: unknown;
           mode?: unknown;
           workspaceId?: unknown;
+          history?: unknown;
+          currentDraft?: unknown;
         };
         const resolvedWsId = typeof workspaceId === "string" ? workspaceId : undefined;
+        const conversationHistory = sanitizeHistory(history);
+        const canvasText =
+          typeof currentDraft === "string" && currentDraft.trim().length > 0
+            ? currentDraft.slice(0, 4000)
+            : null;
         if (typeof input !== "string" || input.trim().length === 0) {
-          return jsonResponse(
-            { error: "Please provide some raw material to work from." },
-            400,
-          );
+          return jsonResponse({ error: "Please provide some raw material to work from." }, 400);
         }
         if (input.length > 4000) {
-          return jsonResponse(
-            { error: "Raw material is too long (max 4,000 characters)." },
-            400,
-          );
+          return jsonResponse({ error: "Raw material is too long (max 4,000 characters)." }, 400);
         }
 
         // 2. Resolve plan and check feature gating (voice notes require Studio or Teams)
@@ -172,11 +206,7 @@ export const Route = createFileRoute("/api/generate")({
           resolvedWsId
             ? supabaseAdmin.rpc("get_workspace_plan", { p_workspace_id: resolvedWsId })
             : supabaseAdmin.rpc("get_user_plan", { _user_id: userId }),
-          supabaseAdmin
-            .from("profiles")
-            .select("voice_notes")
-            .eq("user_id", userId)
-            .maybeSingle(),
+          supabaseAdmin.from("profiles").select("voice_notes").eq("user_id", userId).maybeSingle(),
         ]);
         const userPlan = (planRes.data as PlanTier | null) ?? "trial";
         const allowsVoiceMapping = PLAN_LIMITS[userPlan]?.voiceMapping ?? false;
@@ -184,10 +214,10 @@ export const Route = createFileRoute("/api/generate")({
         const voiceNotes = allowsVoiceMapping ? rawVoiceNotes : "";
 
         // 3. Deduct credit from workspace
-        const { data: creditRes, error: creditErr } = await supabaseAdmin.rpc(
-          "consume_credit",
-          { _user_id: userId, _workspace_id: resolvedWsId },
-        );
+        const { data: creditRes, error: creditErr } = await supabaseAdmin.rpc("consume_credit", {
+          _user_id: userId,
+          _workspace_id: resolvedWsId,
+        });
         if (creditErr) {
           console.error("[generate] consume_credit failed", creditErr);
           return jsonResponse({ error: "Could not verify your credit balance." }, 500);
@@ -235,9 +265,24 @@ export const Route = createFileRoute("/api/generate")({
         const imageInstruction = imageInputs.length
           ? `\n\nThe writer attached ${imageInputs.length} image(s) as additional context. Weave relevant visual details (people, places, screenshots, products, moments) into the post naturally if they add specificity.`
           : "";
+        const canvasBlock = canvasText
+          ? `\n\nCurrent canvas (the live post — source of truth, includes manual edits):\n"""\n${canvasText}\n"""`
+          : "";
         const userPrompt = isAssistantMode
           ? `User message:\n"""\n${input.trim()}\n"""\n\nRespond helpfully as a writing and LinkedIn strategy advisor.`
-          : `Tone: ${safeTone}${voiceBlock}${imageInstruction}
+          : canvasText
+            ? `Tone: ${safeTone}${voiceBlock}${imageInstruction}${canvasBlock}
+
+The writer's instruction for this turn:
+"""
+${input.trim()}
+"""
+
+Apply the instruction to the current canvas without disturbing parts the instruction doesn't concern.
+- For a targeted change (shorten, reword, cut/replace a span), reply with <<<THOUGHTS>>> plus a <<<EDIT>>> block whose <<<OLD>>> content is an exact verbatim substring of the current canvas.
+- Use a full <<<POST>>> rewrite only when the instruction calls for a complete rewrite.
+- If the instruction is a question or needs no canvas change, use KEEP_CURRENT.`
+            : `Tone: ${safeTone}${voiceBlock}${imageInstruction}
 
 Raw material from the writer:
 """
@@ -252,6 +297,7 @@ Write the LinkedIn post now.`;
             systemPrompt,
             userPrompt,
             images: isAssistantMode ? [] : imageInputs,
+            history: conversationHistory,
           });
         } catch (error) {
           console.error("[generate] AI provider request failed", error);
@@ -270,4 +316,3 @@ Write the LinkedIn post now.`;
     },
   },
 });
-

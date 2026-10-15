@@ -120,6 +120,14 @@ export function AiChatPanel({ onToggleCollapse }: AiChatPanelProps) {
               <div key={m.id} className="flex flex-col items-start">
                 <div className="max-w-[88%] px-3.5 py-2.5 rounded-2xl rounded-tl-sm bg-card border border-border shadow-soft">
                   <Markdown>{m.content}</Markdown>
+                  {m.canvasEdited && (
+                    <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-border/60">
+                      <span className="size-1.5 rounded-full bg-accent-cyan shrink-0" />
+                      <span className="text-[10px] font-mono uppercase tracking-[0.1em] text-accent-cyan/90">
+                        Canvas updated
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             );

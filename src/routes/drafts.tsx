@@ -3,12 +3,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarShell } from "@/components/workspace/SidebarShell";
-import {
-  Trash2,
-  Clock,
-  FileText,
-  File,
-} from "lucide-react";
+import { Trash2, Clock, FileText, File } from "lucide-react";
 import { useWorkspace } from "@/lib/workspace-context";
 import {
   formatBytes,
@@ -58,6 +53,7 @@ type DraftRow = {
   attachments: DraftAttachment[];
   scheduled_at: string | null;
   schedule_status: string | null;
+  thread_id?: string | null;
 };
 
 import { DraftsSkeleton, DraftItemSkeleton } from "@/components/skeletons/DraftsSkeleton";
@@ -118,6 +114,7 @@ function DraftsList() {
         dataUrl: a.dataUrl || "",
       })),
       raw_input: "",
+      thread_id: r.thread_id ?? null,
     });
     navigate({ to: "/app" });
   }
@@ -258,17 +255,17 @@ function DraftsList() {
       setRows((prev) =>
         prev
           ? prev.map((r) =>
-            r.id === selected.id
-              ? {
-                ...r,
-                title: nextTitle,
-                content: nextContent,
-                char_count: nextCharCount,
-                images: modalImages,
-                attachments: modalAttachments,
-              }
-              : r,
-          )
+              r.id === selected.id
+                ? {
+                    ...r,
+                    title: nextTitle,
+                    content: nextContent,
+                    char_count: nextCharCount,
+                    images: modalImages,
+                    attachments: modalAttachments,
+                  }
+                : r,
+            )
           : prev,
       );
       setSelected({
@@ -295,7 +292,7 @@ function DraftsList() {
       const { data, error: err } = await supabase
         .from("drafts")
         .select(
-          "id, title, content, tone, char_count, published, updated_at, images, attachments, scheduled_at, schedule_status",
+          "id, title, content, tone, char_count, published, updated_at, images, attachments, scheduled_at, schedule_status, thread_id",
         )
         .eq("workspace_id", activeWorkspaceId)
         .order("updated_at", { ascending: false });
@@ -312,8 +309,7 @@ function DraftsList() {
               ? (r.attachments as unknown as DraftAttachment[])
               : [],
             scheduled_at: (r as { scheduled_at?: string | null }).scheduled_at ?? null,
-            schedule_status:
-              (r as { schedule_status?: string | null }).schedule_status ?? null,
+            schedule_status: (r as { schedule_status?: string | null }).schedule_status ?? null,
           })),
         );
       }
@@ -357,7 +353,7 @@ function DraftsList() {
         setError("Session expired — please sign in again.");
         return;
       }
-      const imagesToSend = modalImages.length ? modalImages : row.images ?? [];
+      const imagesToSend = modalImages.length ? modalImages : (row.images ?? []);
       const contentToSend = modalContent || row.content;
       const resp = await fetch("/api/linkedin/publish", {
         method: "POST",
@@ -402,18 +398,18 @@ function DraftsList() {
       setRows((prev) =>
         prev
           ? prev.map((r) =>
-            r.id === row.id
-              ? {
-                ...r,
-                published: true,
-                title: titleToSend,
-                content: contentToSend,
-                char_count: contentToSend.length,
-                images: imagesToSend,
-                attachments: attachmentsToSend,
-              }
-              : r,
-          )
+              r.id === row.id
+                ? {
+                    ...r,
+                    published: true,
+                    title: titleToSend,
+                    content: contentToSend,
+                    char_count: contentToSend.length,
+                    images: imagesToSend,
+                    attachments: attachmentsToSend,
+                  }
+                : r,
+            )
           : prev,
       );
       setSelected({
@@ -434,7 +430,9 @@ function DraftsList() {
   async function scheduleDraft(row: DraftRow, iso: string) {
     if (!user) return;
     if (!allowsScheduling) {
-      setPublishMsg("Post scheduling requires the Studio or Teams plan. Upgrade in Settings → Billing.");
+      setPublishMsg(
+        "Post scheduling requires the Studio or Teams plan. Upgrade in Settings → Billing.",
+      );
       setShowScheduler(false);
       return;
     }
@@ -465,10 +463,10 @@ function DraftsList() {
       setRows((prev) =>
         prev
           ? prev.map((r) =>
-            r.id === row.id
-              ? { ...r, scheduled_at: iso, schedule_status: "scheduled", media_bytes: mediaBytes }
-              : r,
-          )
+              r.id === row.id
+                ? { ...r, scheduled_at: iso, schedule_status: "scheduled", media_bytes: mediaBytes }
+                : r,
+            )
           : prev,
       );
       setShowScheduler(false);
@@ -492,10 +490,8 @@ function DraftsList() {
     setRows((prev) =>
       prev
         ? prev.map((r) =>
-          r.id === row.id
-            ? { ...r, scheduled_at: null, schedule_status: "draft" }
-            : r,
-        )
+            r.id === row.id ? { ...r, scheduled_at: null, schedule_status: "draft" } : r,
+          )
         : prev,
     );
     if (selected?.id === row.id) {
@@ -527,10 +523,11 @@ function DraftsList() {
                   key={f}
                   type="button"
                   onClick={() => setFilter(f)}
-                  className={`h-7 px-2.5 rounded text-[12px] font-medium border transition-colors capitalize shrink-0 ${filter === f
-                    ? "bg-ink text-surface border-ink"
-                    : "bg-card text-ink border-border hover:bg-subtle"
-                    }`}
+                  className={`h-7 px-2.5 rounded text-[12px] font-medium border transition-colors capitalize shrink-0 ${
+                    filter === f
+                      ? "bg-ink text-surface border-ink"
+                      : "bg-card text-ink border-border hover:bg-subtle"
+                  }`}
                 >
                   {f}
                 </button>
@@ -576,17 +573,19 @@ function DraftsList() {
                         {r.title || "Untitled draft"}
                       </h2>
                       <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground flex-wrap">
-                        {r.scheduled_at && (r.schedule_status === "scheduled" || r.schedule_status === "pending") ? (
+                        {r.scheduled_at &&
+                        (r.schedule_status === "scheduled" || r.schedule_status === "pending") ? (
                           <span className="px-1.5 py-0.5 rounded border bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 inline-flex items-center gap-1">
                             <Clock className="size-3" />
                             Scheduled
                           </span>
                         ) : (
                           <span
-                            className={`px-1.5 py-0.5 rounded border ${r.published
-                              ? "bg-ink text-surface border-ink"
-                              : "bg-subtle border-border"
-                              }`}
+                            className={`px-1.5 py-0.5 rounded border ${
+                              r.published
+                                ? "bg-ink text-surface border-ink"
+                                : "bg-subtle border-border"
+                            }`}
                           >
                             {r.published ? "Published" : "Draft"}
                           </span>
@@ -598,11 +597,11 @@ function DraftsList() {
                         <span>
                           {r.scheduled_at && r.schedule_status === "pending"
                             ? new Date(r.scheduled_at).toLocaleString(undefined, {
-                              month: "short",
-                              day: "numeric",
-                              hour: "numeric",
-                              minute: "2-digit",
-                            })
+                                month: "short",
+                                day: "numeric",
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })
                             : new Date(r.updated_at).toLocaleDateString()}
                         </span>
                         {r.scheduled_at && r.schedule_status === "pending" && (
@@ -632,16 +631,19 @@ function DraftsList() {
                     </button>
                   </div>
                   {r.images.length > 0 && (
-                    <div className={`mb-3 ${r.images.length === 1 ? "" : "flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1"}`}>
+                    <div
+                      className={`mb-3 ${r.images.length === 1 ? "" : "flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1"}`}
+                    >
                       {r.images.map((src, i) => (
                         <img
                           key={i}
                           src={src}
                           alt={`Thumb ${i + 1}`}
-                          className={`rounded-lg border border-border object-cover shrink-0 ${r.images.length === 1
-                            ? "w-full aspect-video max-h-[240px]"
-                            : "h-24 w-auto aspect-square sm:h-32"
-                            }`}
+                          className={`rounded-lg border border-border object-cover shrink-0 ${
+                            r.images.length === 1
+                              ? "w-full aspect-video max-h-[240px]"
+                              : "h-24 w-auto aspect-square sm:h-32"
+                          }`}
                         />
                       ))}
                     </div>
@@ -686,6 +688,5 @@ function DraftsList() {
         />
       </div>
     </SidebarShell>
-  )
+  );
 }
-

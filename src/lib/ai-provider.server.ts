@@ -8,10 +8,17 @@ export type AiImageInput = {
   base64: string;
 };
 
+export type AiChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 export type AiGenerationInput = {
   systemPrompt: string;
   userPrompt: string;
   images: AiImageInput[];
+  /** Prior turns of the conversation (text-only), oldest first. */
+  history?: AiChatMessage[];
 };
 
 export type AiProvider = "openai" | "gemini";
@@ -96,10 +103,14 @@ async function createOpenAiStream(
     name: config.providerName ?? "openai-compatible",
     apiKey: config.apiKey,
   });
+  const historyMessages = (input.history ?? []).map((message) => ({
+    role: message.role,
+    content: message.content,
+  }));
   const stream = streamText({
     model: provider.chatModel(config.model),
     system: input.systemPrompt,
-    messages: [{ role: "user", content }],
+    messages: [...historyMessages, { role: "user", content }],
   });
 
   return stream.textStream;
@@ -110,9 +121,13 @@ async function createGeminiStream(
   input: AiGenerationInput,
 ): Promise<AsyncIterable<string>> {
   const client = new GoogleGenAI({ apiKey: config.apiKey });
+  const historyContents = (input.history ?? []).map((message) => ({
+    role: message.role === "assistant" ? ("model" as const) : ("user" as const),
+    parts: [{ text: message.content }],
+  }));
   const stream = await client.models.generateContentStream({
     model: config.model,
-    contents: [{ role: "user", parts: toGeminiParts(input) }],
+    contents: [...historyContents, { role: "user" as const, parts: toGeminiParts(input) }],
     config: { systemInstruction: input.systemPrompt },
   });
 
@@ -123,12 +138,9 @@ async function createGeminiStream(
   })();
 }
 
-export async function createAiTextStream(
-  input: AiGenerationInput,
-): Promise<AsyncIterable<string>> {
+export async function createAiTextStream(input: AiGenerationInput): Promise<AsyncIterable<string>> {
   const config = getProviderConfig();
   return config.provider === "openai"
     ? createOpenAiStream(config, input)
     : createGeminiStream(config, input);
 }
-

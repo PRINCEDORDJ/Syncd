@@ -42,6 +42,8 @@ export interface ChatMessage {
   content: string;
   /** If true, this message is a canvas update summary, not a conversational reply */
   isCanvasUpdate?: boolean;
+  /** If true, this turn changed the canvas (rendered as a "Canvas updated" chip) */
+  canvasEdited?: boolean;
 }
 
 export interface WorkspaceState {
@@ -57,6 +59,8 @@ export interface WorkspaceState {
   images: string[];
   attachments: AttachmentItem[];
   saving: boolean;
+  /** Conversation thread id — shared with chat_messages / drafts.thread_id */
+  threadId: string;
   // Generation
   generating: boolean;
   error: string | null;
@@ -90,6 +94,8 @@ export interface WorkspaceActions {
   saveDraft: (asPublished?: boolean) => Promise<string | null>;
   /** Send a message: first turn = generate, subsequent = refine */
   sendMessage: (userInput: string) => Promise<void>;
+  /** Abort an in-flight generation/stream */
+  abortGeneration: () => void;
   publish: () => Promise<void>;
   loadDraft: (row: {
     id: string;
@@ -99,6 +105,7 @@ export interface WorkspaceActions {
     images: string[];
     attachments: AttachmentItem[];
     raw_input: string;
+    thread_id?: string | null;
   }) => void;
   newDraft: () => void;
 }
@@ -136,42 +143,139 @@ function makeId() {
   return Math.random().toString(36).slice(2);
 }
 
-function parseDualStream(raw: string): { thoughts: string; post: string | null; isKeepCurrent: boolean } {
-  const thoughtsTag = "<<<THOUGHTS>>>";
-  const postTag = "<<<POST>>>";
+function newThreadId(): string {
+  try {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  } catch {
+    // fall through
+  }
+  return `thr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
 
-  if (!raw.includes(thoughtsTag) && !raw.includes(postTag)) {
-    return { thoughts: raw, post: null, isKeepCurrent: false };
+/** A single exact search/replace instruction parsed out of an <<<EDIT>>> block. */
+export interface EditOp {
+  old: string;
+  new: string;
+}
+
+const THOUGHTS_TAG = "<<<THOUGHTS>>>";
+const POST_TAG = "<<<POST>>>";
+const EDIT_TAG = "<<<EDIT>>>";
+const END_EDIT_TAG = "<<<END_EDIT>>>";
+const OLD_TAG = "<<<OLD>>>";
+const END_OLD_TAG = "<<<END_OLD>>>";
+const NEW_TAG = "<<<NEW>>>";
+const END_NEW_TAG = "<<<END_NEW>>>";
+
+/** Parses every complete OLD/NEW pair inside an <<<EDIT>>>…<<<END_EDIT>>> block. */
+function parseEditOps(raw: string): EditOp[] {
+  const editStart = raw.indexOf(EDIT_TAG);
+  if (editStart === -1) return [];
+  const bodyStart = editStart + EDIT_TAG.length;
+  const editEnd = raw.indexOf(END_EDIT_TAG, bodyStart);
+  const body = raw.slice(bodyStart, editEnd === -1 ? undefined : editEnd);
+  const ops: EditOp[] = [];
+  let idx = 0;
+  while (idx < body.length) {
+    const oldAt = body.indexOf(OLD_TAG, idx);
+    if (oldAt === -1) break;
+    const oldEnd = body.indexOf(END_OLD_TAG, oldAt);
+    if (oldEnd === -1) break;
+    const newAt = body.indexOf(NEW_TAG, oldEnd);
+    if (newAt === -1) break;
+    const newEnd = body.indexOf(END_NEW_TAG, newAt);
+    if (newEnd === -1) break;
+    const oldText = body.slice(oldAt + OLD_TAG.length, oldEnd);
+    const newText = body.slice(newAt + NEW_TAG.length, newEnd);
+    if (oldText.trim().length > 0) ops.push({ old: oldText, new: newText });
+    idx = newEnd + END_NEW_TAG.length;
+  }
+  return ops;
+}
+
+interface DualStreamResult {
+  thoughts: string;
+  post: string | null;
+  editOps: EditOp[];
+  isKeepCurrent: boolean;
+}
+
+function parseDualStream(raw: string): DualStreamResult {
+  const thoughtsIndex = raw.indexOf(THOUGHTS_TAG);
+  const postIndex = raw.indexOf(POST_TAG);
+  const editIndex = raw.indexOf(EDIT_TAG);
+
+  if (thoughtsIndex === -1 && postIndex === -1 && editIndex === -1) {
+    return { thoughts: raw, post: null, editOps: [], isKeepCurrent: false };
   }
 
+  // Thoughts run from after the thoughts tag up to the first content section.
   let thoughts = "";
-  let post: string | null = null;
-  let isKeepCurrent = false;
-
-  const postIndex = raw.indexOf(postTag);
-  const thoughtsIndex = raw.indexOf(thoughtsTag);
-
   if (thoughtsIndex !== -1) {
-    if (postIndex !== -1 && postIndex > thoughtsIndex) {
-      thoughts = raw.slice(thoughtsIndex + thoughtsTag.length, postIndex).trim();
-    } else {
-      thoughts = raw.slice(thoughtsIndex + thoughtsTag.length).trimStart();
-    }
-  } else if (postIndex !== -1) {
-    thoughts = raw.slice(0, postIndex).trim();
+    const boundaries = [postIndex, editIndex].filter((i) => i > thoughtsIndex);
+    const end = boundaries.length ? Math.min(...boundaries) : raw.length;
+    thoughts = raw.slice(thoughtsIndex + THOUGHTS_TAG.length, end).trim();
+  } else {
+    const firstSection =
+      postIndex === -1 ? editIndex : editIndex === -1 ? postIndex : Math.min(postIndex, editIndex);
+    thoughts = raw.slice(0, Math.max(firstSection, 0)).trim();
+  }
+
+  // A targeted edit takes precedence — never apply both edit and post.
+  if (editIndex !== -1) {
+    return { thoughts, post: null, editOps: parseEditOps(raw), isKeepCurrent: false };
   }
 
   if (postIndex !== -1) {
-    const postContent = raw.slice(postIndex + postTag.length).trimStart();
-    if (postContent.trim() === "KEEP_CURRENT" || postContent.startsWith("KEEP_CURRENT")) {
-      isKeepCurrent = true;
-      post = null;
-    } else {
-      post = postContent;
+    const postContent = raw.slice(postIndex + POST_TAG.length).trimStart();
+    if (postContent.startsWith("KEEP_CURRENT")) {
+      return { thoughts, post: null, editOps: [], isKeepCurrent: true };
     }
+    return { thoughts, post: postContent, editOps: [], isKeepCurrent: false };
   }
 
-  return { thoughts, post, isKeepCurrent };
+  return { thoughts, post: null, editOps: [], isKeepCurrent: false };
+}
+
+const EDIT_FAILURE_MESSAGE =
+  "I couldn't apply that edit precisely — the canvas changed or the match wasn't unique. Try rephrasing the instruction, or ask for a full rewrite.";
+
+type ApplyOutcome =
+  | { status: "replace"; text: string; canvasEdited: boolean }
+  | { status: "keep" }
+  | { status: "failed"; message: string };
+
+/**
+ * Applies the model's output to the current canvas.
+ * Targeted edit ops must match the canvas exactly and uniquely, otherwise the
+ * canvas is left untouched and the caller surfaces `message`.
+ */
+function applyCanvasResult(
+  current: string,
+  { post, editOps, isKeepCurrent }: Pick<DualStreamResult, "post" | "editOps" | "isKeepCurrent">,
+): ApplyOutcome {
+  if (editOps.length > 0) {
+    let next = current;
+    for (const op of editOps) {
+      const occurrences = next.split(op.old).length - 1;
+      if (occurrences !== 1) return { status: "failed", message: EDIT_FAILURE_MESSAGE };
+      next = next.replace(op.old, op.new);
+    }
+    if (next.length > 3000) {
+      return {
+        status: "failed",
+        message:
+          "That edit would push the post past the 3,000-character limit, so I left the canvas untouched. Ask me to shorten it instead.",
+      };
+    }
+    if (next === current) return { status: "keep" };
+    return { status: "replace", text: next, canvasEdited: true };
+  }
+  if (post !== null && !isKeepCurrent) {
+    if (!post.trim()) return { status: "keep" };
+    return { status: "replace", text: post, canvasEdited: true };
+  }
+  return { status: "keep" };
 }
 
 /** Reads an SSE stream and accumulates the full text, calling onChunk for each delta. */
@@ -251,8 +355,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const userId = user?.id;
 
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(() => readStoredWorkspaceId());
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(() =>
+    readStoredWorkspaceId(),
+  );
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [threadId, setThreadId] = useState<string>(() => newThreadId());
   const [draft, setDraft] = useState("");
   const [title, setTitle] = useState("Untitled draft");
   const [titleEdited, setTitleEdited] = useState(false);
@@ -269,12 +376,22 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [linkedinConnected, setLinkedinConnected] = useState<boolean | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
+  // Latest committed canvas text — used to validate targeted edit ops at stream
+  // completion even if the closure value is stale.
+  const draftRef = useRef(draft);
+  useEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
+  // Monotonic token so a slow chat-history fetch never overwrites newer state.
+  const loadSeqRef = useRef(0);
 
   // Reset all workspace state on account switch / sign-out so a previous
   // user's in-progress draft is never carried into another session
   // (important now that the provider lives above all routes).
   useEffect(() => {
+    loadSeqRef.current += 1;
     setDraftId(null);
+    setThreadId(newThreadId());
     setDraft("");
     setTitle("Untitled draft");
     setTitleEdited(false);
@@ -453,6 +570,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           workspace_id: activeWorkspaceId!,
           content: draft,
           raw_input: messages.filter((m) => m.role === "user")[0]?.content ?? "",
+          thread_id: threadId,
           tone,
           char_count: draft.length,
           title: title.trim() || "Untitled draft",
@@ -478,7 +596,22 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             .select("id")
             .single();
           if (insErr) throw insErr;
-          if (data?.id) setDraftId(data.id);
+          if (data?.id) {
+            setDraftId(data.id);
+            // Link any chat messages written before the draft row existed.
+            void (async () => {
+              try {
+                const { error: linkErr } = await supabase
+                  .from("chat_messages")
+                  .update({ draft_id: data.id })
+                  .eq("thread_id", threadId)
+                  .is("draft_id", null);
+                if (linkErr) console.error("chat message backfill failed", linkErr);
+              } catch (e) {
+                console.error("chat message backfill failed", e);
+              }
+            })();
+          }
           return data?.id ?? null;
         }
       } catch (e) {
@@ -488,7 +621,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         setSaving(false);
       }
     },
-    [user, draft, messages, tone, title, images, attachments, draftId, activeWorkspaceId],
+    [user, draft, messages, tone, title, images, attachments, draftId, activeWorkspaceId, threadId],
   );
 
   // ── Send message (generate / refine) ───────────────────────────────────────
@@ -498,11 +631,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setError(null);
       setSuccess(null);
 
-      const userMsg: ChatMessage = { id: makeId(), role: "user", content: userInput.trim() };
+      const trimmedInput = userInput.trim();
+      const userMsg: ChatMessage = { id: makeId(), role: "user", content: trimmedInput };
       const assistantMsgId = makeId();
+      // `messages` is the conversation BEFORE this turn — the placeholder below
+      // only exists in state, never in this closure.
       const isFirstTurn = messages.length === 0;
       const isPostMode = aiMode === "post-generator";
+      const hasCanvas = draft.trim().length > 0;
+      // The live canvas travels as structured context; the model quotes exact
+      // substrings from it for targeted edits (empty canvas → raw-material path).
+      const canvasForTurn = isPostMode && hasCanvas ? draft : null;
 
+      // Pending history hydration must not clobber the turn we are about to add.
+      loadSeqRef.current += 1;
       setMessages((prev) => [
         ...prev,
         userMsg,
@@ -523,15 +665,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      try {
-        const payloadInput = isPostMode
-          ? isFirstTurn
-            ? userInput
-            : `Current draft:\n"""\n${draft}\n"""\n\nInstruction: ${userInput}`
-          : userInput;
+      const history = messages
+        .filter(
+          (m) =>
+            (m.role === "user" || m.role === "assistant") && !m.isCanvasUpdate && m.content.trim(),
+        )
+        .slice(-12)
+        .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
 
-        if (isPostMode && isFirstTurn) {
+      try {
+        if (isPostMode && isFirstTurn && !hasCanvas) {
           setDraft("");
+          draftRef.current = "";
           setDraftId(null);
           setTitle("Untitled draft");
           setTitleEdited(false);
@@ -544,10 +689,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            input: payloadInput,
+            input: trimmedInput,
             tone,
             images,
             mode: aiMode,
+            workspaceId: activeWorkspaceId ?? undefined,
+            history,
+            ...(canvasForTurn ? { currentDraft: canvasForTurn } : {}),
           }),
           signal: controller.signal,
         });
@@ -564,34 +712,87 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
           if (thoughts) {
             setMessages((prev) =>
-              prev.map((m) => (m.id === assistantMsgId ? { ...m, content: thoughts } : m))
+              prev.map((m) => (m.id === assistantMsgId ? { ...m, content: thoughts } : m)),
             );
           }
 
-          if (isPostMode && post !== null && !isKeepCurrent) {
+          // Stream fresh generations token-by-token. Refine turns never mutate
+          // the canvas mid-stream — targeted edits and rewrites apply atomically
+          // once the full response has arrived.
+          if (isPostMode && canvasForTurn === null && post !== null && !isKeepCurrent) {
             setDraft(post);
+            draftRef.current = post;
             if (!titleEdited) {
               setTitle(deriveTitle(post));
             }
           }
         });
 
-        const { thoughts, post, isKeepCurrent } = parseDualStream(accumulated);
-        const finalThoughts =
-          thoughts.trim() ||
-          (isKeepCurrent
+        const parsed = parseDualStream(accumulated);
+        let assistantContent =
+          parsed.thoughts.trim() ||
+          (parsed.isKeepCurrent
             ? "I've reviewed your request."
-            : `Applied: "${userInput.slice(0, 80)}${userInput.length > 80 ? "…" : ""}"`);
+            : `Applied: "${trimmedInput.slice(0, 80)}${trimmedInput.length > 80 ? "…" : ""}"`);
+        let canvasEditedFlag = false;
+
+        if (isPostMode) {
+          const outcome = applyCanvasResult(draftRef.current, parsed);
+          if (outcome.status === "failed") {
+            assistantContent = assistantContent
+              ? `${assistantContent}\n\n${outcome.message}`
+              : outcome.message;
+          } else if (outcome.status === "replace") {
+            setDraft(outcome.text);
+            draftRef.current = outcome.text;
+            if (!titleEdited) {
+              setTitle(deriveTitle(outcome.text));
+            }
+            canvasEditedFlag = !isFirstTurn;
+          }
+        }
 
         setMessages((prev) =>
-          prev.map((m) => (m.id === assistantMsgId ? { ...m, content: finalThoughts } : m))
+          prev.map((m) =>
+            m.id === assistantMsgId
+              ? {
+                  ...m,
+                  content: assistantContent,
+                  canvasEdited: canvasEditedFlag || undefined,
+                }
+              : m,
+          ),
         );
 
-        if (isPostMode && post !== null && !isKeepCurrent) {
-          setDraft(post);
-          if (!titleEdited) {
-            setTitle(deriveTitle(post));
-          }
+        // Persist the turn to the draft's thread (best-effort — never blocks UX).
+        if (user && activeWorkspaceId) {
+          const rows = [
+            {
+              user_id: user.id,
+              workspace_id: activeWorkspaceId,
+              thread_id: threadId,
+              draft_id: draftId,
+              role: "user" as const,
+              content: trimmedInput,
+            },
+            {
+              user_id: user.id,
+              workspace_id: activeWorkspaceId,
+              thread_id: threadId,
+              draft_id: draftId,
+              role: "assistant" as const,
+              content: assistantContent,
+              is_canvas_update: canvasEditedFlag,
+            },
+          ];
+          void (async () => {
+            try {
+              const { error: insErr } = await supabase.from("chat_messages").insert(rows);
+              if (insErr) console.error("chat persistence failed", insErr);
+            } catch (e) {
+              console.error("chat persistence failed", e);
+            }
+          })();
         }
       } catch (e) {
         if ((e as Error).name === "AbortError") {
@@ -604,8 +805,25 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         setGenerating(false);
       }
     },
-    [generating, messages, draft, tone, images, titleEdited, aiMode],
+    [
+      generating,
+      messages,
+      draft,
+      tone,
+      images,
+      titleEdited,
+      aiMode,
+      user,
+      activeWorkspaceId,
+      threadId,
+      draftId,
+    ],
   );
+
+  // ── Abort an in-flight generation ──────────────────────────────────────────
+  const abortGeneration = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
 
   // ── Publish ─────────────────────────────────────────────────────────────────
   const publish = useCallback(async () => {
@@ -650,9 +868,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       images: string[];
       attachments: AttachmentItem[];
       raw_input: string;
+      thread_id?: string | null;
     }) => {
+      const seq = ++loadSeqRef.current;
       setDraftId(row.id);
+      setThreadId(row.thread_id ?? newThreadId());
       setDraft(row.content);
+      draftRef.current = row.content;
       setTitle(row.title || "Untitled draft");
       setTitleEdited(true);
       setTone((TONES.includes(row.tone as Tone) ? row.tone : TONES[0]) as Tone);
@@ -660,6 +882,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setAttachments(row.attachments ?? []);
       setError(null);
       setSuccess(null);
+      // Immediate fallback (legacy drafts without a persisted thread)…
       setMessages(
         row.raw_input
           ? [
@@ -673,15 +896,44 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             ]
           : [],
       );
+      // …then replace with the real persisted thread when one exists.
+      if (row.thread_id) {
+        void (async () => {
+          let restored: ChatMessage[] = [];
+          try {
+            const { data: rows, error: fetchErr } = await supabase
+              .from("chat_messages")
+              .select("id, role, content, is_canvas_update")
+              .eq("thread_id", row.thread_id as string)
+              .order("created_at", { ascending: true })
+              .limit(200);
+            if (fetchErr) throw fetchErr;
+            restored = (rows ?? []).map((r) => ({
+              id: r.id,
+              role: r.role as ChatRole,
+              content: r.content,
+              canvasEdited: r.role === "assistant" && r.is_canvas_update ? true : undefined,
+            }));
+          } catch (e) {
+            console.error("chat history load failed", e);
+            return;
+          }
+          if (seq !== loadSeqRef.current) return;
+          if (restored.length) setMessages(restored);
+        })();
+      }
     },
     [],
   );
 
   // ── New draft ───────────────────────────────────────────────────────────────
   const newDraft = useCallback(() => {
+    loadSeqRef.current += 1;
     abortRef.current?.abort();
     setDraftId(null);
+    setThreadId(newThreadId());
     setDraft("");
+    draftRef.current = "";
     setTitle("Untitled draft");
     setTitleEdited(false);
     setTone("Authoritative & Warm");
@@ -700,12 +952,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   // ── Workspace switching ─────────────────────────────────────────────────────
   const setActiveWorkspace = useCallback((ws: Workspace) => {
+    loadSeqRef.current += 1;
     setActiveWorkspaceId(ws.id);
     persistActiveWorkspace(ws);
     // Clear the canvas for the new workspace
     abortRef.current?.abort();
     setDraftId(null);
+    setThreadId(newThreadId());
     setDraft("");
+    draftRef.current = "";
     setTitle("Untitled draft");
     setTitleEdited(false);
     setTone("Authoritative & Warm");
@@ -719,6 +974,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const ctx: WorkspaceCtx = {
     activeWorkspaceId,
     draftId,
+    threadId,
     draft,
     title,
     titleEdited,
@@ -752,6 +1008,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     removeAttachment,
     saveDraft,
     sendMessage,
+    abortGeneration,
     publish,
     loadDraft,
     newDraft,

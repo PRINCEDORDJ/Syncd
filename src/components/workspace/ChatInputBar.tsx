@@ -13,8 +13,17 @@ interface ChatInputBarProps {
 }
 
 export function ChatInputBar({ variant = "full", value, onChange, onSend }: ChatInputBarProps) {
-  const { generating, images, attachments, handleFiles, handleAttachFiles, messages, aiMode, setAiMode } =
-    useWorkspace();
+  const {
+    generating,
+    images,
+    attachments,
+    handleFiles,
+    handleAttachFiles,
+    messages,
+    aiMode,
+    setAiMode,
+    abortGeneration,
+  } = useWorkspace();
   const isBlocked = useIsGenerationBlocked();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachInputRef = useRef<HTMLInputElement | null>(null);
@@ -134,7 +143,7 @@ export function ChatInputBar({ variant = "full", value, onChange, onSend }: Chat
 
         <button
           type="button"
-          onClick={generating ? () => {} : onSend}
+          onClick={generating ? abortGeneration : onSend}
           disabled={!canSend && !generating}
           aria-label={generating ? "Stop generation" : "Send message"}
           className={`h-7 w-7 inline-flex items-center justify-center rounded-lg transition-colors ${
