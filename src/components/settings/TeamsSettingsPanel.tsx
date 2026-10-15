@@ -386,11 +386,15 @@ export function TeamsSettingsPanel({
       <Section title="Team" subtitle="Invite teammates, set roles, and link your workspace.">
         <div className="flex items-center gap-2 text-[13px] text-muted-foreground py-4">
           <Loader2 className="size-4 animate-spin" />
-          Loading team…
+          Loading teams…
         </div>
       </Section>
     );
   }
+
+  const canManage = !!team && team.owner_id === user.id;
+  const seatsUsed = team ? teamMembers.length + 1 : 0;
+  const planLocked = !isAdmin && effectivePlan !== "teams";
 
   return (
     <div>
