@@ -189,7 +189,7 @@ export function TeamsSettingsPanel({
 
   const accepted = teamMembers.filter((m) => m.accepted_at);
   const pending = teamMembers.filter((m) => !m.accepted_at);
-  const seatsUsed = teamMembers.length;
+  const seatsUsed = teamMembers.length + 1;
   const linkedWorkspaceIds = new Set(grants.map((g) => g.workspace_id));
   const grantableWorkspaces = ownedWorkspaces.filter((w) => !linkedWorkspaceIds.has(w.id));
 
@@ -392,10 +392,6 @@ export function TeamsSettingsPanel({
     );
   }
 
-  const canManage = !!team && team.owner_id === user.id;
-  const seatsUsed = team ? teamMembers.length + 1 : 0;
-  const planLocked = !isAdmin && effectivePlan !== "teams";
-
   return (
     <div>
       {errMsg && (
@@ -434,8 +430,8 @@ export function TeamsSettingsPanel({
               <div>
                 <div className="text-[14px] font-medium text-ink">No team yet</div>
                 <div className="text-[12px] text-muted-foreground mt-0.5">
-                  One team per account, up to 5 member seats. Link it to your workspace so members
-                  share drafts, credits, and storage.
+                  One team per account, up to 5 seats (you + up to 4 members). Link it to your
+                  workspace so members share drafts, credits, and storage.
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -465,7 +461,7 @@ export function TeamsSettingsPanel({
           {/* Team header + members */}
           <Section
             title="Team"
-            subtitle={`${seatsUsed} of ${MEMBER_SEAT_CAP} member seats used (pending invites hold a seat). Owner seat is free.`}
+            subtitle={`${seatsUsed} of ${MEMBER_SEAT_CAP} seats used (you + members; pending invites hold a seat).`}
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               {renaming ? (
@@ -554,7 +550,7 @@ export function TeamsSettingsPanel({
                 <button
                   type="button"
                   onClick={inviteMember}
-                  disabled={inviting || !inviteEmail.trim()}
+                  disabled={inviting || !inviteEmail.trim() || seatsUsed >= MEMBER_SEAT_CAP}
                   className="h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-50"
                 >
                   {inviting ? "Creating…" : "Invite"}
@@ -564,6 +560,11 @@ export function TeamsSettingsPanel({
                 Invites are one-time links valid for 30 days — send the link yourself (Slack,
                 email, etc.).
               </p>
+              {seatsUsed >= MEMBER_SEAT_CAP && (
+                <p className="text-[11px] text-destructive mt-1.5">
+                  Seat limit reached — remove a member or revoke an invite to invite someone else.
+                </p>
+              )}
             </div>
 
             {/* Members */}
