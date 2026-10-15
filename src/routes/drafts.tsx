@@ -16,6 +16,7 @@ import {
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useCredits } from "@/hooks/useCredits";
 import { PLAN_LIMITS } from "@/lib/plans";
+import { useWorkspaceCanEdit } from "@/lib/workspace-permissions";
 
 type DraftAttachment = {
   name: string;
@@ -98,6 +99,7 @@ function DraftsList() {
   const fileAttachInputRef = useRef<HTMLInputElement | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const { loadDraft, activeWorkspaceId } = useWorkspace();
+  const canEdit = useWorkspaceCanEdit(activeWorkspaceId, user?.id);
   const navigate = useNavigate();
 
   function openDraft(r: DraftRow) {
@@ -618,17 +620,19 @@ function DraftsList() {
                         )}
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        remove(r.id);
-                      }}
-                      className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-                      aria-label="Delete"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          remove(r.id);
+                        }}
+                        className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+                        aria-label="Delete"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    )}
                   </div>
                   {r.images.length > 0 && (
                     <div

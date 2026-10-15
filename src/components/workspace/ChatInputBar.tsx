@@ -1,5 +1,7 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useAuth } from "@/lib/auth";
+import { useWorkspaceCanEdit } from "@/lib/workspace-permissions";
 import { ImagePlus, Paperclip, ArrowUp, Square, MessageSquareText, PenLine } from "lucide-react";
 import { MAX_IMAGES, MAX_ATTACHMENTS } from "@/lib/image-validation";
 import { useIsGenerationBlocked } from "@/components/CreditBanner";
@@ -23,10 +25,18 @@ export function ChatInputBar({ variant = "full", value, onChange, onSend }: Chat
     aiMode,
     setAiMode,
     abortGeneration,
+    activeWorkspaceId,
   } = useWorkspace();
+  const { user } = useAuth();
+  const canEdit = useWorkspaceCanEdit(activeWorkspaceId, user?.id);
   const isBlocked = useIsGenerationBlocked();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Viewers can chat with the assistant (personal history) but not edit the canvas.
+  useEffect(() => {
+    if (!canEdit && aiMode !== "assistant") setAiMode("assistant");
+  }, [canEdit, aiMode, setAiMode]);
 
   const isFirstTurn = messages.length === 0;
   const placeholder =
@@ -92,8 +102,8 @@ export function ChatInputBar({ variant = "full", value, onChange, onSend }: Chat
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={images.length >= MAX_IMAGES}
-            title="Add image"
+            disabled={!canEdit || images.length >= MAX_IMAGES}
+            title={canEdit ? "Add image" : "Viewers have read-only access"}
             aria-label="Add image"
             className="h-7 w-7 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -102,8 +112,8 @@ export function ChatInputBar({ variant = "full", value, onChange, onSend }: Chat
           <button
             type="button"
             onClick={() => attachInputRef.current?.click()}
-            disabled={attachments.length >= MAX_ATTACHMENTS}
-            title="Attach file"
+            disabled={!canEdit || attachments.length >= MAX_ATTACHMENTS}
+            title={canEdit ? "Attach file" : "Viewers have read-only access"}
             aria-label="Attach file"
             className="h-7 w-7 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -128,13 +138,14 @@ export function ChatInputBar({ variant = "full", value, onChange, onSend }: Chat
           </button>
           <button
             type="button"
+            disabled={!canEdit}
             onClick={() => setAiMode("post-generator")}
             className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium transition-colors ${
               aiMode === "post-generator"
                 ? "bg-ink text-surface shadow-sm"
                 : "text-muted-foreground hover:text-ink"
-            }`}
-            title="Post Generator — generate and refine posts on canvas"
+            } ${!canEdit ? "opacity-40 cursor-not-allowed hover:text-muted-foreground" : ""}`}
+            title={canEdit ? "Post Generator — generate and refine posts on canvas" : "Viewers have read-only access"}
           >
             <PenLine className="size-2.5" />
             Post

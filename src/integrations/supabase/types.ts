@@ -318,7 +318,9 @@ export type Database = {
         Row: {
           accepted_at: string | null
           email: string
+          expires_at: string
           id: string
+          invite_token: string | null
           invited_at: string
           role: Database["public"]["Enums"]["team_role"]
           team_id: string
@@ -327,7 +329,9 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           email: string
+          expires_at?: string
           id?: string
+          invite_token?: string | null
           invited_at?: string
           role?: Database["public"]["Enums"]["team_role"]
           team_id: string
@@ -336,7 +340,9 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           email?: string
+          expires_at?: string
           id?: string
+          invite_token?: string | null
           invited_at?: string
           role?: Database["public"]["Enums"]["team_role"]
           team_id?: string
@@ -672,6 +678,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_team_invite: {
+        Args: { p_token: string }
+        Returns: {
+          accepted_at: string | null
+          email: string
+          expires_at: string
+          id: string
+          invite_token: string | null
+          invited_at: string
+          role: Database["public"]["Enums"]["team_role"]
+          team_id: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "team_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       accept_workspace_invite: {
         Args: { p_invite_id: string }
         Returns: {
@@ -726,6 +752,10 @@ export type Database = {
       }
       expire_linkedin_connections: { Args: never; Returns: number }
       get_post_signup_context: { Args: never; Returns: Json }
+      get_team_invite: {
+        Args: { p_token: string }
+        Returns: Json
+      }
       get_team_role: {
         Args: { _team_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["team_role"]
@@ -762,6 +792,10 @@ export type Database = {
         Returns: boolean
       }
       has_workspace_access: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
+      has_workspace_edit_access: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
