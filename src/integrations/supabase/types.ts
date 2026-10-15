@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          draft_id: string | null
+          id: string
+          is_canvas_update: boolean
+          role: string
+          thread_id: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          draft_id?: string | null
+          id?: string
+          is_canvas_update?: boolean
+          role: string
+          thread_id: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          draft_id?: string | null
+          id?: string
+          is_canvas_update?: boolean
+          role?: string
+          thread_id?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_transactions: {
         Row: {
           amount: number
@@ -56,6 +107,7 @@ export type Database = {
           schedule_status: string
           scheduled_at: string | null
           team_id: string | null
+          thread_id: string | null
           title: string
           tone: string
           updated_at: string
@@ -77,6 +129,7 @@ export type Database = {
           schedule_status?: string
           scheduled_at?: string | null
           team_id?: string | null
+          thread_id?: string | null
           title?: string
           tone?: string
           updated_at?: string
@@ -98,6 +151,7 @@ export type Database = {
           schedule_status?: string
           scheduled_at?: string | null
           team_id?: string | null
+          thread_id?: string | null
           title?: string
           tone?: string
           updated_at?: string

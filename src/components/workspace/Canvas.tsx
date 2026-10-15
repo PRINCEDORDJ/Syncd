@@ -60,8 +60,9 @@ export function Canvas() {
     publishing,
     publish,
     draftId,
+    threadId,
   } = useWorkspace();
-  
+
   const navigate = useNavigate();
   const [showScheduler, setShowScheduler] = useState(false);
   const [scheduling, setScheduling] = useState(false);
@@ -71,6 +72,9 @@ export function Canvas() {
   async function handleDelete() {
     if (!draftId) return;
     await supabase.from("drafts").delete().eq("id", draftId);
+    // Cascade covers messages already linked to the draft; this clears any
+    // written before the draft row was first saved.
+    await supabase.from("chat_messages").delete().eq("thread_id", threadId);
     navigate({ to: "/drafts" });
   }
 
@@ -83,12 +87,12 @@ export function Canvas() {
     }
     setScheduling(true);
     const { error: err } = await supabase
-        .from("drafts")
-        .update({
-          scheduled_at: iso,
-          schedule_status: "scheduled",
-        })
-        .eq("id", draftId);
+      .from("drafts")
+      .update({
+        scheduled_at: iso,
+        schedule_status: "scheduled",
+      })
+      .eq("id", draftId);
     if (err) setError(err.message);
     else setSuccess("Post scheduled successfully.");
     setScheduling(false);
@@ -179,7 +183,9 @@ export function Canvas() {
               type="button"
               onClick={() => attachInputRef.current?.click()}
               disabled={attachments.length >= MAX_ATTACHMENTS}
-              title={attachments.length >= MAX_ATTACHMENTS ? "Attachment limit reached" : "Attach file"}
+              title={
+                attachments.length >= MAX_ATTACHMENTS ? "Attachment limit reached" : "Attach file"
+              }
               aria-label="Attach file"
               className="h-6 px-2 inline-flex items-center gap-1.5 rounded text-[11px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
@@ -199,20 +205,20 @@ export function Canvas() {
           <div className="flex items-center gap-1.5 shrink-0">
             {draftId && (
               <button
-                 type="button"
-                 onClick={() => setShowScheduler(!showScheduler)}
-                 className="h-6 px-2 rounded text-[11px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors"
+                type="button"
+                onClick={() => setShowScheduler(!showScheduler)}
+                className="h-6 px-2 rounded text-[11px] font-medium border border-border bg-card text-ink hover:bg-subtle transition-colors"
               >
-                 <CalendarClock className="size-3" />
+                <CalendarClock className="size-3" />
               </button>
             )}
             {draftId && (
               <button
-                 type="button"
-                 onClick={handleDelete}
-                 className="h-6 px-2 rounded text-[11px] font-medium border border-destructive/20 bg-card text-destructive hover:bg-destructive/5 transition-colors"
+                type="button"
+                onClick={handleDelete}
+                className="h-6 px-2 rounded text-[11px] font-medium border border-destructive/20 bg-card text-destructive hover:bg-destructive/5 transition-colors"
               >
-                 <Trash2 className="size-3" />
+                <Trash2 className="size-3" />
               </button>
             )}
             <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.12em] shrink-0 ml-2">
@@ -417,10 +423,7 @@ export function Canvas() {
               </Link>
             </div>
           ) : (
-            <SchedulePicker
-              submitting={scheduling}
-              onSchedule={handleSchedule}
-            />
+            <SchedulePicker submitting={scheduling} onSchedule={handleSchedule} />
           )}
         </div>
       )}
@@ -437,21 +440,21 @@ export function Canvas() {
         <div className="flex items-center gap-2">
           {draftId && (
             <button
-               type="button"
-               onClick={() => setShowScheduler(!showScheduler)}
-               className="h-8 px-3 rounded-md text-[13px] font-medium text-ink border border-border hover:bg-subtle transition-colors"
+              type="button"
+              onClick={() => setShowScheduler(!showScheduler)}
+              className="h-8 px-3 rounded-md text-[13px] font-medium text-ink border border-border hover:bg-subtle transition-colors"
             >
-               <CalendarClock className="size-4" />
+              <CalendarClock className="size-4" />
             </button>
           )}
           {draftId && (
-             <button
-                type="button"
-                onClick={handleDelete}
-                className="h-8 px-3 rounded-md text-[13px] font-medium text-destructive border border-destructive/20 hover:bg-destructive/5 transition-colors"
-             >
-                <Trash2 className="size-4" />
-             </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="h-8 px-3 rounded-md text-[13px] font-medium text-destructive border border-destructive/20 hover:bg-destructive/5 transition-colors"
+            >
+              <Trash2 className="size-4" />
+            </button>
           )}
           <button
             type="button"
