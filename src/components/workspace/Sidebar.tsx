@@ -11,6 +11,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { PLAN_LABELS } from "@/lib/plans";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { NotificationBell } from "@/components/NotificationBell";
+import { useNotifications } from "@/lib/notifications-context";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -35,6 +36,7 @@ import {
   Book,
   CreditCard,
   CalendarClock,
+  Bell,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -70,6 +72,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
   const { theme, toggle: toggleTheme } = useTheme();
   const { activeWorkspaceId, setActiveWorkspace } = useWorkspace();
   const { plan, subscriptionCredits, topupCredits, isAdmin } = useCredits();
+  const { unreadCount } = useNotifications();
 
   const metaAvatar =
     (user?.user_metadata?.avatar_url as string | undefined) ||
@@ -362,6 +365,22 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
               >
                 <SettingsIcon className="size-4" />
                 Settings
+              </Link>
+            </DropdownMenuItem>
+
+            {/* Notifications */}
+            <DropdownMenuItem asChild>
+              <Link
+                to="/notifications"
+                className="cursor-pointer flex items-center gap-2"
+              >
+                <Bell className="size-4" />
+                <span className="flex-1">Notifications</span>
+                {unreadCount > 0 && (
+                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-ink px-1 text-[10px] font-semibold text-surface">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </Link>
             </DropdownMenuItem>
 
