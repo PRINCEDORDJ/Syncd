@@ -52,14 +52,15 @@ export function useStorage(overrideWorkspaceId?: string): StorageState {
       try {
         let wsId = activeWorkspaceId;
         if (!wsId) {
-          const { data: memberWs } = await supabase
-            .from("workspace_members")
-            .select("workspace_id")
-            .eq("user_id", user!.id)
+          // Deterministic fallback: the owned workspace (matches the RPC fallback)
+          const { data: ownedWs } = await supabase
+            .from("workspaces")
+            .select("id")
+            .eq("owner_id", user!.id)
             .order("created_at", { ascending: true })
             .limit(1)
             .maybeSingle();
-          wsId = memberWs?.workspace_id ?? null;
+          wsId = ownedWs?.id ?? null;
         }
 
         if (!wsId) {

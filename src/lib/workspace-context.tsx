@@ -403,7 +403,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setSuccess(null);
   }, [userId]);
 
-  // Ensure active workspace is resolved and valid for current user
+  // Ensure active workspace is resolved and valid for current user.
+  // Source of truth order: localStorage (fast cache) → profiles.active_workspace_id
+  // (server-persisted, follows the user across devices) → owned workspace →
+  // first active membership. Everything is validated against workspace access.
   useEffect(() => {
     if (!user) {
       setActiveWorkspaceId(null);
@@ -411,6 +414,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
     let cancelled = false;
     void (async () => {
+      // 1. Validate the cached choice
       if (activeWorkspaceId) {
         const { data: hasAccess } = await supabase.rpc("has_workspace_access", {
           _user_id: user.id,
@@ -418,16 +422,56 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         });
         if (hasAccess) return;
       }
-      const { data: memberRows } = await supabase
-        .from("workspace_members")
-        .select("workspace:workspaces(id, name, owner_id, created_at, updated_at)")
+
+      // 2. Server-persisted active workspace
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("active_workspace_id")
         .eq("user_id", user.id)
-        .eq("status", "active")
+        .maybeSingle();
+      if (cancelled) return;
+      const serverWsId = profile?.active_workspace_id;
+      if (serverWsId) {
+        const { data: hasAccess } = await supabase.rpc("has_workspace_access", {
+          _user_id: user.id,
+          _workspace_id: serverWsId,
+        });
+        if (hasAccess) {
+          const { data: ws } = await supabase
+            .from("workspaces")
+            .select("id, name, owner_id, created_at, updated_at")
+            .eq("id", serverWsId)
+            .maybeSingle();
+          if (ws) {
+            setActiveWorkspaceId(ws.id);
+            persistActiveWorkspace(ws as Workspace);
+            return;
+          }
+        }
+      }
+
+      // 3. Fall back to the owned workspace, then first active membership
+      const { data: owned } = await supabase
+        .from("workspaces")
+        .select("id, name, owner_id, created_at, updated_at")
+        .eq("owner_id", user.id)
         .order("created_at", { ascending: true })
-        .limit(1);
+        .limit(1)
+        .maybeSingle();
+
+      let ws = owned as Workspace | undefined;
+      if (!ws) {
+        const { data: memberRows } = await supabase
+          .from("workspace_members")
+          .select("workspace:workspaces(id, name, owner_id, created_at, updated_at)")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .order("created_at", { ascending: true })
+          .limit(1);
+        ws = memberRows?.[0]?.workspace as unknown as Workspace | undefined;
+      }
 
       if (cancelled) return;
-      const ws = memberRows?.[0]?.workspace as unknown as Workspace | undefined;
       if (ws) {
         setActiveWorkspaceId(ws.id);
         persistActiveWorkspace(ws);
@@ -955,6 +999,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     loadSeqRef.current += 1;
     setActiveWorkspaceId(ws.id);
     persistActiveWorkspace(ws);
+    // Persist the choice server-side so it follows the user across devices.
+    // Fire-and-forget — a failed write must not block the switch.
+    void supabase
+      .rpc("set_active_workspace", { p_workspace_id: ws.id })
+      .then(({ error }) => {
+        if (error) console.error("[workspace] set_active_workspace failed", error);
+      });
     // Clear the canvas for the new workspace
     abortRef.current?.abort();
     setDraftId(null);

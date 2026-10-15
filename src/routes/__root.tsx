@@ -4,6 +4,8 @@ import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { CreditsProvider } from "@/lib/credits-context";
 import { WorkspaceProvider } from "@/lib/workspace-context";
+import { NotificationsProvider } from "@/lib/notifications-context";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -79,10 +81,13 @@ function RootComponent() {
       {/* Global so the persistent sidebar's draft list shares one workspace
           state with the canvas across /app, /drafts and /settings. */}
       <WorkspaceProvider>
-        <CreditsProvider>
-          <Outlet />
-        </CreditsProvider>
+        <NotificationsProvider>
+          <CreditsProvider>
+            <Outlet />
+          </CreditsProvider>
+        </NotificationsProvider>
       </WorkspaceProvider>
+      <Toaster position="bottom-right" richColors closeButton />
     </AuthProvider>
   );
 }

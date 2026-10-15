@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import {
   fetchAccessibleWorkspaces,
   fetchWorkspaceMembers,
@@ -67,6 +68,7 @@ export function WorkspacesSettingsPanel() {
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [invites, setInvites] = useState<WorkspaceInvite[]>([]);
   const [subLoading, setSubLoading] = useState(false);
+  const [workspacePlan, setWorkspacePlan] = useState<PlanTier>("trial");
 
   // Modals state
   const [createWsOpen, setCreateWsOpen] = useState(false);
@@ -81,7 +83,7 @@ export function WorkspacesSettingsPanel() {
 
   // Invite to Workspace
   const [inviteWsEmail, setInviteWsEmail] = useState("");
-  const [inviteWsRole, setInviteWsRole] = useState<WorkspaceRole>("member");
+  const [inviteWsRole, setInviteWsRole] = useState<Exclude<WorkspaceRole, "owner">>("member");
   const [invitingWs, setInvitingWs] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -119,12 +121,14 @@ export function WorkspacesSettingsPanel() {
   const loadWorkspaceSubData = useCallback(async (wsId: string) => {
     setSubLoading(true);
     try {
-      const [mems, invs] = await Promise.all([
+      const [mems, invs, planRes] = await Promise.all([
         fetchWorkspaceMembers(wsId),
         fetchWorkspaceInvites(wsId),
+        supabase.rpc("get_workspace_plan", { p_workspace_id: wsId }),
       ]);
       setMembers(mems);
       setInvites(invs);
+      setWorkspacePlan((planRes.data as PlanTier | null) ?? "trial");
     } catch (err) {
       console.error(err);
     } finally {
@@ -147,7 +151,9 @@ export function WorkspacesSettingsPanel() {
   const ownedWorkspacesCount = workspaces?.filter((w) => w.owner_id === user?.id).length || 0;
 
   const isAtWorkspaceLimit = !isAdmin && ownedWorkspacesCount >= planLimits.maxWorkspaces;
-  const canInviteWorkspaceMembers = isAdmin || planLimits.maxWorkspaceMembers > 1;
+  // Invites are gated on the workspace owner's plan (checked server-side too)
+  const workspaceAllowsInvites = workspacePlan === "teams" || isAdmin;
+  const pendingInvites = invites.filter((i) => i.status === "pending");
 
   // Flash message helper
   const showSuccess = (msg: string) => {
@@ -209,7 +215,7 @@ export function WorkspacesSettingsPanel() {
     try {
       await inviteToWorkspace(selectedWorkspaceId, inviteWsEmail.trim(), inviteWsRole);
       setInviteWsEmail("");
-      showSuccess(`Sent workspace invite to ${inviteWsEmail.trim()}`);
+      showSuccess(`Invite sent to ${inviteWsEmail.trim()}`);
       if (selectedWorkspaceId) await loadWorkspaceSubData(selectedWorkspaceId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to invite to workspace.");
@@ -354,7 +360,7 @@ export function WorkspacesSettingsPanel() {
       {/* Members */}
       {currentWorkspace && (
         <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 space-y-6">
-          {!canInviteWorkspaceMembers ? (
+          {!workspaceAllowsInvites ? (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-border bg-subtle/40 p-4">
               <div className="flex items-start gap-3">
                 <Lock className="size-5 text-muted-foreground shrink-0 mt-0.5" />
@@ -377,7 +383,7 @@ export function WorkspacesSettingsPanel() {
             <div className="rounded-xl border border-border bg-subtle/30 p-4">
               <h4 className="text-[13px] font-semibold text-ink mb-1">Invite member to full workspace</h4>
               <p className="text-[12px] text-muted-foreground mb-3">
-                Workspace members can collaborate across all drafts in this workspace ({members.length}/{planLimits.maxWorkspaceMembers} seats used).
+                Workspace members can collaborate across all drafts in this workspace ({members.length}/{PLAN_LIMITS.teams.maxWorkspaceMembers} seats used, including pending invites).
               </p>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
@@ -389,12 +395,11 @@ export function WorkspacesSettingsPanel() {
                 />
                 <select
                   value={inviteWsRole}
-                  onChange={(e) => setInviteWsRole(e.target.value as WorkspaceRole)}
+                  onChange={(e) => setInviteWsRole(e.target.value as Exclude<WorkspaceRole, "owner">)}
                   className="h-9 rounded-lg border border-border bg-background px-3 text-[13px] text-ink outline-none focus:border-ink"
                 >
                   <option value="member">Member</option>
                   <option value="admin">Admin</option>
-                  <option value="viewer">Viewer</option>
                 </select>
                 <button
                   type="button"
@@ -472,34 +477,45 @@ export function WorkspacesSettingsPanel() {
             )}
           </div>
 
-          {invites.length > 0 && (
+          {pendingInvites.length > 0 && (
             <div>
-              <h4 className="text-[14px] font-semibold text-ink mb-2">Pending Invites ({invites.length})</h4>
+              <h4 className="text-[14px] font-semibold text-ink mb-2">Pending Invites ({pendingInvites.length})</h4>
               <div className="divide-y divide-border rounded-xl border border-border bg-background">
-                {invites.map((inv) => (
-                  <div key={inv.id} className="flex items-center justify-between p-3.5 text-[13px]">
-                    <div className="flex items-center gap-3">
-                      <Mail className="size-4 text-muted-foreground" />
-                      <div>
-                        <div className="font-medium text-ink">{inv.email}</div>
-                        <div className="text-[11px] font-mono text-muted-foreground">Role: {inv.role} · Status: {inv.status}</div>
+                {pendingInvites.map((inv) => {
+                  const expires = inv.expires_at ? new Date(inv.expires_at) : null;
+                  const expired = expires ? expires.getTime() <= Date.now() : false;
+                  return (
+                    <div key={inv.id} className="flex items-center justify-between p-3.5 text-[13px]">
+                      <div className="flex items-center gap-3">
+                        <Mail className="size-4 text-muted-foreground" />
+                        <div>
+                          <div className="font-medium text-ink">{inv.email}</div>
+                          <div className="text-[11px] font-mono text-muted-foreground">
+                            Role: {inv.role} · Expires:{" "}
+                            {expires
+                              ? expired
+                                ? "expired"
+                                : expires.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+                              : "—"}
+                          </div>
+                        </div>
                       </div>
+                      {isManager && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await revokeWorkspaceInvite(inv.id);
+                            if (selectedWorkspaceId) await loadWorkspaceSubData(selectedWorkspaceId);
+                            showSuccess("Invite revoked.");
+                          }}
+                          className="text-[12px] text-destructive hover:underline"
+                        >
+                          Revoke
+                        </button>
+                      )}
                     </div>
-                    {isManager && (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          await revokeWorkspaceInvite(inv.id);
-                          if (selectedWorkspaceId) await loadWorkspaceSubData(selectedWorkspaceId);
-                          showSuccess("Invite cancelled.");
-                        }}
-                        className="text-[12px] text-destructive hover:underline"
-                      >
-                        Cancel
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

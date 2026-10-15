@@ -10,6 +10,7 @@ import { useWorkspace } from "@/lib/workspace-context";
 import { useCredits } from "@/hooks/useCredits";
 import { PLAN_LABELS } from "@/lib/plans";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { NotificationBell } from "@/components/NotificationBell";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -164,21 +165,24 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
             </span>
           )}
         </Link>
-        {onToggleCollapse && (
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="size-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-ink hover:bg-subtle transition-colors shrink-0"
-          >
-            {collapsed ? (
-              <PanelLeftOpen className="size-3.5" />
-            ) : (
-              <PanelLeftClose className="size-4" />
-            )}
-          </button>
-        )}
+        <div className="flex items-center gap-0.5 shrink-0 ml-auto">
+          <NotificationBell />
+          {onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className="size-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-ink hover:bg-subtle transition-colors shrink-0"
+            >
+              {collapsed ? (
+                <PanelLeftOpen className="size-3.5" />
+              ) : (
+                <PanelLeftClose className="size-4" />
+              )}
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Nav links */}

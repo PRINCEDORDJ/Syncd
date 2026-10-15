@@ -2,9 +2,11 @@ import { Link } from "@tanstack/react-router";
 import { Zap } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCredits } from "@/hooks/useCredits";
+import { useWorkspace } from "@/lib/workspace-context";
 
 export function CreditIndicator({ compact = false }: { compact?: boolean }) {
   const c = useCredits();
+  const { activeWorkspaceId } = useWorkspace();
 
   if (c.isLoading) {
     return <Skeleton className="h-7 w-32 rounded-md" />;
@@ -60,6 +62,9 @@ export function CreditIndicator({ compact = false }: { compact?: boolean }) {
     >
       <Zap className="size-3.5 shrink-0" />
       {label}
+      {!isAdmin && activeWorkspaceId && (
+        <span className="text-muted-foreground">· this workspace</span>
+      )}
     </Link>
   );
 }
