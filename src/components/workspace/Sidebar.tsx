@@ -33,6 +33,7 @@ import {
   ChevronsUpDown,
   Book,
   CreditCard,
+  CalendarClock,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -50,7 +51,7 @@ const SETTINGS_SEARCH = {
 };
 
 interface NavLink {
-  to: "/app" | "/drafts" | "/methodology";
+  to: "/app" | "/drafts" | "/schedule" | "/methodology";
   label: string;
   icon: typeof LayoutGrid;
 }
@@ -58,6 +59,7 @@ interface NavLink {
 const NAV_LINKS: NavLink[] = [
   { to: "/app", label: "Workspace", icon: LayoutGrid },
   { to: "/drafts", label: "Drafts", icon: FileText },
+  { to: "/schedule", label: "Schedule", icon: CalendarClock },
   { to: "/methodology", label: "Methodology", icon: Book },
 ];
 
