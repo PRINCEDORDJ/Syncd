@@ -240,13 +240,52 @@ export const Route = createFileRoute("/api/generate")({
           source?: string;
         } | null;
         if (!credit?.success) {
-          const message =
-            credit?.reason === "daily_limit_reached"
-              ? "You've hit today's 5-generation cap on the Free plan. Come back tomorrow or upgrade to Studio."
-              : credit?.reason === "no_credits"
-                ? "You're out of credits. Upgrade or buy a top-up pack to keep generating."
-                : "You don't have enough credits for this generation.";
-          return jsonResponse({ error: message, code: "NO_CREDITS" }, 402);
+          switch (credit?.reason) {
+            case "daily_limit_reached":
+              return jsonResponse(
+                {
+                  error:
+                    "You've hit today's 5-generation cap on the Free plan. Come back tomorrow or upgrade to Studio.",
+                  code: "NO_CREDITS",
+                },
+                402,
+              );
+            case "no_credits":
+              return jsonResponse(
+                {
+                  error: "You're out of credits. Upgrade or buy a top-up pack to keep generating.",
+                  code: "NO_CREDITS",
+                },
+                402,
+              );
+            case "not_a_member":
+              // Caller is no longer an active member of the target workspace.
+              console.error("[generate] consume_credit not_a_member", { userId, resolvedWsId });
+              return jsonResponse(
+                {
+                  error: "You don't have access to this workspace anymore.",
+                  code: "NOT_WORKSPACE_MEMBER",
+                },
+                403,
+              );
+            case "no_workspace":
+              return jsonResponse(
+                {
+                  error: "No workspace found for your account. Create one to start generating.",
+                  code: "NO_WORKSPACE",
+                },
+                409,
+              );
+            default:
+              console.error("[generate] consume_credit unexpected reason", credit?.reason, {
+                userId,
+                resolvedWsId,
+              });
+              return jsonResponse(
+                { error: "You don't have enough credits for this generation.", code: "NO_CREDITS" },
+                402,
+              );
+          }
         }
         const creditSource = (
           credit?.source === "topup"

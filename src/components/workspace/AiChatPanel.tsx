@@ -22,7 +22,7 @@ const ASSISTANT_SUGGESTIONS = [
 ];
 
 export function AiChatPanel({ onToggleCollapse }: AiChatPanelProps) {
-  const { messages, sendMessage, generating, aiMode } = useWorkspace();
+  const { messages, sendMessage, generating, aiMode, error } = useWorkspace();
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -147,6 +147,14 @@ export function AiChatPanel({ onToggleCollapse }: AiChatPanelProps) {
 
       {/* Input bar (desktop sidechat only — mobile uses the pinned bar) */}
       <div className="hidden lg:flex flex-col gap-2 p-3 bg-card/60 border-t border-border shrink-0">
+        {error && (
+          <div
+            className="px-3 py-2 rounded-md bg-destructive/5 border border-destructive/30 text-[12px] leading-relaxed text-destructive"
+            role="status"
+          >
+            {error}
+          </div>
+        )}
         <CreditBanner />
         <ChatInputBar variant="full" value={input} onChange={setInput} onSend={handleSend} />
       </div>
