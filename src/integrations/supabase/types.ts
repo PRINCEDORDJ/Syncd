@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       chat_messages: {
         Row: {
+          canvas_edited: boolean
           content: string
           created_at: string
           draft_id: string | null
@@ -27,6 +28,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          canvas_edited?: boolean
           content: string
           created_at?: string
           draft_id?: string | null
@@ -38,6 +40,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          canvas_edited?: boolean
           content?: string
           created_at?: string
           draft_id?: string | null
@@ -57,7 +60,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "chat_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["thread_id"]
+          },
+          {
             foreignKeyName: "chat_messages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_threads: {
+        Row: {
+          created_at: string
+          draft_id: string | null
+          id: string
+          last_message_at: string
+          last_message_preview: string
+          thread_id: string
+          title: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          draft_id?: string | null
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string
+          thread_id: string
+          title?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          draft_id?: string | null
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string
+          thread_id?: string
+          title?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_threads_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_threads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_threads_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"

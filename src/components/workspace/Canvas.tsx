@@ -62,7 +62,6 @@ export function Canvas() {
     publishing,
     publish,
     draftId,
-    threadId,
     activeWorkspaceId,
   } = useWorkspace();
 
@@ -78,9 +77,6 @@ export function Canvas() {
   async function handleDelete() {
     if (!draftId) return;
     await supabase.from("drafts").delete().eq("id", draftId);
-    // Cascade covers messages already linked to the draft; this clears any
-    // written before the draft row was first saved.
-    await supabase.from("chat_messages").delete().eq("thread_id", threadId);
     navigate({ to: "/drafts" });
   }
 

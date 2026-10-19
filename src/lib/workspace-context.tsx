@@ -21,6 +21,12 @@ import {
   validateAttachmentBatch,
   type AttachmentItem,
 } from "@/lib/image-validation";
+import {
+  parseDualStream,
+  applyCanvasResult,
+  EDIT_FAILURE_MESSAGE,
+  type EditOp,
+} from "@/lib/ai-reply-format";
 
 const ACTIVE_WORKSPACE_KEY = "syncd:active-workspace";
 const AI_MODE_KEY = "syncd:ai-mode";
@@ -96,6 +102,17 @@ export interface WorkspaceActions {
   sendMessage: (userInput: string) => Promise<void>;
   /** Abort an in-flight generation/stream */
   abortGeneration: () => void;
+  /**
+   * Start a fresh conversation. When a draft is open the new thread attaches to
+   * it on the next turn (many chats per draft); with no draft this is a new
+   * draft session.
+   */
+  newChat: () => void;
+  /**
+   * Open a chat thread (from the history list) and restore its transcript.
+   * Standalone threads reset the canvas; threads linked to a draft load it.
+   */
+  openThread: (thread: { thread_id: string; draft_id: string | null }) => Promise<void>;
   publish: () => Promise<void>;
   loadDraft: (row: {
     id: string;
@@ -150,132 +167,6 @@ function newThreadId(): string {
     // fall through
   }
   return `thr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
-}
-
-/** A single exact search/replace instruction parsed out of an <<<EDIT>>> block. */
-export interface EditOp {
-  old: string;
-  new: string;
-}
-
-const THOUGHTS_TAG = "<<<THOUGHTS>>>";
-const POST_TAG = "<<<POST>>>";
-const EDIT_TAG = "<<<EDIT>>>";
-const END_EDIT_TAG = "<<<END_EDIT>>>";
-const OLD_TAG = "<<<OLD>>>";
-const END_OLD_TAG = "<<<END_OLD>>>";
-const NEW_TAG = "<<<NEW>>>";
-const END_NEW_TAG = "<<<END_NEW>>>";
-
-/** Parses every complete OLD/NEW pair inside an <<<EDIT>>>…<<<END_EDIT>>> block. */
-function parseEditOps(raw: string): EditOp[] {
-  const editStart = raw.indexOf(EDIT_TAG);
-  if (editStart === -1) return [];
-  const bodyStart = editStart + EDIT_TAG.length;
-  const editEnd = raw.indexOf(END_EDIT_TAG, bodyStart);
-  const body = raw.slice(bodyStart, editEnd === -1 ? undefined : editEnd);
-  const ops: EditOp[] = [];
-  let idx = 0;
-  while (idx < body.length) {
-    const oldAt = body.indexOf(OLD_TAG, idx);
-    if (oldAt === -1) break;
-    const oldEnd = body.indexOf(END_OLD_TAG, oldAt);
-    if (oldEnd === -1) break;
-    const newAt = body.indexOf(NEW_TAG, oldEnd);
-    if (newAt === -1) break;
-    const newEnd = body.indexOf(END_NEW_TAG, newAt);
-    if (newEnd === -1) break;
-    const oldText = body.slice(oldAt + OLD_TAG.length, oldEnd);
-    const newText = body.slice(newAt + NEW_TAG.length, newEnd);
-    if (oldText.trim().length > 0) ops.push({ old: oldText, new: newText });
-    idx = newEnd + END_NEW_TAG.length;
-  }
-  return ops;
-}
-
-interface DualStreamResult {
-  thoughts: string;
-  post: string | null;
-  editOps: EditOp[];
-  isKeepCurrent: boolean;
-}
-
-function parseDualStream(raw: string): DualStreamResult {
-  const thoughtsIndex = raw.indexOf(THOUGHTS_TAG);
-  const postIndex = raw.indexOf(POST_TAG);
-  const editIndex = raw.indexOf(EDIT_TAG);
-
-  if (thoughtsIndex === -1 && postIndex === -1 && editIndex === -1) {
-    return { thoughts: raw, post: null, editOps: [], isKeepCurrent: false };
-  }
-
-  // Thoughts run from after the thoughts tag up to the first content section.
-  let thoughts = "";
-  if (thoughtsIndex !== -1) {
-    const boundaries = [postIndex, editIndex].filter((i) => i > thoughtsIndex);
-    const end = boundaries.length ? Math.min(...boundaries) : raw.length;
-    thoughts = raw.slice(thoughtsIndex + THOUGHTS_TAG.length, end).trim();
-  } else {
-    const firstSection =
-      postIndex === -1 ? editIndex : editIndex === -1 ? postIndex : Math.min(postIndex, editIndex);
-    thoughts = raw.slice(0, Math.max(firstSection, 0)).trim();
-  }
-
-  // A targeted edit takes precedence — never apply both edit and post.
-  if (editIndex !== -1) {
-    return { thoughts, post: null, editOps: parseEditOps(raw), isKeepCurrent: false };
-  }
-
-  if (postIndex !== -1) {
-    const postContent = raw.slice(postIndex + POST_TAG.length).trimStart();
-    if (postContent.startsWith("KEEP_CURRENT")) {
-      return { thoughts, post: null, editOps: [], isKeepCurrent: true };
-    }
-    return { thoughts, post: postContent, editOps: [], isKeepCurrent: false };
-  }
-
-  return { thoughts, post: null, editOps: [], isKeepCurrent: false };
-}
-
-const EDIT_FAILURE_MESSAGE =
-  "I couldn't apply that edit precisely — the canvas changed or the match wasn't unique. Try rephrasing the instruction, or ask for a full rewrite.";
-
-type ApplyOutcome =
-  | { status: "replace"; text: string; canvasEdited: boolean }
-  | { status: "keep" }
-  | { status: "failed"; message: string };
-
-/**
- * Applies the model's output to the current canvas.
- * Targeted edit ops must match the canvas exactly and uniquely, otherwise the
- * canvas is left untouched and the caller surfaces `message`.
- */
-function applyCanvasResult(
-  current: string,
-  { post, editOps, isKeepCurrent }: Pick<DualStreamResult, "post" | "editOps" | "isKeepCurrent">,
-): ApplyOutcome {
-  if (editOps.length > 0) {
-    let next = current;
-    for (const op of editOps) {
-      const occurrences = next.split(op.old).length - 1;
-      if (occurrences !== 1) return { status: "failed", message: EDIT_FAILURE_MESSAGE };
-      next = next.replace(op.old, op.new);
-    }
-    if (next.length > 3000) {
-      return {
-        status: "failed",
-        message:
-          "That edit would push the post past the 3,000-character limit, so I left the canvas untouched. Ask me to shorten it instead.",
-      };
-    }
-    if (next === current) return { status: "keep" };
-    return { status: "replace", text: next, canvasEdited: true };
-  }
-  if (post !== null && !isKeepCurrent) {
-    if (!post.trim()) return { status: "keep" };
-    return { status: "replace", text: post, canvasEdited: true };
-  }
-  return { status: "keep" };
 }
 
 /** Reads an SSE stream and accumulates the full text, calling onChunk for each delta. */
@@ -642,17 +533,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           if (insErr) throw insErr;
           if (data?.id) {
             setDraftId(data.id);
-            // Link any chat messages written before the draft row existed.
+            // Attach this thread to the new draft (many chats per draft: the
+            // thread keeps its identity, the draft row is just linked).
             void (async () => {
               try {
                 const { error: linkErr } = await supabase
-                  .from("chat_messages")
+                  .from("chat_threads")
                   .update({ draft_id: data.id })
                   .eq("thread_id", threadId)
                   .is("draft_id", null);
-                if (linkErr) console.error("chat message backfill failed", linkErr);
+                if (linkErr) console.error("chat thread link failed", linkErr);
               } catch (e) {
-                console.error("chat message backfill failed", e);
+                console.error("chat thread link failed", e);
               }
             })();
           }
@@ -738,6 +630,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             images,
             mode: aiMode,
             workspaceId: activeWorkspaceId ?? undefined,
+            threadId,
+            ...(draftId ? { draftId } : {}),
             history,
             ...(canvasForTurn ? { currentDraft: canvasForTurn } : {}),
           }),
@@ -807,37 +701,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
               : m,
           ),
         );
-
-        // Persist the turn to the draft's thread (best-effort — never blocks UX).
-        if (user && activeWorkspaceId) {
-          const rows = [
-            {
-              user_id: user.id,
-              workspace_id: activeWorkspaceId,
-              thread_id: threadId,
-              draft_id: draftId,
-              role: "user" as const,
-              content: trimmedInput,
-            },
-            {
-              user_id: user.id,
-              workspace_id: activeWorkspaceId,
-              thread_id: threadId,
-              draft_id: draftId,
-              role: "assistant" as const,
-              content: assistantContent,
-              is_canvas_update: canvasEditedFlag,
-            },
-          ];
-          void (async () => {
-            try {
-              const { error: insErr } = await supabase.from("chat_messages").insert(rows);
-              if (insErr) console.error("chat persistence failed", insErr);
-            } catch (e) {
-              console.error("chat persistence failed", e);
-            }
-          })();
-        }
       } catch (e) {
         if ((e as Error).name === "AbortError") {
           setMessages((prev) => prev.filter((m) => m.id !== userMsg.id && m.id !== assistantMsgId));
@@ -857,7 +720,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       images,
       titleEdited,
       aiMode,
-      user,
       activeWorkspaceId,
       threadId,
       draftId,
@@ -902,19 +764,44 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, [overLimit, draft, publishing, images, user, saveDraft]);
 
-  // ── Load existing draft ─────────────────────────────────────────────────────
-  const loadDraft = useCallback(
-    (row: {
-      id: string;
-      content: string;
-      title: string;
-      tone: string;
-      images: string[];
-      attachments: AttachmentItem[];
-      raw_input: string;
-      thread_id?: string | null;
-    }) => {
-      const seq = ++loadSeqRef.current;
+  // ── Chat transcript helpers ────────────────────────────────────────────────
+  const fetchThreadMessages = useCallback(async (threadUid: string, seq: number) => {
+    try {
+      const { data: rows, error: fetchErr } = await supabase
+        .from("chat_messages")
+        .select("id, role, content, is_canvas_update, canvas_edited")
+        .eq("thread_id", threadUid)
+        .order("created_at", { ascending: true })
+        .limit(200);
+      if (fetchErr) throw fetchErr;
+      const restored: ChatMessage[] = (rows ?? []).map((r) => ({
+        id: r.id,
+        role: r.role as ChatRole,
+        content: r.content,
+        canvasEdited:
+          r.role === "assistant" && (r.canvas_edited || r.is_canvas_update) ? true : undefined,
+      }));
+      if (seq !== loadSeqRef.current) return;
+      if (restored.length) setMessages(restored);
+    } catch (e) {
+      console.error("chat history load failed", e);
+    }
+  }, []);
+
+  const applyDraftRow = useCallback(
+    (
+      row: {
+        id: string;
+        content: string;
+        title: string;
+        tone: string;
+        images: string[];
+        attachments: AttachmentItem[];
+        raw_input: string;
+        thread_id?: string | null;
+      },
+      seq: number,
+    ) => {
       setDraftId(row.id);
       setThreadId(row.thread_id ?? newThreadId());
       setDraft(row.content);
@@ -926,7 +813,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setAttachments(row.attachments ?? []);
       setError(null);
       setSuccess(null);
-      // Immediate fallback (legacy drafts without a persisted thread)…
+      // Immediate fallback (drafts whose thread is being resolved)…
       setMessages(
         row.raw_input
           ? [
@@ -940,34 +827,100 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             ]
           : [],
       );
-      // …then replace with the real persisted thread when one exists.
-      if (row.thread_id) {
-        void (async () => {
-          let restored: ChatMessage[] = [];
-          try {
-            const { data: rows, error: fetchErr } = await supabase
-              .from("chat_messages")
-              .select("id, role, content, is_canvas_update")
-              .eq("thread_id", row.thread_id as string)
-              .order("created_at", { ascending: true })
-              .limit(200);
-            if (fetchErr) throw fetchErr;
-            restored = (rows ?? []).map((r) => ({
-              id: r.id,
-              role: r.role as ChatRole,
-              content: r.content,
-              canvasEdited: r.role === "assistant" && r.is_canvas_update ? true : undefined,
-            }));
-          } catch (e) {
-            console.error("chat history load failed", e);
-            return;
-          }
-          if (seq !== loadSeqRef.current) return;
-          if (restored.length) setMessages(restored);
-        })();
-      }
+      // …then restore the thread transcript. A draft can have several chats;
+      // open the most recently active one, falling back to the legacy
+      // drafts.thread_id column.
+      void (async () => {
+        let effective = row.thread_id ?? null;
+        try {
+          const { data: latest, error: threadErr } = await supabase
+            .from("chat_threads")
+            .select("thread_id")
+            .eq("draft_id", row.id)
+            .order("last_message_at", { ascending: false })
+            .limit(1);
+          if (threadErr) throw threadErr;
+          if (latest?.[0]?.thread_id) effective = latest[0].thread_id;
+        } catch (e) {
+          console.error("chat thread lookup failed", e);
+        }
+        if (seq !== loadSeqRef.current) return;
+        if (effective) {
+          setThreadId(effective);
+          await fetchThreadMessages(effective, seq);
+        }
+      })();
     },
-    [],
+    [fetchThreadMessages],
+  );
+
+  // ── Load existing draft ─────────────────────────────────────────────────────
+  const loadDraft = useCallback(
+    (row: {
+      id: string;
+      content: string;
+      title: string;
+      tone: string;
+      images: string[];
+      attachments: AttachmentItem[];
+      raw_input: string;
+      thread_id?: string | null;
+    }) => {
+      applyDraftRow(row, ++loadSeqRef.current);
+    },
+    [applyDraftRow],
+  );
+
+  // ── Open a thread from the history list ─────────────────────────────────────
+  const openThread = useCallback(
+    async (thread: { thread_id: string; draft_id: string | null }) => {
+      const seq = ++loadSeqRef.current;
+      abortRef.current?.abort();
+      setError(null);
+      setSuccess(null);
+      if (thread.draft_id) {
+        const { data: row, error: fetchErr } = await supabase
+          .from("drafts")
+          .select("id, content, title, tone, images, attachments, raw_input, thread_id")
+          .eq("id", thread.draft_id)
+          .maybeSingle();
+        if (fetchErr) {
+          console.error("thread draft load failed", fetchErr);
+          return;
+        }
+        if (row) {
+          applyDraftRow(
+            {
+              id: row.id,
+              content: row.content,
+              title: row.title,
+              tone: row.tone,
+              images: (row.images as string[] | null) ?? [],
+              attachments: (row.attachments as unknown as AttachmentItem[] | null) ?? [],
+              raw_input: (row.raw_input as string | null) ?? "",
+              thread_id: (row as { thread_id?: string | null }).thread_id ?? null,
+            },
+            seq,
+          );
+          return;
+        }
+        // Draft was deleted in the meantime — the thread cascade should have
+        // removed it too; fall through and treat it as a standalone chat.
+      }
+      // Standalone chat: reset the canvas entirely.
+      setDraftId(null);
+      setDraft("");
+      draftRef.current = "";
+      setTitle("Untitled draft");
+      setTitleEdited(false);
+      setTone("Authoritative & Warm");
+      setImages([]);
+      setAttachments([]);
+      setMessages([]);
+      setThreadId(thread.thread_id);
+      await fetchThreadMessages(thread.thread_id, seq);
+    },
+    [applyDraftRow, fetchThreadMessages],
   );
 
   // ── New draft ───────────────────────────────────────────────────────────────
@@ -988,6 +941,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setSuccess(null);
   }, []);
 
+  // ── New chat ───────────────────────────────────────────────────────────────
+  // Many chats per draft: with a draft open the conversation resets but the
+  // canvas stays — the next turn's thread attaches to that draft server-side.
+  // Without a draft this starts a fresh draft session.
+  const newChat = useCallback(() => {
+    if (!draftId) {
+      newDraft();
+      return;
+    }
+    loadSeqRef.current += 1;
+    abortRef.current?.abort();
+    setThreadId(newThreadId());
+    setMessages([]);
+    setError(null);
+    setSuccess(null);
+  }, [draftId, newDraft]);
+
   // ── AI Mode ────────────────────────────────────────────────────────────────
   const setAiMode = useCallback((m: AiMode) => {
     setAiModeState(m);
@@ -1001,11 +971,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     persistActiveWorkspace(ws);
     // Persist the choice server-side so it follows the user across devices.
     // Fire-and-forget — a failed write must not block the switch.
-    void supabase
-      .rpc("set_active_workspace", { p_workspace_id: ws.id })
-      .then(({ error }) => {
-        if (error) console.error("[workspace] set_active_workspace failed", error);
-      });
+    void supabase.rpc("set_active_workspace", { p_workspace_id: ws.id }).then(({ error }) => {
+      if (error) console.error("[workspace] set_active_workspace failed", error);
+    });
     // Clear the canvas for the new workspace
     abortRef.current?.abort();
     setDraftId(null);
@@ -1062,6 +1030,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     abortGeneration,
     publish,
     loadDraft,
+    openThread,
+    newChat,
     newDraft,
   };
 
