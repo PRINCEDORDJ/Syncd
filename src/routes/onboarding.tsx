@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/lib/auth";
+import { useWorkspace } from "@/lib/workspace-context";
 import {
   completeUserOnboarding,
   createWorkspaceOnboarding,
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/onboarding")({
 
 function OnboardingRoute() {
   const { user, loading, onboarding, refreshOnboarding } = useAuth();
+  const { setActiveWorkspace } = useWorkspace();
   const navigate = useNavigate();
   const [workspaceName, setWorkspaceName] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -35,10 +37,10 @@ function OnboardingRoute() {
   }, [loading, user, navigate]);
 
   useEffect(() => {
-    if (!loading && user && onboarding?.onboarding_status === "complete") {
+    if (!loading && user && (onboarding?.workspace_count ?? 0) > 0) {
       navigate({ to: "/app", replace: true });
     }
-  }, [loading, user, onboarding?.onboarding_status, navigate]);
+  }, [loading, user, onboarding?.onboarding_status, onboarding?.workspace_count, navigate]);
 
   useEffect(() => {
     if (!workspaceName && user) {
@@ -59,10 +61,11 @@ function OnboardingRoute() {
     setSubmitting(true);
     setError(null);
     try {
-      await createWorkspaceOnboarding(user.id, {
+      const { workspace } = await createWorkspaceOnboarding(user.id, {
         workspaceName,
       });
       await completeUserOnboarding();
+      setActiveWorkspace(workspace);
       await refreshOnboarding();
       navigate({ to: "/app", replace: true });
     } catch (err) {

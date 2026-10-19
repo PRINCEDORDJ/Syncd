@@ -41,9 +41,13 @@ function LoginPage() {
 
   useEffect(() => {
     if (loading || !user) return;
-    const dest = resolvePostAuthDestination(onboarding?.onboarding_status, search.redirect);
+    const dest = resolvePostAuthDestination(
+      onboarding?.onboarding_status,
+      onboarding?.workspace_count,
+      search.redirect,
+    );
     navigate({ to: dest, replace: true });
-  }, [user, loading, onboarding?.onboarding_status, navigate, search.redirect]);
+  }, [user, loading, onboarding?.onboarding_status, onboarding?.workspace_count, navigate, search.redirect]);
 
   async function handleGoogle() {
     setError(null);

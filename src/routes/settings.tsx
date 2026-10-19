@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { createUniqueChannel } from "@/lib/realtime";
+import { useWorkspaceGate } from "@/lib/workspace-gate";
 import { SidebarShell } from "@/components/workspace/SidebarShell";
 import { type PlanTier } from "@/lib/plans";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -58,14 +59,9 @@ interface SubscriptionRow {
 }
 
 function SettingsGate() {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
+  const ready = useWorkspaceGate("/settings");
 
-  useEffect(() => {
-    if (!loading && !user) navigate({ to: "/login", search: { redirect: "/settings" } });
-  }, [user, loading, navigate]);
-
-  if (loading || !user) {
+  if (!ready) {
     return <SettingsSkeleton />;
   }
   return <SettingsPage />;

@@ -9,6 +9,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { PLAN_LIMITS } from "@/lib/plans";
 import { SidebarShell } from "@/components/workspace/SidebarShell";
 import { DraftsSkeleton, DraftItemSkeleton } from "@/components/skeletons/DraftsSkeleton";
+import { useWorkspaceGate } from "@/lib/workspace-gate";
 
 export const Route = createFileRoute("/schedule")({
   head: () => ({
@@ -37,16 +38,9 @@ type ScheduledRow = {
 const UPCOMING_STATUSES = ["scheduled", "pending", "publishing"];
 
 function ScheduleGate() {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
+  const ready = useWorkspaceGate("/schedule");
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate({ to: "/login", search: { redirect: "/schedule" } });
-    }
-  }, [user, loading, navigate]);
-
-  if (loading || !user) {
+  if (!ready) {
     return <DraftsSkeleton />;
   }
 

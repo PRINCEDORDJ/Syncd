@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
+import { useWorkspace } from "@/lib/workspace-context";
 import { supabase } from "@/integrations/supabase/client";
 import {
   fetchAccessibleWorkspaces,
@@ -52,7 +53,8 @@ import {
 import { cn } from "@/lib/utils";
 
 export function WorkspacesSettingsPanel() {
-  const { user } = useAuth();
+  const { user, refreshOnboarding } = useAuth();
+  const { setActiveWorkspace } = useWorkspace();
   const [workspaces, setWorkspaces] = useState<AccessibleWorkspace[] | null>(null);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -171,6 +173,8 @@ export function WorkspacesSettingsPanel() {
       setNewWsName("");
       setCreateWsOpen(false);
       showSuccess(`Created workspace "${ws.name}"`);
+      setActiveWorkspace(ws);
+      await refreshOnboarding();
       await loadData();
       setSelectedWorkspaceId(ws.id);
     } catch (err) {
@@ -202,6 +206,7 @@ export function WorkspacesSettingsPanel() {
       await deleteWorkspace(selectedWorkspaceId);
       setDeleteWsConfirmOpen(false);
       showSuccess("Workspace deleted.");
+      await refreshOnboarding();
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete workspace.");

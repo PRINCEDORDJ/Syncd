@@ -17,6 +17,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useCredits } from "@/hooks/useCredits";
 import { PLAN_LIMITS } from "@/lib/plans";
 import { useWorkspaceCanEdit } from "@/lib/workspace-permissions";
+import { useWorkspaceGate } from "@/lib/workspace-gate";
 
 type DraftAttachment = {
   name: string;
@@ -60,16 +61,9 @@ type DraftRow = {
 import { DraftsSkeleton, DraftItemSkeleton } from "@/components/skeletons/DraftsSkeleton";
 
 function DraftsGate() {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
+  const ready = useWorkspaceGate("/drafts");
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate({ to: "/login", search: { redirect: "/drafts" } });
-    }
-  }, [user, loading, navigate]);
-
-  if (loading || !user) {
+  if (!ready) {
     return <DraftsSkeleton />;
   }
 
