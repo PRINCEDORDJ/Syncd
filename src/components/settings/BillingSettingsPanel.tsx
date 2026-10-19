@@ -19,6 +19,7 @@ interface SubscriptionRow {
   current_period_end: string | null;
   cancel_at_period_end: boolean;
   polar_customer_id: string | null;
+  seats: number;
 }
 
 interface Credits {
@@ -81,13 +82,15 @@ export function BillingSettingsPanel({
   async function startCheckout(plan: "studio" | "teams") {
     setCheckoutError(null);
     setCheckoutPlan(plan);
-    const key = (plan === "studio"
-      ? billingInterval === "year"
-        ? "studio_annual"
-        : "studio_monthly"
-      : billingInterval === "year"
-        ? "teams_annual"
-        : "teams_monthly") as CheckoutPlan;
+    const key = (
+      plan === "studio"
+        ? billingInterval === "year"
+          ? "studio_annual"
+          : "studio_monthly"
+        : billingInterval === "year"
+          ? "teams_annual"
+          : "teams_monthly"
+    ) as CheckoutPlan;
     setCheckoutBusy(key);
     const { data: sess } = await supabase.auth.getSession();
     const token = sess.session?.access_token;
@@ -163,8 +166,12 @@ export function BillingSettingsPanel({
           </div>
           <div className="text-[12px] text-muted-foreground mt-1">
             {draftStr}
+            {!isAdmin && sub?.plan === "teams" && sub.seats
+              ? ` · ${sub.seats} seat${sub.seats === 1 ? "" : "s"} billed`
+              : ""}
             {topupCredits > 0 && !isAdmin ? ` · +${topupCredits} top-up` : ""}
-            {" · "}{linkedInMax} LinkedIn account{linkedInMax > 1 ? "s" : ""}
+            {" · "}
+            {linkedInMax} LinkedIn account{linkedInMax > 1 ? "s" : ""}
             {dailyCap > 0 && !isAdmin ? ` · ${dailyCap}/day cap` : ""}
           </div>
           {isAdmin ? (
@@ -225,7 +232,7 @@ export function BillingSettingsPanel({
                     {p.credits} credits
                   </div>
                   <div className="text-[12px] text-muted-foreground">
-                    ${p.priceUsd} — {(p.priceUsd / p.credits * 100).toFixed(1)}¢ per credit
+                    ${p.priceUsd} — {((p.priceUsd / p.credits) * 100).toFixed(1)}¢ per credit
                   </div>
                 </div>
                 <button
