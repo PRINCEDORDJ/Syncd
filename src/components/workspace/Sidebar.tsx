@@ -1,6 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { BrandMark } from "@/components/BrandMark";
 import { DraftList } from "@/components/workspace/DraftList";
+import { ChatThreadList } from "@/components/workspace/ChatThreadList";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { useEffect, useState } from "react";
@@ -244,6 +245,11 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
         className={`flex-1 min-h-0 overflow-y-auto ${collapsed ? "py-1 px-1.5" : "py-3 px-2 border-t border-border"}`}
       >
         <DraftList collapsed={collapsed} onSelect={onSelectDraft} />
+        {!collapsed && (
+          <div className="mt-3 pt-3 border-t border-border">
+            <ChatThreadList onSelect={onSelectDraft} />
+          </div>
+        )}
       </div>
 
       {/* Footer: user profile card → popup menu */}
@@ -259,7 +265,11 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
               >
                 <Avatar className="size-6 border border-border shrink-0">
                   {activeAvatar && (
-                    <AvatarImage src={activeAvatar} alt={activeDisplayName ?? "Profile"} loading="lazy" />
+                    <AvatarImage
+                      src={activeAvatar}
+                      alt={activeDisplayName ?? "Profile"}
+                      loading="lazy"
+                    />
                   )}
                   <AvatarFallback className="text-[9px] font-semibold bg-ink/10 text-ink">
                     {initials || "U"}
@@ -274,7 +284,11 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
               >
                 <Avatar className="size-6 border border-border shrink-0">
                   {activeAvatar && (
-                    <AvatarImage src={activeAvatar} alt={activeDisplayName ?? "Profile"} loading="lazy" />
+                    <AvatarImage
+                      src={activeAvatar}
+                      alt={activeDisplayName ?? "Profile"}
+                      loading="lazy"
+                    />
                   )}
                   <AvatarFallback className="text-[9px] font-semibold bg-ink/10 text-ink">
                     {initials || "U"}
@@ -304,7 +318,11 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
               <div className="flex items-center gap-2.5">
                 <Avatar className="size-8 border border-border shrink-0">
                   {activeAvatar && (
-                    <AvatarImage src={activeAvatar} alt={activeDisplayName ?? "Profile"} loading="lazy" />
+                    <AvatarImage
+                      src={activeAvatar}
+                      alt={activeDisplayName ?? "Profile"}
+                      loading="lazy"
+                    />
                   )}
                   <AvatarFallback className="text-[11px] font-semibold bg-ink/10 text-ink">
                     {initials || "U"}
@@ -370,10 +388,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onSelectDraft }: SidebarP
 
             {/* Notifications */}
             <DropdownMenuItem asChild>
-              <Link
-                to="/notifications"
-                className="cursor-pointer flex items-center gap-2"
-              >
+              <Link to="/notifications" className="cursor-pointer flex items-center gap-2">
                 <Bell className="size-4" />
                 <span className="flex-1">Notifications</span>
                 {unreadCount > 0 && (

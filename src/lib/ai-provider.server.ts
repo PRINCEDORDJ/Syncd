@@ -63,10 +63,10 @@ function getProviderConfig(): {
     apiKey,
     model:
       readEnv(provider === "openai" ? "OPENAI_MODEL" : "GEMINI_MODEL") ??
-      (provider === "openai" ? "gpt-5.6" : "gemini-2.5-flash"),
+      (provider === "openai" ? "qwen/qwen3.8-max:free" : "gemini-2.5-flash"),
     ...(provider === "openai"
       ? {
-          baseURL: readEnv("OPENAI_BASE_URL") ?? "https://api.openai.com/v1",
+          baseURL: readEnv("OPENAI_BASE_URL") ?? "https://api.xkiro.com/v1",
           providerName: readEnv("OPENAI_PROVIDER_NAME") ?? "openai-compatible",
         }
       : {}),
@@ -99,7 +99,7 @@ async function createOpenAiStream(
     })),
   ];
   const provider = createOpenAICompatible({
-    baseURL: config.baseURL ?? "https://api.openai.com/v1",
+    baseURL: config.baseURL ?? "https://api.xkiro.com/v1",
     name: config.providerName ?? "openai-compatible",
     apiKey: config.apiKey,
   });

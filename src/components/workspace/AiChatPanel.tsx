@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
 import { ChatInputBar } from "@/components/workspace/ChatInputBar";
+import { ChatThreadList } from "@/components/workspace/ChatThreadList";
 import { CreditBanner } from "@/components/CreditBanner";
 import { Markdown } from "@/components/ui/markdown";
-import { Sparkles, PanelRightClose, Wand2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sparkles, PanelRightClose, Wand2, Plus, History } from "lucide-react";
 
 interface AiChatPanelProps {
   onToggleCollapse?: () => void;
@@ -22,8 +24,9 @@ const ASSISTANT_SUGGESTIONS = [
 ];
 
 export function AiChatPanel({ onToggleCollapse }: AiChatPanelProps) {
-  const { messages, sendMessage, generating, aiMode, error } = useWorkspace();
+  const { messages, sendMessage, generating, aiMode, error, newChat } = useWorkspace();
   const [input, setInput] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const suggestions = aiMode === "assistant" ? ASSISTANT_SUGGESTIONS : POST_GENERATOR_SUGGESTIONS;
@@ -49,17 +52,45 @@ export function AiChatPanel({ onToggleCollapse }: AiChatPanelProps) {
             AI Sidechat
           </span>
         </div>
-        {onToggleCollapse && (
+        <div className="flex items-center gap-0.5">
+          <Popover open={historyOpen} onOpenChange={setHistoryOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                title="Chat history"
+                aria-label="Chat history"
+                className="p-1 rounded-md text-muted-foreground hover:text-ink hover:bg-subtle transition-colors"
+              >
+                <History className="size-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" sideOffset={4} className="w-72 max-h-80 overflow-y-auto">
+              <div className="px-1">
+                <ChatThreadList showHeader={false} onSelect={() => setHistoryOpen(false)} />
+              </div>
+            </PopoverContent>
+          </Popover>
           <button
             type="button"
-            onClick={onToggleCollapse}
-            title="Collapse sidechat"
-            aria-label="Collapse sidechat"
+            onClick={() => newChat()}
+            title="New chat"
+            aria-label="New chat"
             className="p-1 rounded-md text-muted-foreground hover:text-ink hover:bg-subtle transition-colors"
           >
-            <PanelRightClose className="size-4" />
+            <Plus className="size-4" />
           </button>
-        )}
+          {onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              title="Collapse sidechat"
+              aria-label="Collapse sidechat"
+              className="p-1 rounded-md text-muted-foreground hover:text-ink hover:bg-subtle transition-colors"
+            >
+              <PanelRightClose className="size-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Message list */}
