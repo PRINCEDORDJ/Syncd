@@ -184,6 +184,26 @@ export async function fetchUserWorkspaces(userId: string): Promise<Workspace[]> 
 }
 
 /**
+ * Cheap existence check: does the user own a workspace or hold an active
+ * direct membership in one? Used as a fallback when the onboarding summary
+ * (get_post_signup_context) is unavailable. Note it does not cover team-grant
+ * access; callers use this only when the authoritative count is unknown.
+ */
+export async function hasAnyWorkspaceAccess(userId: string): Promise<boolean> {
+  const [owned, membership] = await Promise.all([
+    supabase.from("workspaces").select("id").eq("owner_id", userId).limit(1),
+    supabase
+      .from("workspace_members")
+      .select("workspace_id")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .limit(1),
+  ]);
+
+  return Boolean(owned.data?.length || membership.data?.length);
+}
+
+/**
  * High-level loader: Returns all workspaces with the current user's role info.
  */
 export async function fetchAccessibleWorkspaces(userId: string): Promise<AccessibleWorkspace[]> {

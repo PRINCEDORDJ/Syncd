@@ -30,13 +30,17 @@ function AuthCallback() {
     if (loading) return;
     if (user) {
       void syncUserProfileMetadata(user);
-      const dest = resolvePostAuthDestination(onboarding?.onboarding_status, redirect);
+      const dest = resolvePostAuthDestination(
+        onboarding?.onboarding_status,
+        onboarding?.workspace_count,
+        redirect,
+      );
       navigate({ to: dest, replace: true });
       return;
     }
     const t = setTimeout(() => setTimedOut(true), 4000);
     return () => clearTimeout(t);
-  }, [user, loading, onboarding?.onboarding_status, navigate, redirect]);
+  }, [user, loading, onboarding?.onboarding_status, onboarding?.workspace_count, navigate, redirect]);
 
   useEffect(() => {
     if (timedOut && !user) {

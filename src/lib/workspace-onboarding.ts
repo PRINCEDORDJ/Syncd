@@ -19,13 +19,34 @@ export interface WorkspaceSummary {
   updated_at: string;
 }
 
+/**
+ * Invite surfaces are never intercepted: an invitee without a workspace is
+ * there to accept an invite, not to create a workspace.
+ */
+function isInviteRedirect(dest: string): boolean {
+  return (
+    dest === "/notifications" ||
+    dest.startsWith("/notifications?") ||
+    dest === "/invite" ||
+    dest.startsWith("/invite?")
+  );
+}
+
 export function resolvePostAuthDestination(
   status: OnboardingStatus | undefined | null,
+  workspaceCount: number | undefined,
   redirect: string | undefined,
 ): string {
-  if (status === "pending") return "/onboarding";
   const safe = redirect && redirect.startsWith("/") ? redirect : "/app";
-  if (status === "complete" && (safe === "/onboarding" || safe.startsWith("/onboarding?"))) {
+  if (isInviteRedirect(safe)) return safe;
+
+  // No accessible workspace — the user must create one before using the app.
+  // Covers new signups (pending) and users who deleted their last workspace
+  // (complete) alike. A member of someone else's workspace (count > 0) can
+  // use the app even if their own onboarding flag was never completed.
+  if ((workspaceCount ?? 0) === 0) return "/onboarding";
+
+  if (safe === "/onboarding" || safe.startsWith("/onboarding?")) {
     return "/app";
   }
   return safe;
