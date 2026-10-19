@@ -20,24 +20,25 @@ export function useWorkspaceGate(loginRedirect: string): boolean {
   const { user, loading, onboarding, refreshOnboarding } = useAuth();
   const navigate = useNavigate();
   const [fallbackAccess, setFallbackAccess] = useState<boolean | null>(null);
+  const userId = user?.id;
 
   useEffect(() => {
     setFallbackAccess(null);
-  }, [user?.id]);
+  }, [userId]);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !userId) {
       navigate({ to: "/login", search: { redirect: loginRedirect } });
     }
-  }, [loading, user, navigate, loginRedirect]);
+  }, [loading, userId, navigate, loginRedirect]);
 
   const status = onboarding?.onboarding_status;
-  const uncertain = !!user && (status === "unknown" || status === undefined);
+  const uncertain = !!userId && (status === "unknown" || status === undefined);
 
   useEffect(() => {
-    if (!uncertain || !user) return;
+    if (!uncertain || !userId) return;
     let cancelled = false;
-    void hasAnyWorkspaceAccess(user.id)
+    void hasAnyWorkspaceAccess(userId)
       .then((ok) => {
         if (cancelled) return;
         setFallbackAccess(ok);
@@ -50,10 +51,10 @@ export function useWorkspaceGate(loginRedirect: string): boolean {
     return () => {
       cancelled = true;
     };
-  }, [uncertain, user?.id, refreshOnboarding]);
+  }, [uncertain, userId, refreshOnboarding]);
 
   useEffect(() => {
-    if (loading || !user) return;
+    if (loading || !userId) return;
     if (uncertain && fallbackAccess === null) return;
     const blocked = uncertain ? !fallbackAccess : (onboarding?.workspace_count ?? 0) === 0;
     if (blocked) {
@@ -61,7 +62,7 @@ export function useWorkspaceGate(loginRedirect: string): boolean {
     }
   }, [
     loading,
-    user?.id,
+    userId,
     uncertain,
     fallbackAccess,
     onboarding?.onboarding_status,
@@ -69,7 +70,7 @@ export function useWorkspaceGate(loginRedirect: string): boolean {
     navigate,
   ]);
 
-  if (!user || loading) return false;
+  if (!userId || loading) return false;
   if (uncertain) return fallbackAccess === true;
   return (onboarding?.workspace_count ?? 0) > 0;
 }

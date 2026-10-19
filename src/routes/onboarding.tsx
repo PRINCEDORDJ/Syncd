@@ -153,7 +153,7 @@ function OnboardingRoute() {
               <Field
                 label="Workspace name"
                 value={workspaceName}
-                onChange={setWorkspaceName}
+                onChange={(e)=>setWorkspaceName(e.target.value)}
                 placeholder="Marketing team"
                 autoComplete="organization"
               />
