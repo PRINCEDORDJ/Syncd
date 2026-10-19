@@ -17,16 +17,7 @@ import {
   type WorkspaceRole,
   type WorkspaceTeamAccess,
 } from "@/lib/workspace-access";
-import {
-  Loader2,
-  Pencil,
-  Copy,
-  Plus,
-  Building2,
-  LogOut,
-  Link2,
-  Check,
-} from "lucide-react";
+import { Loader2, Pencil, Copy, Plus, Building2, LogOut, Link2, Check } from "lucide-react";
 
 interface Team {
   id: string;
@@ -51,8 +42,6 @@ interface OwnedWorkspace {
 
 type GrantRow = WorkspaceTeamAccess & { workspace_name: string };
 
-const MEMBER_SEAT_CAP = 5;
-
 const inputCls =
   "h-9 px-3 rounded-md border border-border bg-card text-[13px] text-ink placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink transition-all";
 const selectCls =
@@ -73,6 +62,7 @@ export function TeamsSettingsPanel({
   const [ownedWorkspaces, setOwnedWorkspaces] = useState<OwnedWorkspace[]>([]);
   const [grants, setGrants] = useState<GrantRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [seatCap, setSeatCap] = useState(1);
 
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -115,7 +105,7 @@ export function TeamsSettingsPanel({
     setLoading(true);
     setErrMsg(null);
     try {
-      const [ownedTeams, teamMemberships, wsRes] = await Promise.all([
+      const [ownedTeams, teamMemberships, wsRes, subRes] = await Promise.all([
         fetchUserTeams(user.id),
         fetchUserTeamMemberships(user.id),
         supabase
@@ -123,7 +113,11 @@ export function TeamsSettingsPanel({
           .select("id, name")
           .eq("owner_id", user.id)
           .order("created_at", { ascending: true }),
+        supabase.from("subscriptions").select("seats").eq("user_id", user.id).maybeSingle(),
       ]);
+
+      const purchased = (subRes.data as { seats: number } | null)?.seats ?? 1;
+      setSeatCap(isAdmin ? 5 : Math.max(1, Math.min(purchased, 5)));
 
       const owned = (wsRes.data ?? []) as OwnedWorkspace[];
       setOwnedWorkspaces(owned);
@@ -181,7 +175,7 @@ export function TeamsSettingsPanel({
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, isAdmin]);
 
   useEffect(() => {
     void load();
@@ -297,10 +291,7 @@ export function TeamsSettingsPanel({
 
   async function changeRole(memberId: string, role: TeamMemberRole) {
     setErrMsg(null);
-    const { error } = await supabase
-      .from("team_members")
-      .update({ role })
-      .eq("id", memberId);
+    const { error } = await supabase.from("team_members").update({ role }).eq("id", memberId);
     if (error) {
       setErrMsg(error.message);
       return;
@@ -325,10 +316,7 @@ export function TeamsSettingsPanel({
   async function revokeInviteById() {
     if (!revokeInviteId) return;
     setErrMsg(null);
-    const { error } = await supabase
-      .from("team_members")
-      .delete()
-      .eq("id", revokeInviteId);
+    const { error } = await supabase.from("team_members").delete().eq("id", revokeInviteId);
     const id = revokeInviteId;
     setRevokeInviteId(null);
     if (error) {
@@ -430,8 +418,10 @@ export function TeamsSettingsPanel({
               <div>
                 <div className="text-[14px] font-medium text-ink">No team yet</div>
                 <div className="text-[12px] text-muted-foreground mt-0.5">
-                  One team per account, up to 5 seats (you + up to 4 members). Link it to your
-                  workspace so members share drafts, credits, and storage.
+                  One team per account, {seatCap} seat{seatCap === 1 ? "" : "s"} included (you + up
+                  to {Math.max(seatCap - 1, 0)} member{seatCap - 1 === 1 ? "" : "s"}). Add seats in
+                  Billing — they apply here automatically. Link it to your workspace so members
+                  share drafts, credits, and storage.
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -449,7 +439,11 @@ export function TeamsSettingsPanel({
                   disabled={creating}
                   className="h-10 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
                 >
-                  {creating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+                  {creating ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Plus className="size-4" />
+                  )}
                   Create team
                 </button>
               </div>
@@ -461,7 +455,7 @@ export function TeamsSettingsPanel({
           {/* Team header + members */}
           <Section
             title="Team"
-            subtitle={`${seatsUsed} of ${MEMBER_SEAT_CAP} seats used (you + members; pending invites hold a seat).`}
+            subtitle={`${seatsUsed} of ${seatCap} seats used (you + members; pending invites hold a seat).`}
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               {renaming ? (
@@ -511,7 +505,7 @@ export function TeamsSettingsPanel({
                     <Pencil className="size-3.5" />
                   </button>
                   <Badge variant="secondary" className="font-mono text-[10px] uppercase">
-                    {seatsUsed}/{MEMBER_SEAT_CAP} seats
+                    {seatsUsed}/{seatCap} seats
                   </Badge>
                 </div>
               )}
@@ -550,17 +544,17 @@ export function TeamsSettingsPanel({
                 <button
                   type="button"
                   onClick={inviteMember}
-                  disabled={inviting || !inviteEmail.trim() || seatsUsed >= MEMBER_SEAT_CAP}
+                  disabled={inviting || !inviteEmail.trim() || seatsUsed >= seatCap}
                   className="h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-50"
                 >
                   {inviting ? "Creating…" : "Invite"}
                 </button>
               </div>
               <p className="text-[11px] text-muted-foreground mt-2">
-                Invites are one-time links valid for 30 days — send the link yourself (Slack,
-                email, etc.).
+                Invites are one-time links valid for 30 days — send the link yourself (Slack, email,
+                etc.).
               </p>
-              {seatsUsed >= MEMBER_SEAT_CAP && (
+              {seatsUsed >= seatCap && (
                 <p className="text-[11px] text-destructive mt-1.5">
                   Seat limit reached — remove a member or revoke an invite to invite someone else.
                 </p>
@@ -578,7 +572,10 @@ export function TeamsSettingsPanel({
                   </span>
                 </li>
                 {accepted.map((m) => (
-                  <li key={m.id} className="px-3 py-2.5 flex items-center justify-between gap-3 text-[13px]">
+                  <li
+                    key={m.id}
+                    className="px-3 py-2.5 flex items-center justify-between gap-3 text-[13px]"
+                  >
                     <span className="text-ink truncate min-w-0">{m.email}</span>
                     <div className="flex items-center gap-3 shrink-0">
                       <select
@@ -607,7 +604,10 @@ export function TeamsSettingsPanel({
                   </li>
                 )}
                 {pending.map((m) => (
-                  <li key={m.id} className="px-3 py-2.5 flex items-center justify-between gap-3 text-[13px]">
+                  <li
+                    key={m.id}
+                    className="px-3 py-2.5 flex items-center justify-between gap-3 text-[13px]"
+                  >
                     <div className="min-w-0">
                       <span className="text-ink truncate block">{m.email}</span>
                       <span className="text-[11px] text-muted-foreground">
@@ -647,7 +647,10 @@ export function TeamsSettingsPanel({
             {grants.length > 0 && (
               <ul className="divide-y divide-border border border-border rounded-md bg-card">
                 {grants.map((g) => (
-                  <li key={g.id} className="px-3 py-2.5 flex items-center justify-between gap-3 text-[13px]">
+                  <li
+                    key={g.id}
+                    className="px-3 py-2.5 flex items-center justify-between gap-3 text-[13px]"
+                  >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <Building2 className="size-4 text-muted-foreground shrink-0" />
                       <span className="text-ink truncate">{g.workspace_name}</span>
@@ -710,7 +713,11 @@ export function TeamsSettingsPanel({
                   disabled={granting || !grantWsId}
                   className="h-9 px-4 rounded-md bg-ink text-surface text-[13px] font-medium hover:bg-ink/90 disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
                 >
-                  {granting ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
+                  {granting ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Link2 className="size-4" />
+                  )}
                   Link
                 </button>
               </div>
@@ -727,13 +734,13 @@ export function TeamsSettingsPanel({
 
       {/* Your teams (member side) */}
       {memberships.length > 0 && (
-        <Section
-          title="Your teams"
-          subtitle="Teams you've joined as a member."
-        >
+        <Section title="Your teams" subtitle="Teams you've joined as a member.">
           <ul className="divide-y divide-border border border-border rounded-md bg-card">
             {memberships.map((m) => (
-              <li key={m.id} className="px-3 py-2.5 flex items-center justify-between gap-3 text-[13px]">
+              <li
+                key={m.id}
+                className="px-3 py-2.5 flex items-center justify-between gap-3 text-[13px]"
+              >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="text-ink font-medium truncate">{m.team_name}</span>
                   <Badge variant="outline" className="text-[10px] font-mono uppercase">

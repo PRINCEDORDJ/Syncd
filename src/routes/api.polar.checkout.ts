@@ -18,14 +18,12 @@ export const Route = createFileRoute("/api/polar/checkout")({
           return json({ error: "Billing is not configured." }, 500);
         }
 
-        const authHeader =
-          getRequestHeader("authorization") ?? getRequestHeader("Authorization");
+        const authHeader = getRequestHeader("authorization") ?? getRequestHeader("Authorization");
         if (!authHeader?.startsWith("Bearer ")) {
           return json({ error: "Not authenticated." }, 401);
         }
         const token = authHeader.slice(7);
-        const { data: userData, error: userErr } =
-          await supabaseAdmin.auth.getUser(token);
+        const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token);
         if (userErr || !userData.user) {
           return json({ error: "Not authenticated." }, 401);
         }
@@ -73,7 +71,8 @@ export const Route = createFileRoute("/api/polar/checkout")({
         }
 
         const url = new URL(request.url);
-        const origin = `${url.protocol}//${url.host}`;
+        const appUrl = process.env.APP_URL?.trim().replace(/\/+$/, "");
+        const origin = appUrl || `${url.protocol}//${url.host}`;
 
         const resp = await fetch("https://api.polar.sh/v1/checkouts/", {
           method: "POST",
