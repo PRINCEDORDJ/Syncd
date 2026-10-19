@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { useAuth } from "@/lib/auth";
 import { useWorkspace } from "@/lib/workspace-context";
 import {
@@ -22,13 +22,36 @@ export const Route = createFileRoute("/onboarding")({
   component: OnboardingRoute,
 });
 
+/**
+ * Resolve a human-friendly label for the current user, mirroring the
+ * precedence used in ProfileSettingsPanel and the profiles DB trigger:
+ * display_name → full_name → name → email prefix → null.
+ */
+function resolveUserLabel(user: {
+  user_metadata?: Record<string, unknown>;
+  email?: string | null;
+}): string | null {
+  const meta = user.user_metadata ?? {};
+  const fromMeta = [meta.display_name, meta.full_name, meta.name].find(
+    (v): v is string => typeof v === "string" && v.trim().length > 0,
+  );
+  if (fromMeta) return fromMeta.trim();
+  const emailPrefix = user.email?.split("@")[0]?.trim();
+  return emailPrefix || null;
+}
+
 function OnboardingRoute() {
   const { user, loading, onboarding, refreshOnboarding } = useAuth();
   const { setActiveWorkspace } = useWorkspace();
   const navigate = useNavigate();
   const [workspaceName, setWorkspaceName] = useState("");
+  const [nameMode, setNameMode] = useState<"personal" | "custom">("personal");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fieldRef = useRef<HTMLInputElement>(null);
+
+  const userLabel = user ? resolveUserLabel(user) : null;
+  const personalName = userLabel ? `${userLabel}'s workspace` : "";
 
   useEffect(() => {
     if (!loading && !user) {
@@ -43,26 +66,36 @@ function OnboardingRoute() {
   }, [loading, user, onboarding?.onboarding_status, onboarding?.workspace_count, navigate]);
 
   useEffect(() => {
-    if (!workspaceName && user) {
-      const fallback =
-        user.user_metadata?.display_name ||
-        user.user_metadata?.full_name ||
-        user.user_metadata?.name ||
-        user.email?.split("@")[0] ||
-        "My workspace";
-      setWorkspaceName(`${fallback}'s workspace`);
+    if (!user) return;
+    if (personalName) {
+      // Pre-fill with the personal suggestion, but never clobber an
+      // already-entered value.
+      setWorkspaceName((prev) => prev || personalName);
+    } else {
+      // Nothing to suggest — the user must type their own name.
+      setNameMode("custom");
     }
-  }, [user, workspaceName]);
+  }, [user, personalName]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!user) return;
 
+    const trimmed = workspaceName.trim();
+    if (!trimmed) {
+      setError("Enter a workspace name, or pick the suggestion with your name.");
+      return;
+    }
+    if (trimmed.length > 80) {
+      setError("Workspace name must be 80 characters or fewer.");
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     try {
       const { workspace } = await createWorkspaceOnboarding(user.id, {
-        workspaceName,
+        workspaceName: trimmed,
       });
       await completeUserOnboarding();
       setActiveWorkspace(workspace);
@@ -146,16 +179,52 @@ function OnboardingRoute() {
               Name your workspace
             </h2>
             <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
-              This is the root space your teammates will be invited into.
+              Use your name or pick anything you like — this is the root space
+              your teammates will be invited into.
             </p>
 
             <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+              <div className="flex flex-wrap gap-2">
+                {personalName ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNameMode("personal");
+                      setWorkspaceName(personalName);
+                    }}
+                    className={chipClass(nameMode === "personal")}
+                    title={personalName}
+                  >
+                    <Users className="size-3.5 shrink-0" />
+                    <span className="max-w-[200px] truncate">{personalName}</span>
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNameMode("custom");
+                    setWorkspaceName("");
+                    fieldRef.current?.focus();
+                  }}
+                  className={chipClass(nameMode === "custom")}
+                >
+                  <Sparkles className="size-3.5 shrink-0" />
+                  Choose my own
+                </button>
+              </div>
+
               <Field
                 label="Workspace name"
                 value={workspaceName}
-                onChange={(e)=>setWorkspaceName(e.target.value)}
+                onChange={(v) => {
+                  setNameMode(
+                    personalName && v === personalName ? "personal" : "custom",
+                  );
+                  setWorkspaceName(v);
+                }}
                 placeholder="Marketing team"
                 autoComplete="organization"
+                inputRef={fieldRef}
               />
 
               {error && (
@@ -198,18 +267,29 @@ function Feature({
   );
 }
 
+function chipClass(active: boolean): string {
+  return [
+    "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-[13px] transition-colors",
+    active
+      ? "border-ink bg-ink text-surface"
+      : "border-border bg-background text-ink hover:border-ink/40",
+  ].join(" ");
+}
+
 function Field({
   label,
   value,
   onChange,
   placeholder,
   autoComplete,
+  inputRef,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   autoComplete?: string;
+  inputRef?: RefObject<HTMLInputElement | null>;
 }) {
   return (
     <label className="flex flex-col gap-1.5">
@@ -217,6 +297,7 @@ function Field({
         {label}
       </span>
       <input
+        ref={inputRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
