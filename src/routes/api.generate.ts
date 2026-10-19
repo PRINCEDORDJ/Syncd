@@ -410,14 +410,20 @@ export const Route = createFileRoute("/api/generate")({
           if (draftRow) turnDraftId = draftRow.id;
         }
 
-        // 2. Resolve plan and check feature gating (voice notes require Studio or Teams)
-        const [planRes, profRes] = await Promise.all([
+        // 2. Resolve plan and check feature gating (voice notes require Studio or Teams).
+        //    Admins get full plan access server-side regardless of their
+        //    workspace's stored plan tier.
+        const [planRes, profRes, roleRes] = await Promise.all([
           resolvedWsId
             ? supabaseAdmin.rpc("get_workspace_plan", { p_workspace_id: resolvedWsId })
             : supabaseAdmin.rpc("get_user_plan", { _user_id: userId }),
           supabaseAdmin.from("profiles").select("voice_notes").eq("user_id", userId).maybeSingle(),
+          supabaseAdmin.from("user_roles").select("role").eq("user_id", userId),
         ]);
-        const userPlan = (planRes.data as PlanTier | null) ?? "trial";
+        const isAdminUser = !!roleRes.data?.some((r) => r.role === "admin");
+        const userPlan: PlanTier = isAdminUser
+          ? "teams"
+          : ((planRes.data as PlanTier | null) ?? "trial");
         const allowsVoiceMapping = PLAN_LIMITS[userPlan]?.voiceMapping ?? false;
         const rawVoiceNotes = (profRes.data?.voice_notes ?? "").trim();
         const voiceNotes = allowsVoiceMapping ? rawVoiceNotes : "";

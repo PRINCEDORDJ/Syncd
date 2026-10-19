@@ -53,7 +53,7 @@ const TIERS: Array<{
     cadenceAnnual: "per year · 2 seat min",
     description: "For teams who ship together.",
     features: [
-      "150 credits per seat, pooled",
+      "350 credits per seat, pooled",
       "Shared draft library",
       "Review before publish",
       "Team voice consistency",
@@ -115,9 +115,7 @@ export function PlanTiers({
             <div
               key={t.id}
               className={`relative flex flex-col gap-4 p-4 rounded-lg border ${
-                t.highlighted
-                  ? "bg-ink text-surface border-ink"
-                  : "bg-card text-ink border-border"
+                t.highlighted ? "bg-ink text-surface border-ink" : "bg-card text-ink border-border"
               }`}
             >
               <div>
