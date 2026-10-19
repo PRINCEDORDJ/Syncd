@@ -40,6 +40,10 @@ export function resolvePostAuthDestination(
   const safe = redirect && redirect.startsWith("/") ? redirect : "/app";
   if (isInviteRedirect(safe)) return safe;
 
+  // Unknown status (context load failed): fall back to the requested
+  // destination — the route gates probe workspace access directly.
+  if (status !== "pending" && status !== "complete") return safe;
+
   // No accessible workspace — the user must create one before using the app.
   // Covers new signups (pending) and users who deleted their last workspace
   // (complete) alike. A member of someone else's workspace (count > 0) can

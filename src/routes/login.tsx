@@ -41,13 +41,16 @@ function LoginPage() {
 
   useEffect(() => {
     if (loading || !user) return;
+    // Wait for the onboarding summary before resolving the destination; an
+    // unloaded context would read as "zero workspaces".
+    if (!onboarding) return;
     const dest = resolvePostAuthDestination(
-      onboarding?.onboarding_status,
-      onboarding?.workspace_count,
+      onboarding.onboarding_status,
+      onboarding.workspace_count,
       search.redirect,
     );
     navigate({ to: dest, replace: true });
-  }, [user, loading, onboarding?.onboarding_status, onboarding?.workspace_count, navigate, search.redirect]);
+  }, [user, loading, onboarding, onboarding?.onboarding_status, onboarding?.workspace_count, navigate, search.redirect]);
 
   async function handleGoogle() {
     setError(null);

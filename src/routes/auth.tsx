@@ -29,10 +29,13 @@ function AuthCallback() {
   useEffect(() => {
     if (loading) return;
     if (user) {
+      // Wait for the onboarding summary before resolving the destination;
+      // an unloaded context would read as "zero workspaces".
+      if (!onboarding) return;
       void syncUserProfileMetadata(user);
       const dest = resolvePostAuthDestination(
-        onboarding?.onboarding_status,
-        onboarding?.workspace_count,
+        onboarding.onboarding_status,
+        onboarding.workspace_count,
         redirect,
       );
       navigate({ to: dest, replace: true });
@@ -40,7 +43,7 @@ function AuthCallback() {
     }
     const t = setTimeout(() => setTimedOut(true), 4000);
     return () => clearTimeout(t);
-  }, [user, loading, onboarding?.onboarding_status, onboarding?.workspace_count, navigate, redirect]);
+  }, [user, loading, onboarding, onboarding?.onboarding_status, onboarding?.workspace_count, navigate, redirect]);
 
   useEffect(() => {
     if (timedOut && !user) {
