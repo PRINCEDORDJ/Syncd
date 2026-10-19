@@ -144,3 +144,12 @@ export async function createAiTextStream(input: AiGenerationInput): Promise<Asyn
     ? createOpenAiStream(config, input)
     : createGeminiStream(config, input);
 }
+
+/** Single non-streaming completion, aggregated from the shared provider router. */
+export async function generateAiText(input: AiGenerationInput): Promise<string> {
+  let result = "";
+  for await (const chunk of await createAiTextStream(input)) {
+    result += chunk;
+  }
+  return result;
+}

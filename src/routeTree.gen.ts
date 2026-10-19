@@ -32,6 +32,7 @@ import { Route as ApiLinkedinStartRouteImport } from './routes/api.linkedin.star
 import { Route as ApiPolarCheckoutRouteImport } from './routes/api.polar.checkout'
 import { Route as ApiPolarPortalRouteImport } from './routes/api.polar.portal'
 import { Route as ApiPublicSchedulerRouteImport } from './routes/api.public.scheduler'
+import { Route as ApiVoiceCalibrateRouteImport } from './routes/api.voice.calibrate'
 import { Route as ApiWorkspaceInviteRouteImport } from './routes/api.workspace.invite'
 import { Route as ApiPublicPolarWebhookRouteImport } from './routes/api.public.polar.webhook'
 
@@ -150,6 +151,11 @@ const ApiPublicSchedulerRoute = ApiPublicSchedulerRouteImport.update({
   path: '/api/public/scheduler',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiVoiceCalibrateRoute = ApiVoiceCalibrateRouteImport.update({
+  id: '/api/voice/calibrate',
+  path: '/api/voice/calibrate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWorkspaceInviteRoute = ApiWorkspaceInviteRouteImport.update({
   id: '/api/workspace/invite',
   path: '/api/workspace/invite',
@@ -185,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/api/polar/checkout': typeof ApiPolarCheckoutRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
   '/api/public/scheduler': typeof ApiPublicSchedulerRoute
+  '/api/voice/calibrate': typeof ApiVoiceCalibrateRoute
   '/api/workspace/invite': typeof ApiWorkspaceInviteRoute
   '/api/public/polar/webhook': typeof ApiPublicPolarWebhookRoute
 }
@@ -212,6 +219,7 @@ export interface FileRoutesByTo {
   '/api/polar/checkout': typeof ApiPolarCheckoutRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
   '/api/public/scheduler': typeof ApiPublicSchedulerRoute
+  '/api/voice/calibrate': typeof ApiVoiceCalibrateRoute
   '/api/workspace/invite': typeof ApiWorkspaceInviteRoute
   '/api/public/polar/webhook': typeof ApiPublicPolarWebhookRoute
 }
@@ -240,6 +248,7 @@ export interface FileRoutesById {
   '/api/polar/checkout': typeof ApiPolarCheckoutRoute
   '/api/polar/portal': typeof ApiPolarPortalRoute
   '/api/public/scheduler': typeof ApiPublicSchedulerRoute
+  '/api/voice/calibrate': typeof ApiVoiceCalibrateRoute
   '/api/workspace/invite': typeof ApiWorkspaceInviteRoute
   '/api/public/polar/webhook': typeof ApiPublicPolarWebhookRoute
 }
@@ -269,6 +278,7 @@ export interface FileRouteTypes {
     | '/api/polar/checkout'
     | '/api/polar/portal'
     | '/api/public/scheduler'
+    | '/api/voice/calibrate'
     | '/api/workspace/invite'
     | '/api/public/polar/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -296,6 +306,7 @@ export interface FileRouteTypes {
     | '/api/polar/checkout'
     | '/api/polar/portal'
     | '/api/public/scheduler'
+    | '/api/voice/calibrate'
     | '/api/workspace/invite'
     | '/api/public/polar/webhook'
   id:
@@ -323,6 +334,7 @@ export interface FileRouteTypes {
     | '/api/polar/checkout'
     | '/api/polar/portal'
     | '/api/public/scheduler'
+    | '/api/voice/calibrate'
     | '/api/workspace/invite'
     | '/api/public/polar/webhook'
   fileRoutesById: FileRoutesById
@@ -351,6 +363,7 @@ export interface RootRouteChildren {
   ApiPolarCheckoutRoute: typeof ApiPolarCheckoutRoute
   ApiPolarPortalRoute: typeof ApiPolarPortalRoute
   ApiPublicSchedulerRoute: typeof ApiPublicSchedulerRoute
+  ApiVoiceCalibrateRoute: typeof ApiVoiceCalibrateRoute
   ApiWorkspaceInviteRoute: typeof ApiWorkspaceInviteRoute
   ApiPublicPolarWebhookRoute: typeof ApiPublicPolarWebhookRoute
 }
@@ -518,6 +531,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSchedulerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/voice/calibrate': {
+      id: '/api/voice/calibrate'
+      path: '/api/voice/calibrate'
+      fullPath: '/api/voice/calibrate'
+      preLoaderRoute: typeof ApiVoiceCalibrateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/workspace/invite': {
       id: '/api/workspace/invite'
       path: '/api/workspace/invite'
@@ -559,6 +579,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPolarCheckoutRoute: ApiPolarCheckoutRoute,
   ApiPolarPortalRoute: ApiPolarPortalRoute,
   ApiPublicSchedulerRoute: ApiPublicSchedulerRoute,
+  ApiVoiceCalibrateRoute: ApiVoiceCalibrateRoute,
   ApiWorkspaceInviteRoute: ApiWorkspaceInviteRoute,
   ApiPublicPolarWebhookRoute: ApiPublicPolarWebhookRoute,
 }

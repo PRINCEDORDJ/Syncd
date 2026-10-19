@@ -37,7 +37,7 @@ const TIERS: Array<{
     description: "For creators who post weekly.",
     features: [
       "150 credits every month",
-      "Voice profile — Syncd learns your writing",
+      "Voice map — calibrate it from your own posts",
       "Scheduling — queue posts for the perfect moment",
       "Priority generation",
       "5 GB media storage",
@@ -56,7 +56,7 @@ const TIERS: Array<{
       "350 credits per seat, pooled",
       "Shared draft library",
       "Review before publish",
-      "Team voice consistency",
+      "Consistent voice for every teammate",
       "20 GB media storage",
     ],
     highlighted: false,

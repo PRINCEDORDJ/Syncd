@@ -24,7 +24,7 @@ const sections = [
   {
     n: "01",
     title: "Voice mapping",
-    body: "Save voice notes in your settings — habits, hedge words, examples you keep returning to. The engine threads them into every draft so output reads like you on a focused day.",
+    body: "In settings you map your voice — point of view, rhythm, banned words, the themes you own. Paste a few of your real posts and Syncd calibrates the map for you; every draft is then threaded through it, so output reads like you on a focused day.",
   },
   {
     n: "02",
@@ -55,9 +55,8 @@ function MethodologyPage() {
             A small set of opinionated defaults.
           </h1>
           <p className="mt-5 text-[17px] text-muted-foreground max-w-[58ch] leading-relaxed">
-            Syncd is not a generic writing assistant. It is a narrow tool tuned for one
-            surface and one outcome: a LinkedIn post that earns attention without sounding
-            synthetic.
+            Syncd is not a generic writing assistant. It is a narrow tool tuned for one surface and
+            one outcome: a LinkedIn post that earns attention without sounding synthetic.
           </p>
 
           <div className="mt-14 border-t border-border">
@@ -66,16 +65,10 @@ function MethodologyPage() {
                 key={s.n}
                 className="grid grid-cols-[auto_1fr] gap-6 md:gap-10 py-8 border-b border-border"
               >
-                <div className="font-mono text-[13px] text-muted-foreground pt-1.5">
-                  {s.n}
-                </div>
+                <div className="font-mono text-[13px] text-muted-foreground pt-1.5">{s.n}</div>
                 <div>
-                  <h2 className="text-xl font-semibold tracking-tight text-ink">
-                    {s.title}
-                  </h2>
-                  <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed">
-                    {s.body}
-                  </p>
+                  <h2 className="text-xl font-semibold tracking-tight text-ink">{s.title}</h2>
+                  <p className="mt-2 text-[15px] text-muted-foreground leading-relaxed">{s.body}</p>
                 </div>
               </article>
             ))}
@@ -94,6 +87,12 @@ function MethodologyPage() {
               className="text-[14px] text-muted-foreground hover:text-ink transition-colors"
             >
               See pricing →
+            </Link>
+            <Link
+              to="/settings"
+              className="text-[14px] text-muted-foreground hover:text-ink transition-colors"
+            >
+              Open your voice map →
             </Link>
           </div>
         </main>

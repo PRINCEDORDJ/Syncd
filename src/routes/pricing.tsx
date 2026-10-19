@@ -69,7 +69,7 @@ const tiers: TierDef[] = [
     description: "For creators who post weekly.",
     features: [
       "150 credits every month",
-      "Voice profile — Syncd learns your writing style",
+      "Voice map — calibrate it from your own posts",
       "Scheduling — queue posts for the perfect moment",
       "Priority generation — no waiting in line",
       "5 GB media storage",
@@ -87,7 +87,7 @@ const tiers: TierDef[] = [
       "350 credits per seat, pooled across the team",
       "Shared draft library — everyone drafts in one place",
       "Review before publish — nothing goes live unvetted",
-      "Team voice consistency",
+      "Consistent voice for every teammate",
       "20 GB media storage",
     ],
     cta: "Get Teams",
