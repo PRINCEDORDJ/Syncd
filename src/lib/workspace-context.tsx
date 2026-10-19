@@ -31,13 +31,24 @@ import {
 const ACTIVE_WORKSPACE_KEY = "syncd:active-workspace";
 const AI_MODE_KEY = "syncd:ai-mode";
 
-export const TONES = [
-  "Authoritative & Warm",
-  "Conversational",
-  "Contrarian",
-  "Storytelling",
-] as const;
+export const TONES = ["Authoritative & Warm", "Conversational", "Expert", "Storytelling"] as const;
 export type Tone = (typeof TONES)[number];
+
+/** Canonical tone values (what is stored on drafts and validated by the API)
+ *  paired with plain-English display names users actually understand. */
+export const TONE_LABELS: Record<Tone, string> = {
+  "Authoritative & Warm": "Confident & Warm",
+  Conversational: "Conversational",
+  Expert: "Expert",
+  Storytelling: "Storytelling",
+};
+
+export const TONE_HINTS: Record<Tone, string> = {
+  "Authoritative & Warm": "Warm and capable, human",
+  Conversational: "Casual, like a friend",
+  Expert: "Direct, takes a stance",
+  Storytelling: "Narrative-driven",
+};
 
 export type AiMode = "assistant" | "post-generator";
 

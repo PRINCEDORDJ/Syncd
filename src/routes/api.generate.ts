@@ -70,12 +70,7 @@ Always structure your response using this exact delimiter:
 
 Do NOT include a <<<POST>>> section. You are in assistant mode — just provide helpful conversational responses.`;
 
-const VALID_TONES = [
-  "Authoritative & Warm",
-  "Conversational",
-  "Contrarian",
-  "Storytelling",
-] as const;
+const VALID_TONES = ["Authoritative & Warm", "Conversational", "Expert", "Storytelling"] as const;
 type Tone = (typeof VALID_TONES)[number];
 
 function isValidTone(t: unknown): t is Tone {
