@@ -54,8 +54,8 @@ export function DangerSettingsPanel({
           {deleting ? "Deleting…" : "Delete all my data"}
         </button>
         <p className="text-[12px] text-muted-foreground">
-          Removes drafts, profile, and LinkedIn token. Your auth account stays — contact support
-          to fully erase it.
+          Removes drafts, profile, and LinkedIn token. Your auth account stays — contact support to
+          fully erase it.
         </p>
       </Section>
 

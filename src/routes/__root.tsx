@@ -1,4 +1,5 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Analytics } from "@vercel/analytics/react";
 
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
@@ -35,17 +36,34 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Syncd" },
-      { name: "description", content: "Syncd integrates LinkedIn to streamline content sharing and profile management." },
+      {
+        name: "description",
+        content: "Syncd integrates LinkedIn to streamline content sharing and profile management.",
+      },
       { name: "author", content: "Lovable" },
       { property: "og:title", content: "Syncd" },
-      { property: "og:description", content: "Syncd integrates LinkedIn to streamline content sharing and profile management." },
+      {
+        property: "og:description",
+        content: "Syncd integrates LinkedIn to streamline content sharing and profile management.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Syncd" },
-      { name: "twitter:description", content: "Syncd integrates LinkedIn to streamline content sharing and profile management." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/32914e93-a8e9-4b04-90b7-6eb0de114462/id-preview-49abd114--cfec36dd-d218-4e4e-9ba5-2ddb31f007a5.lovable.app-1776472776957.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/32914e93-a8e9-4b04-90b7-6eb0de114462/id-preview-49abd114--cfec36dd-d218-4e4e-9ba5-2ddb31f007a5.lovable.app-1776472776957.png" },
+      {
+        name: "twitter:description",
+        content: "Syncd integrates LinkedIn to streamline content sharing and profile management.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/32914e93-a8e9-4b04-90b7-6eb0de114462/id-preview-49abd114--cfec36dd-d218-4e4e-9ba5-2ddb31f007a5.lovable.app-1776472776957.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/32914e93-a8e9-4b04-90b7-6eb0de114462/id-preview-49abd114--cfec36dd-d218-4e4e-9ba5-2ddb31f007a5.lovable.app-1776472776957.png",
+      },
     ],
     links: [
       { rel: "icon", type: "image/png", href: "/favicon.png" },
@@ -70,6 +88,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
       <body>
         {children}
         <Scripts />
+        <Analytics />
       </body>
     </html>
   );

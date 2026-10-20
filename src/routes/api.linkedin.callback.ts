@@ -47,20 +47,17 @@ export const Route = createFileRoute("/api/linkedin/callback")({
         const redirectUri = `${getOrigin(request)}${REDIRECT_URI_PATH}`;
 
         // Exchange code for tokens
-        const tokenResp = await fetch(
-          "https://www.linkedin.com/oauth/v2/accessToken",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({
-              grant_type: "authorization_code",
-              code,
-              redirect_uri: redirectUri,
-              client_id: clientId,
-              client_secret: clientSecret,
-            }).toString(),
-          },
-        );
+        const tokenResp = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            grant_type: "authorization_code",
+            code,
+            redirect_uri: redirectUri,
+            client_id: clientId,
+            client_secret: clientSecret,
+          }).toString(),
+        });
         if (!tokenResp.ok) {
           const t = await tokenResp.text().catch(() => "");
           console.error("[linkedin/callback] token exchange failed", tokenResp.status, t);
@@ -88,42 +85,38 @@ export const Route = createFileRoute("/api/linkedin/callback")({
           });
         }
         const userinfo = (await userinfoResp.json()) as any;
-        
+
         console.log("[linkedin/callback] userinfo received", {
           sub: userinfo.sub,
           name: userinfo.name,
           hasPicture: !!userinfo.picture,
-          email: userinfo.email ? "present" : "absent"
+          email: userinfo.email ? "present" : "absent",
         });
 
-        // OpenID Connect "picture" is standard, but some versions might use "profile_picture" 
+        // OpenID Connect "picture" is standard, but some versions might use "profile_picture"
         // or have it nested. We try a few common locations.
         const pictureUrl = userinfo.picture || userinfo.profile_picture || null;
 
-        const expiresAt = new Date(
-          Date.now() + tokenJson.expires_in * 1000,
-        ).toISOString();
+        const expiresAt = new Date(Date.now() + tokenJson.expires_in * 1000).toISOString();
         const memberUrn = `urn:li:person:${userinfo.sub}`;
 
         // Upsert connection — supports multiple accounts per user.
         // onConflict targets (user_id, linkedin_member_urn) so re-authorizing
         // the same LinkedIn profile updates the existing row while connecting
         // a different profile creates a new one.
-        const { error: upsertErr } = await supabaseAdmin
-          .from("linkedin_connections")
-          .upsert(
-            {
-              user_id: stateRow.user_id,
-              linkedin_member_urn: memberUrn,
-              linkedin_name: userinfo.name ?? null,
-              linkedin_picture_url: pictureUrl,
-              access_token: tokenJson.access_token,
-              refresh_token: tokenJson.refresh_token ?? null,
-              expires_at: expiresAt,
-              scope: tokenJson.scope ?? null,
-            },
-            { onConflict: "user_id,linkedin_member_urn" },
-          );
+        const { error: upsertErr } = await supabaseAdmin.from("linkedin_connections").upsert(
+          {
+            user_id: stateRow.user_id,
+            linkedin_member_urn: memberUrn,
+            linkedin_name: userinfo.name ?? null,
+            linkedin_picture_url: pictureUrl,
+            access_token: tokenJson.access_token,
+            refresh_token: tokenJson.refresh_token ?? null,
+            expires_at: expiresAt,
+            scope: tokenJson.scope ?? null,
+          },
+          { onConflict: "user_id,linkedin_member_urn" },
+        );
         if (upsertErr) {
           console.error("[linkedin/callback] upsert failed", upsertErr);
           throw redirect({

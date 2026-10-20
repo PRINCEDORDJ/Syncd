@@ -111,7 +111,11 @@ function InvitePage() {
             ) : loading || (fetching && !preview && !fetchError) ? (
               <p className="text-[14px] text-muted-foreground">Loading invite…</p>
             ) : fetchError ? (
-              <StateBlock message={fetchError} actionLabel="Go to Syncd" onAction={() => navigate({ to: "/app", replace: true })} />
+              <StateBlock
+                message={fetchError}
+                actionLabel="Go to Syncd"
+                onAction={() => navigate({ to: "/app", replace: true })}
+              />
             ) : accepted || preview?.accepted ? (
               <div className="flex flex-col gap-4">
                 <p className="text-[14px] text-muted-foreground leading-relaxed">
@@ -132,8 +136,8 @@ function InvitePage() {
               <div className="flex flex-col gap-4">
                 <p className="text-[14px] text-muted-foreground leading-relaxed">
                   This invite was sent to{" "}
-                  <span className="text-ink font-medium">{preview.email}</span>, but you're signed in as{" "}
-                  <span className="text-ink font-medium">{user?.email}</span>.
+                  <span className="text-ink font-medium">{preview.email}</span>, but you're signed
+                  in as <span className="text-ink font-medium">{user?.email}</span>.
                 </p>
                 <PrimaryButton onClick={handleSwitchAccount}>Switch account</PrimaryButton>
                 <button
@@ -161,8 +165,11 @@ function InvitePage() {
                     as{" "}
                     <span className="inline-flex items-center rounded-full border border-border bg-subtle px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-ink">
                       {preview.role}
-                    </span>
-                    {" "}— {preview.role === "viewer" ? "read-only access to shared drafts" : "full access to shared drafts"}
+                    </span>{" "}
+                    —{" "}
+                    {preview.role === "viewer"
+                      ? "read-only access to shared drafts"
+                      : "full access to shared drafts"}
                   </p>
                 </div>
                 {acceptError && (

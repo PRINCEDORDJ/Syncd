@@ -3,6 +3,7 @@
 Syncd is an AI-powered social media management and content orchestration platform. It streamlines the workflow for creators and social media managers by providing a centralized workspace to generate, draft, schedule, and publish content across platforms, with a focus on high-quality AI assistance and direct integrations.
 
 ## Key Features
+
 - **AI-Powered Generation**: Integrated AI tools to generate post ideas and full drafts from raw input, with pluggable provider support (OpenAI-compatible & Google Gemini).
 - **Cross-Platform Publishing**: Direct publishing and scheduling, starting with LinkedIn.
 - **Drafts Library**: Centralized, searchable library of saved drafts with preview, inline editing, and publishing.
@@ -163,17 +164,21 @@ ssyncd/
 # Recent Changes
 
 ## 2026-09-17
+
 - **Workspace-Scoped Credits & Storage**: Added workspace-level credit tracking and storage accounting. Credits are now tracked per-workspace, and storage quotas are workspace-scoped. New migrations: `20260917100000_workspace_scoped_credits_and_storage.sql`, `20260917110000_update_handle_plan_change_workspace_scoped.sql`.
 - **Pricing Update**: Revised pricing — Studio $12/month ($115/year), Teams $15/seat/month ($144/seat/year). Studio: 150 credits/month, single workspace. Teams: 150 credits/seat (pooled), 1 workspace per user. Top-up packs unchanged ($4/50, $10/150, $25/500).
 - **Plan Limits Update**: Studio `monthlyCredits` 100→150, `maxWorkspaces` 999→1. Teams `maxWorkspaces` 999→1. Both plans now limited to 1 workspace per user.
 
 ## 2026-09-12
+
 - **Workspace Migration**: Removed projects table; added `workspace_id` to drafts for workspace-based organization. Fixed workspace member insert RLS policy. New migrations: `20260912000000_remove_projects_add_workspace_to_drafts.sql`, `20260908182800_fix_workspace_member_insert_rls.sql`.
 
 ## 2026-08-23
+
 - **Daily Credits Cron**: Added daily credit allowance cron job migration (`20260823000000_daily_credits_cron.sql`).
 
 ## 2026-08-22
+
 - **AI Provider Abstraction**: Added `ai-provider.server.ts` supporting both OpenAI-compatible (default `gpt-5.6`) and Google Gemini (default `gemini-2.5-flash`) providers via `AI_PROVIDER` env var. Refactored `api.generate.ts` to stream SSE responses, support image inputs (up to 4), and refund credits on provider errors. Added `docs/ai-providers.md` documenting configuration.
 - **Polar Payment Integration**: Added `api.polar.checkout.ts` and `api.polar.portal.ts` routes. Refactored `api.public.polar.webhook.ts` to use explicit types, support both raw and `whsec_` secrets, log delivery outcomes, and derive event IDs reliably. Added `.env.example` with all Supabase, Polar, and LinkedIn env vars.
 - **LinkedIn OAuth & Publishing**: Added `linkedin_connections` and `linkedin_oauth_states` tables with realtime support. Added `api.linkedin.start.ts`, `api.linkedin.callback.ts`, `api.linkedin.publish.ts`, and `api.linkedin.disconnect.ts` routes. Added `linkedin-publish.server.ts` for shared publishing logic. Added `expire_linkedin_connections` RPC and scheduler cleanup.
@@ -182,9 +187,11 @@ ssyncd/
 - **Responsive Fix**: Adjusted `CreditIndicator` visibility in `SiteNav` for mobile/desktop breakpoints.
 
 ## 2026-07-25
+
 - **Brand Rename**: Renamed the product from **SocialSync** to **Syncd** across all UI components, page `<title>` and SEO meta tags, the AI system prompt (`api.generate.ts`), and planning documentation. Contact emails updated to the `@syncd.app` domain. Deployment URLs (`sociosync.lovable.app`) left unchanged.
 
 ## 2026-07-24
+
 - **Credit & Subscription Model**: Hardened credit accounting with `consume_credit`, `refund_credit`, and `handle_plan_change` RPCs. Implemented real-time credit balance via `useCredits` and `CreditIndicator` in `SiteNav`. Added `CreditBanner` to the workspace to block/warn generation at plan limits.
 - **Storage Quotas**: Added `user_storage` table, `media_bytes` on `drafts`, and RPCs for quota checks and atomic increments/decrements. Enforced tier limits (Free 200 MB / Studio 5 GB / Teams 20 GB) and per-file size limits. Integrated `useStorage` hook into settings and drafts UI.
 - **Scheduling UI**: Built `SchedulePicker` component and wired it into the drafts modal. Added scheduled-post badges, cancel-schedule action, and one-minute scheduler worker (`/api/public/scheduler`).
@@ -196,11 +203,13 @@ ssyncd/
 - **Security**: Restricted security-definer helpers to `service_role` only; kept bucket RLS user-scoped; validated all destructive actions through `ConfirmDialog`.
 
 ## 2026-07-12
+
 - **Navbar Redesign**: Cleaned navbar to show only logo + profile. Moved Methodology and Pricing into profile dropdown / settings. Added account dropdown with settings, theme toggle, and sign-out.
 - **Avatar Upload**: Replaced avatar URL with file upload and preview modal in settings.
 - **Admin RBAC**: Added `user_roles` table and `has_role` helper; promoted `kinlion00@gmail.com` to admin for unlimited access.
 
 ## 2026-05-14
+
 - **Documentation**: Created `structure.md` and added comprehensive project description and feature list.
 - **Workflow**: Established a pattern to record all future code changes in this file for persistent context.
 - **Drafts Management**: Enhanced the drafts route (`/drafts`) with improved media management capabilities.

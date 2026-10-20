@@ -10,8 +10,7 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 async function authenticate(): Promise<{ userId: string } | { error: Response }> {
-  const authHeader =
-    getRequestHeader("authorization") ?? getRequestHeader("Authorization");
+  const authHeader = getRequestHeader("authorization") ?? getRequestHeader("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return { error: jsonResponse({ error: "Not authenticated." }, 401) };
   }
@@ -32,7 +31,11 @@ export const Route = createFileRoute("/api/linkedin/publish")({
 
         let body: { content?: unknown; images?: unknown; connection_id?: unknown };
         try {
-          body = (await request.json()) as { content?: unknown; images?: unknown; connection_id?: unknown };
+          body = (await request.json()) as {
+            content?: unknown;
+            images?: unknown;
+            connection_id?: unknown;
+          };
         } catch {
           return jsonResponse({ error: "Invalid JSON body." }, 400);
         }
@@ -41,10 +44,7 @@ export const Route = createFileRoute("/api/linkedin/publish")({
           return jsonResponse({ error: "Post content is required." }, 400);
         }
         if (content.length > 3000) {
-          return jsonResponse(
-            { error: "Post exceeds LinkedIn's 3,000 character limit." },
-            400,
-          );
+          return jsonResponse({ error: "Post exceeds LinkedIn's 3,000 character limit." }, 400);
         }
 
         // Validate images (data URLs)
@@ -71,16 +71,12 @@ export const Route = createFileRoute("/api/linkedin/publish")({
         const conn = connRows?.[0] ?? null;
 
         if (connErr || !conn) {
-          return jsonResponse(
-            { error: "Connect LinkedIn in Settings before publishing." },
-            400,
-          );
+          return jsonResponse({ error: "Connect LinkedIn in Settings before publishing." }, 400);
         }
         if (new Date(conn.expires_at).getTime() < Date.now()) {
           return jsonResponse(
             {
-              error:
-                "Your LinkedIn connection has expired. Please reconnect in Settings.",
+              error: "Your LinkedIn connection has expired. Please reconnect in Settings.",
               code: "LINKEDIN_TOKEN_EXPIRED",
             },
             400,
@@ -123,10 +119,7 @@ export const Route = createFileRoute("/api/linkedin/publish")({
             if (!regResp.ok) {
               const t = await regResp.text().catch(() => "");
               console.error("[linkedin/publish] register failed", regResp.status, t);
-              return jsonResponse(
-                { error: "Failed to register image with LinkedIn." },
-                502,
-              );
+              return jsonResponse({ error: "Failed to register image with LinkedIn." }, 502);
             }
             const reg = (await regResp.json()) as {
               value: {
@@ -156,10 +149,7 @@ export const Route = createFileRoute("/api/linkedin/publish")({
             if (!upResp.ok) {
               const t = await upResp.text().catch(() => "");
               console.error("[linkedin/publish] image upload failed", upResp.status, t);
-              return jsonResponse(
-                { error: "Failed to upload image to LinkedIn." },
-                502,
-              );
+              return jsonResponse({ error: "Failed to upload image to LinkedIn." }, 502);
             }
             mediaAssets.push({ status: "READY", media: asset });
           } catch (e) {
@@ -169,11 +159,7 @@ export const Route = createFileRoute("/api/linkedin/publish")({
         }
 
         const shareMediaCategory =
-          mediaAssets.length === 0
-            ? "NONE"
-            : mediaAssets.length === 1
-              ? "IMAGE"
-              : "IMAGE";
+          mediaAssets.length === 0 ? "NONE" : mediaAssets.length === 1 ? "IMAGE" : "IMAGE";
 
         const shareContent: Record<string, unknown> = {
           shareCommentary: { text: content },
@@ -207,17 +193,13 @@ export const Route = createFileRoute("/api/linkedin/publish")({
           if (ugcResp.status === 401) {
             return jsonResponse(
               {
-                error:
-                  "LinkedIn rejected your token. Please reconnect in Settings.",
+                error: "LinkedIn rejected your token. Please reconnect in Settings.",
                 code: "LINKEDIN_TOKEN_EXPIRED",
               },
               401,
             );
           }
-          return jsonResponse(
-            { error: "LinkedIn rejected the post.", details: txt },
-            502,
-          );
+          return jsonResponse({ error: "LinkedIn rejected the post.", details: txt }, 502);
         }
 
         const postId = ugcResp.headers.get("x-restli-id") ?? "";

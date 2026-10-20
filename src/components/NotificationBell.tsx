@@ -27,10 +27,7 @@ function GenericNotificationItem({ notification }: { notification: AppNotificati
   return (
     <div className="rounded-xl border border-border bg-background p-3">
       <p
-        className={cn(
-          "text-[13px] text-ink",
-          notification.read_at ? "font-normal" : "font-medium",
-        )}
+        className={cn("text-[13px] text-ink", notification.read_at ? "font-normal" : "font-medium")}
       >
         {title}
       </p>
@@ -51,11 +48,7 @@ export function NotificationBell() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         className="relative inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-subtle transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label={
-          unreadCount > 0
-            ? `Notifications, ${unreadCount} unread`
-            : "Notifications"
-        }
+        aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
       >
         <Bell className="size-4 text-ink" />
         {badge && (
@@ -79,9 +72,7 @@ export function NotificationBell() {
         </div>
         <div className="max-h-96 overflow-y-auto p-2">
           {isLoading ? (
-            <p className="px-2 py-6 text-center text-[12px] text-muted-foreground">
-              Loading…
-            </p>
+            <p className="px-2 py-6 text-center text-[12px] text-muted-foreground">Loading…</p>
           ) : notifications.length === 0 ? (
             <p className="px-2 py-6 text-center text-[12px] text-muted-foreground">
               You're all caught up.
