@@ -12,7 +12,16 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, Settings as SettingsIcon, LayoutGrid, FileText, Menu, Moon, Sun, BookOpen } from "lucide-react";
+import {
+  LogOut,
+  Settings as SettingsIcon,
+  LayoutGrid,
+  FileText,
+  Menu,
+  Moon,
+  Sun,
+  BookOpen,
+} from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useTheme } from "@/lib/theme";
 import { CreditIndicator } from "@/components/CreditIndicator";
@@ -87,7 +96,10 @@ export function SiteNav() {
   return (
     <nav className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
       <div className="flex items-center justify-between px-6 md:px-8 h-14 w-full max-w-6xl mx-auto gap-3">
-        <Link to={workspaceHref as "/app" | "/onboarding"} className="flex items-center gap-2 group">
+        <Link
+          to={workspaceHref as "/app" | "/onboarding"}
+          className="flex items-center gap-2 group"
+        >
           <BrandMark size={22} />
           <span className="font-semibold tracking-tight text-[15px] text-ink">Syncd</span>
         </Link>
@@ -100,83 +112,95 @@ export function SiteNav() {
             </div>
           ) : user ? (
             <>
-            <div className="hidden max-lg:flex sm:flex items-center gap-2">
-              <WorkspaceSwitcher />
-              <CreditIndicator />
-            </div>
-            <NotificationBell />
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className="hidden md:flex items-center gap-2 rounded-full p-0.5 hover:bg-subtle transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="Account menu"
-              >
-                <Avatar className="h-8 w-8 border border-border">
-                  {activeAvatar && (
-                    <AvatarImage src={activeAvatar} alt={activeDisplayName ?? "Profile"} loading="lazy" />
-                  )}
-                  <AvatarFallback className="text-[11px] font-medium bg-subtle text-ink">
-                    {initials || "U"}
-                  </AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-ink truncate">
-                      {activeDisplayName || "Account"}
-                    </span>
-                    <span className="text-xs text-muted-foreground truncate">{user.email}</span>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to={workspaceHref as "/app" | "/onboarding"} className="cursor-pointer">
-                    <LayoutGrid className="h-4 w-4" />
-                    Workspace
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/drafts" className="cursor-pointer">
-                    <FileText className="h-4 w-4" />
-                    Posts
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/methodology" className="cursor-pointer">
-                    <BookOpen className="h-4 w-4" />
-                    Methodology
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/settings" search={{ linkedin_connected: undefined, linkedin_error: undefined, billing: undefined }} className="cursor-pointer">
-                    <SettingsIcon className="h-4 w-4" />
-                    Settings
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    toggleTheme();
-                  }}
-                  className="cursor-pointer"
+              <div className="hidden max-lg:flex sm:flex items-center gap-2">
+                <WorkspaceSwitcher />
+                <CreditIndicator />
+              </div>
+              <NotificationBell />
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="hidden md:flex items-center gap-2 rounded-full p-0.5 hover:bg-subtle transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Account menu"
                 >
-                  {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                  {theme === "dark" ? "Light mode" : "Dark mode"}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setConfirmSignOut(true);
-                  }}
-                  className="cursor-pointer text-destructive focus:text-destructive"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <Avatar className="h-8 w-8 border border-border">
+                    {activeAvatar && (
+                      <AvatarImage
+                        src={activeAvatar}
+                        alt={activeDisplayName ?? "Profile"}
+                        loading="lazy"
+                      />
+                    )}
+                    <AvatarFallback className="text-[11px] font-medium bg-subtle text-ink">
+                      {initials || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-ink truncate">
+                        {activeDisplayName || "Account"}
+                      </span>
+                      <span className="text-xs text-muted-foreground truncate">{user.email}</span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to={workspaceHref as "/app" | "/onboarding"} className="cursor-pointer">
+                      <LayoutGrid className="h-4 w-4" />
+                      Workspace
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/drafts" className="cursor-pointer">
+                      <FileText className="h-4 w-4" />
+                      Posts
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/methodology" className="cursor-pointer">
+                      <BookOpen className="h-4 w-4" />
+                      Methodology
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      to="/settings"
+                      search={{
+                        linkedin_connected: undefined,
+                        linkedin_error: undefined,
+                        billing: undefined,
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <SettingsIcon className="h-4 w-4" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      toggleTheme();
+                    }}
+                    className="cursor-pointer"
+                  >
+                    {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    {theme === "dark" ? "Light mode" : "Dark mode"}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setConfirmSignOut(true);
+                    }}
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           ) : (
             <>
@@ -221,7 +245,11 @@ export function SiteNav() {
                     <div className="flex items-center gap-2.5">
                       <Avatar className="size-8 border border-border shrink-0">
                         {activeAvatar && (
-                          <AvatarImage src={activeAvatar} alt={activeDisplayName ?? "Profile"} loading="lazy" />
+                          <AvatarImage
+                            src={activeAvatar}
+                            alt={activeDisplayName ?? "Profile"}
+                            loading="lazy"
+                          />
                         )}
                         <AvatarFallback className="text-[11px] font-semibold bg-subtle text-ink">
                           {initials || "U"}
@@ -231,7 +259,9 @@ export function SiteNav() {
                         <span className="text-[13px] font-semibold text-ink truncate">
                           {activeDisplayName || "Account"}
                         </span>
-                        <span className="text-[11px] text-muted-foreground truncate">{user.email}</span>
+                        <span className="text-[11px] text-muted-foreground truncate">
+                          {user.email}
+                        </span>
                       </div>
                     </div>
                   </DropdownMenuLabel>
@@ -246,7 +276,15 @@ export function SiteNav() {
                     <Link to="/methodology">Methodology</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
-                    <Link to="/settings" search={{ linkedin_connected: undefined, linkedin_error: undefined, billing: undefined }} className="cursor-pointer">
+                    <Link
+                      to="/settings"
+                      search={{
+                        linkedin_connected: undefined,
+                        linkedin_error: undefined,
+                        billing: undefined,
+                      }}
+                      className="cursor-pointer"
+                    >
                       Settings
                     </Link>
                   </DropdownMenuItem>

@@ -11,7 +11,11 @@ export const ButtonPrimary = (props: React.ComponentProps<typeof Button>) => (
 );
 
 export const ButtonOutline = (props: React.ComponentProps<typeof Button>) => (
-  <Button {...props} variant="outline" className={cn("rounded-md border-white/[0.08]", props.className)} />
+  <Button
+    {...props}
+    variant="outline"
+    className={cn("rounded-md border-white/[0.08]", props.className)}
+  />
 );
 
 export const ButtonDanger = (props: React.ComponentProps<typeof Button>) => (
@@ -21,12 +25,12 @@ export const ButtonDanger = (props: React.ComponentProps<typeof Button>) => (
 // Card Primitive
 export const Card = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof UICard>>(
   ({ className, ...props }, ref) => (
-    <UICard 
-      ref={ref} 
-      className={cn("rounded-lg border-white/[0.08] bg-[#111214] shadow-none", className)} 
-      {...props} 
+    <UICard
+      ref={ref}
+      className={cn("rounded-lg border-white/[0.08] bg-[#111214] shadow-none", className)}
+      {...props}
     />
-  )
+  ),
 );
 Card.displayName = "SettingsCard";
 
@@ -36,9 +40,16 @@ export const Badge = (props: React.ComponentProps<typeof UIBadge>) => (
 );
 
 // Eyebrow Label
-export const Eyebrow = ({ className, children, ...props }: React.HTMLAttributes<HTMLSpanElement>) => (
+export const Eyebrow = ({
+  className,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLSpanElement>) => (
   <span
-    className={cn("text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em]", className)}
+    className={cn(
+      "text-[11px] font-mono text-muted-foreground uppercase tracking-[0.15em]",
+      className,
+    )}
     {...props}
   >
     {children}
@@ -65,9 +76,7 @@ export function Section({
     >
       <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-border">
         <h2 className="text-[15px] font-semibold tracking-tight text-ink">{title}</h2>
-        {subtitle && (
-          <p className="text-[13px] text-muted-foreground mt-1">{subtitle}</p>
-        )}
+        {subtitle && <p className="text-[13px] text-muted-foreground mt-1">{subtitle}</p>}
       </div>
       <div className="px-4 sm:px-6 py-4 sm:py-5 flex flex-col gap-4">{children}</div>
     </section>

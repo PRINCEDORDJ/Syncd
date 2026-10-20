@@ -35,9 +35,7 @@ export function ConfirmDialog({
       <AlertDialogContent className="sm:rounded-xl">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-[17px] tracking-tight">{title}</AlertDialogTitle>
-          <AlertDialogDescription className="text-[14px]">
-            {description}
-          </AlertDialogDescription>
+          <AlertDialogDescription className="text-[14px]">{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-2 sm:gap-0">
           <AlertDialogCancel className="h-10 rounded-lg text-[13px] font-medium border-border hover:bg-subtle transition-colors">

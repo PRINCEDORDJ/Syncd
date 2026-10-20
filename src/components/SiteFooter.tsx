@@ -7,9 +7,7 @@ export function SiteFooter() {
       <div className="max-w-6xl mx-auto px-6 md:px-8 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex items-center gap-2">
           <BrandMark size={22} />
-          <span className="font-semibold tracking-tight text-ink text-[15px]">
-            Syncd
-          </span>
+          <span className="font-semibold tracking-tight text-ink text-[15px]">Syncd</span>
           <span className="text-muted-foreground text-[13px] ml-3 font-mono">
             © {new Date().getFullYear()}
           </span>

@@ -18,14 +18,12 @@ export const Route = createFileRoute("/api/polar/portal")({
           return json({ error: "Billing is not configured." }, 500);
         }
 
-        const authHeader =
-          getRequestHeader("authorization") ?? getRequestHeader("Authorization");
+        const authHeader = getRequestHeader("authorization") ?? getRequestHeader("Authorization");
         if (!authHeader?.startsWith("Bearer ")) {
           return json({ error: "Not authenticated." }, 401);
         }
         const token = authHeader.slice(7);
-        const { data: userData, error: userErr } =
-          await supabaseAdmin.auth.getUser(token);
+        const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token);
         if (userErr || !userData.user) {
           return json({ error: "Not authenticated." }, 401);
         }

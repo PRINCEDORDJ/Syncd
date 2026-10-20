@@ -49,9 +49,7 @@ function timeGroup(iso: string): string {
 
 function GenericNotificationRow({ notification }: { notification: AppNotification }) {
   const title =
-    typeof notification.payload.title === "string"
-      ? notification.payload.title
-      : "Notification";
+    typeof notification.payload.title === "string" ? notification.payload.title : "Notification";
   return (
     <div className="rounded-xl border border-border bg-background p-4">
       <p className={`text-[13px] text-ink ${notification.read_at ? "font-normal" : "font-medium"}`}>

@@ -17,9 +17,7 @@ export function CreditIndicator({ compact = false }: { compact?: boolean }) {
   const isAdmin = c.isAdmin;
 
   // Threshold color relative to monthly allocation
-  const remainingRatio = c.monthlyAllocation
-    ? c.subscriptionCredits / c.monthlyAllocation
-    : 1;
+  const remainingRatio = c.monthlyAllocation ? c.subscriptionCredits / c.monthlyAllocation : 1;
   const tone = isAdmin
     ? "text-ink"
     : remainingRatio > 0.3
@@ -39,8 +37,7 @@ export function CreditIndicator({ compact = false }: { compact?: boolean }) {
       </span>
     ) : (
       <span className="tabular-nums">
-        {dailyLeft}/{c.dailyLimit} today · {c.subscriptionCredits}/
-        {c.monthlyAllocation} month
+        {dailyLeft}/{c.dailyLimit} today · {c.subscriptionCredits}/{c.monthlyAllocation} month
       </span>
     );
   } else {

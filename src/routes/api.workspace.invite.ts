@@ -91,8 +91,7 @@ export const Route = createFileRoute("/api/workspace/invite")({
 
         const result = (data ?? {}) as InviteRpcResult;
         if (!result.success) {
-          const message =
-            REASON_MESSAGES[result.reason ?? ""] ?? "Could not create the invite.";
+          const message = REASON_MESSAGES[result.reason ?? ""] ?? "Could not create the invite.";
           return jsonResponse({ error: message, reason: result.reason }, 400);
         }
 
@@ -114,8 +113,7 @@ export const Route = createFileRoute("/api/workspace/invite")({
             if (resendKey) {
               const resend = new Resend(resendKey);
               const appUrl = process.env.APP_URL || new URL(request.url).origin;
-              const from =
-                process.env.RESEND_FROM || "Syncd <invites@syncd.app>";
+              const from = process.env.RESEND_FROM || "Syncd <invites@syncd.app>";
               const workspaceName = await supabaseAdmin
                 .from("workspaces")
                 .select("name")

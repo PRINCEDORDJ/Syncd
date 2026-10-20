@@ -13,8 +13,7 @@ export const Route = createFileRoute("/api/linkedin/disconnect")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const authHeader =
-          getRequestHeader("authorization") ?? getRequestHeader("Authorization");
+        const authHeader = getRequestHeader("authorization") ?? getRequestHeader("Authorization");
         if (!authHeader?.startsWith("Bearer ")) {
           return jsonResponse({ error: "Not authenticated." }, 401);
         }
@@ -75,10 +74,7 @@ export const Route = createFileRoute("/api/linkedin/disconnect")({
         }
 
         // Delete the connection(s)
-        let deleteQuery = supabaseAdmin
-          .from("linkedin_connections")
-          .delete()
-          .eq("user_id", userId);
+        let deleteQuery = supabaseAdmin.from("linkedin_connections").delete().eq("user_id", userId);
 
         if (connectionId) {
           deleteQuery = deleteQuery.eq("id", connectionId);

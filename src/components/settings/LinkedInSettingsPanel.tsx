@@ -44,9 +44,7 @@ export function LinkedInSettingsPanel({
 
     // Filter out expired connections client-side
     const now = Date.now();
-    const active = (data ?? []).filter(
-      (c) => new Date(c.expires_at).getTime() > now,
-    );
+    const active = (data ?? []).filter((c) => new Date(c.expires_at).getTime() > now);
     setConnections(active);
     setLoading(false);
   }, [user]);
@@ -71,7 +69,9 @@ export function LinkedInSettingsPanel({
         () => void loadConnections(),
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, loadConnections]);
 
   async function connectLinkedIn() {
@@ -166,7 +166,8 @@ export function LinkedInSettingsPanel({
         {/* Connection limit info */}
         <div className="flex items-center justify-between text-[12px] text-muted-foreground">
           <span>
-            {connections.length} of {isAdmin ? "∞" : maxAccounts} account{maxAccounts > 1 ? "s" : ""} connected
+            {connections.length} of {isAdmin ? "∞" : maxAccounts} account
+            {maxAccounts > 1 ? "s" : ""} connected
           </span>
           {atLimit && !isAdmin && (
             <Link to="/pricing" className="text-ink underline font-medium">
@@ -280,8 +281,11 @@ export function LinkedInSettingsPanel({
           <div className="flex items-start gap-2 p-3 rounded-md border border-border bg-subtle/40 text-[12px] text-muted-foreground">
             <AlertCircle className="size-4 shrink-0 mt-0.5" />
             <span>
-              You've reached the {maxAccounts} account limit on the {effectivePlan === "trial" ? "Free" : "Studio"} plan.{" "}
-              <Link to="/pricing" className="text-ink underline font-medium">Upgrade to Teams</Link>{" "}
+              You've reached the {maxAccounts} account limit on the{" "}
+              {effectivePlan === "trial" ? "Free" : "Studio"} plan.{" "}
+              <Link to="/pricing" className="text-ink underline font-medium">
+                Upgrade to Teams
+              </Link>{" "}
               for up to 10 LinkedIn accounts.
             </span>
           </div>
@@ -290,7 +294,9 @@ export function LinkedInSettingsPanel({
 
       <ConfirmDialog
         open={!!confirmDisconnect}
-        onOpenChange={(open) => { if (!open) setConfirmDisconnect(null); }}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDisconnect(null);
+        }}
         title="Disconnect LinkedIn?"
         description={`You won't be able to publish directly as ${confirmDisconnect?.linkedin_name ?? "this account"} until you reconnect.`}
         confirmText="Disconnect"

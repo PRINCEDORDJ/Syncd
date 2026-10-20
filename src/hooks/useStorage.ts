@@ -70,11 +70,7 @@ export function useStorage(overrideWorkspaceId?: string): StorageState {
         }
 
         const [storageRes, sub, planRes] = await Promise.all([
-          supabase
-            .from("user_storage")
-            .select("bytes_used")
-            .eq("workspace_id", wsId)
-            .maybeSingle(),
+          supabase.from("user_storage").select("bytes_used").eq("workspace_id", wsId).maybeSingle(),
           getMySubscription().catch(() => null),
           supabase.rpc("get_workspace_plan", { p_workspace_id: wsId }),
         ]);
@@ -87,9 +83,7 @@ export function useStorage(overrideWorkspaceId?: string): StorageState {
           : ((planRes.data as PlanTier | null) ?? sub?.plan ?? "trial");
         const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.trial;
         const bytesUsed = storageRes.data?.bytes_used ?? 0;
-        const pct = limits.storageBytes
-          ? (bytesUsed / limits.storageBytes) * 100
-          : 0;
+        const pct = limits.storageBytes ? (bytesUsed / limits.storageBytes) * 100 : 0;
         setState({
           bytesUsed,
           bytesLimit: limits.storageBytes,

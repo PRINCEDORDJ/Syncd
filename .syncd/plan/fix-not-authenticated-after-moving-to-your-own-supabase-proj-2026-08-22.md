@@ -7,7 +7,7 @@ The app is now talking to **two different Supabase projects at once**:
 - **The browser** signs you in against your new project (`fvwoqldf…`), taken from the `VITE_SUPABASE_*` values in `.env`.
 - **The server** (API routes, server functions) still validates tokens against the old Lovable Cloud project (`gsmxzlep…`), because the hosting runtime injects its own `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SERVICE_ROLE_KEY` environment variables, and those override what's in `.env`.
 
-So you log in fine, the browser attaches a valid token, the server asks the *old* project "who is this token?", the old project says "nobody" — and every action returns `Not authenticated.`
+So you log in fine, the browser attaches a valid token, the server asks the _old_ project "who is this token?", the old project says "nobody" — and every action returns `Not authenticated.`
 
 Verified: at runtime the server's `SUPABASE_URL` resolves to the old Cloud project ref, while `.env`'s `VITE_SUPABASE_URL` points at your new one. The 401 message matches the `authenticate()` helper in the LinkedIn API routes, which calls the service-role client built from those server variables.
 
@@ -15,7 +15,7 @@ Second, smaller issue: there is **no `src/start.ts`**, so the client-side bearer
 
 ## The fix
 
-The `SUPABASE_*` names are reserved by the platform and can't be overwritten, so the server side needs to read *your* project's credentials from differently-named secrets.
+The `SUPABASE_*` names are reserved by the platform and can't be overwritten, so the server side needs to read _your_ project's credentials from differently-named secrets.
 
 1. **Add three new secrets** holding your own project's values:
    - `APP_SUPABASE_URL`
@@ -31,7 +31,7 @@ The `SUPABASE_*` names are reserved by the platform and can't be overwritten, so
    - `src/routes/api.linkedin.disconnect.ts`
    - `src/routes/api.generate.ts`
    - `src/routes/api.polar.checkout.ts`, `api.polar.portal.ts`, `api.public.polar.webhook.ts`, `api.public.scheduler.ts`
-   (exact list confirmed while implementing)
+     (exact list confirmed while implementing)
 
 4. **Add `src/lib/require-auth.server.ts`** — a replacement for the generated `requireSupabaseAuth` middleware that validates the bearer token against the same helper, and point `src/lib/subscription.functions.ts` at it.
 

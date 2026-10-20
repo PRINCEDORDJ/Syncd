@@ -10,10 +10,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { linkPendingInvites } from "@/lib/workspace-access";
-import {
-  loadPostSignupContext,
-  type PostSignupContext,
-} from "@/lib/workspace-onboarding";
+import { loadPostSignupContext, type PostSignupContext } from "@/lib/workspace-onboarding";
 
 interface AuthContextValue {
   session: Session | null;
@@ -152,9 +149,7 @@ export async function syncUserProfileMetadata(user: User): Promise<void> {
   if (!meta) return;
 
   const avatarUrl =
-    (meta.avatar_url as string | undefined) ||
-    (meta.picture as string | undefined) ||
-    null;
+    (meta.avatar_url as string | undefined) || (meta.picture as string | undefined) || null;
   const displayName =
     (meta.display_name as string | undefined) ||
     (meta.full_name as string | undefined) ||
