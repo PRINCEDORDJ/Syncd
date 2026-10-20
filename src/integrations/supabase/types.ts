@@ -338,6 +338,7 @@ export type Database = {
           updated_at: string;
           user_id: string;
           voice_notes: string | null;
+          voice_profile: Json | null;
         };
         Insert: {
           active_workspace_id?: string | null;
@@ -348,6 +349,7 @@ export type Database = {
           updated_at?: string;
           user_id: string;
           voice_notes?: string | null;
+          voice_profile?: Json | null;
         };
         Update: {
           active_workspace_id?: string | null;
@@ -358,6 +360,7 @@ export type Database = {
           updated_at?: string;
           user_id?: string;
           voice_notes?: string | null;
+          voice_profile?: Json | null;
         };
         Relationships: [
           {

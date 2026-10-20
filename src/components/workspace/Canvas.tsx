@@ -1,6 +1,6 @@
 import { useRef, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useWorkspace, TONES, type Tone } from "@/lib/workspace-context";
+import { useWorkspace, TONES, TONE_LABELS, type Tone } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth";
 import { useWorkspaceCanEdit } from "@/lib/workspace-permissions";
 import {
@@ -232,6 +232,7 @@ export function Canvas() {
                 key={t}
                 type="button"
                 disabled={!canEdit}
+                title={t}
                 onClick={() => setTone(t)}
                 className={`h-6 px-2 rounded text-[11px] font-medium border transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
                   tone === t
@@ -239,7 +240,7 @@ export function Canvas() {
                     : "bg-card text-ink border-border hover:bg-subtle"
                 }`}
               >
-                {t}
+                {TONE_LABELS[t]}
               </button>
             ))}
           </div>

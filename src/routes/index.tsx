@@ -3,19 +3,12 @@ import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { WorkspacePreview } from "@/components/WorkspacePreview";
 import { useAuth } from "@/lib/auth";
-import {
-  Sparkles,
-  Images,
-  CalendarClock,
-  Users,
-  Coins,
-  Linkedin,
-} from "lucide-react";
+import { Sparkles, Images, CalendarClock, Users, Coins, Linkedin } from "lucide-react";
 
 const BASE_URL = process.env.APP_URL;
 
 export const Route = createFileRoute("/")({
-  head: () => ({   
+  head: () => ({
     meta: [
       { title: "Syncd — AI LinkedIn posts, scheduling & team drafts" },
       {
@@ -26,7 +19,8 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "Syncd — AI LinkedIn posts, scheduling & team drafts" },
       {
         property: "og:description",
-        content: "AI drafts in your voice. Scheduling. Shared team libraries. One-click LinkedIn publishing.",
+        content:
+          "AI drafts in your voice. Scheduling. Shared team libraries. One-click LinkedIn publishing.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: `${BASE_URL}/` },
@@ -34,7 +28,8 @@ export const Route = createFileRoute("/")({
       { name: "twitter:title", content: "Syncd — AI LinkedIn posts, scheduling & team drafts" },
       {
         name: "twitter:description",
-        content: "AI drafts in your voice. Scheduling. Shared team libraries. One-click LinkedIn publishing.",
+        content:
+          "AI drafts in your voice. Scheduling. Shared team libraries. One-click LinkedIn publishing.",
       },
     ],
     links: [{ rel: "canonical", href: `${BASE_URL}/` }],
@@ -72,8 +67,7 @@ function LandingPage() {
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-[56ch] text-pretty leading-relaxed">
-            Dump a half-formed thought. Syncd drafts it in your voice and
-            attaches your media.
+            Dump a half-formed thought. Syncd drafts it in your voice and attaches your media.
           </p>
           <p className="text-lg md:text-xl text-muted-foreground max-w-[56ch] text-pretty leading-relaxed">
             Publish now, or schedule — straight to LinkedIn.
@@ -155,8 +149,6 @@ function LandingPage() {
         </div>
       </section>
 
-     
-
       {/* Features */}
       <section className="max-w-6xl mx-auto px-6 md:px-8 pb-24">
         <div className="mb-12 max-w-2xl">
@@ -210,18 +202,34 @@ function LandingPage() {
           <PlanCard
             name="Free"
             price="$0"
-            highlights={["30 credits / month", "5 credits / day cap", "200 MB media storage", "Solo workspace"]}
+            highlights={[
+              "30 credits / month",
+              "5 credits / day cap",
+              "200 MB media storage",
+              "Solo workspace",
+            ]}
           />
           <PlanCard
             name="Studio"
             price="$12"
-            highlights={["150 credits / month", "Voice profile", "Scheduling", "Priority generation", "5 GB media storage"]}
+            highlights={[
+              "150 credits / month",
+              "Voice profile",
+              "Scheduling",
+              "Priority generation",
+              "5 GB media storage",
+            ]}
             featured
           />
           <PlanCard
             name="Teams"
             price="$15 / seat"
-            highlights={["150 credits / seat, pooled", "20 GB media storage", "Shared draft library", "Review before publish"]}
+            highlights={[
+              "350 credits / seat, pooled",
+              "20 GB media storage",
+              "Shared draft library",
+              "Review before publish",
+            ]}
           />
         </div>
       </section>
@@ -233,7 +241,8 @@ function LandingPage() {
             Stop drafting in the LinkedIn composer.
           </h2>
           <p className="text-muted-foreground mt-4 max-w-[48ch] mx-auto text-[15px]">
-            Connect once. Generate in your voice with credits, schedule for later, and collaborate with your team — all in one canvas.
+            Connect once. Generate in your voice with credits, schedule for later, and collaborate
+            with your team — all in one canvas.
           </p>
           <Link
             to={user ? "/app" : "/login"}
@@ -261,15 +270,7 @@ function FeatureCard({ n, title, body }: { n: string; title: string; body: strin
   );
 }
 
-function Bento({
-  icon,
-  title,
-  body,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  body: string;
-}) {
+function Bento({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
     <div className="p-6 sm:p-8 flex flex-col gap-3 bg-card hover:bg-subtle/40 transition-colors">
       <div className="inline-flex items-center justify-center size-8 rounded-md border border-border bg-background text-ink">

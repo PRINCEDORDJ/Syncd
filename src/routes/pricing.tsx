@@ -19,7 +19,8 @@ export const Route = createFileRoute("/pricing")({
       { title: "Pricing — Syncd" },
       {
         name: "description",
-        content: "Priced like a tool, not a tax. Start free. Upgrade when Syncd is doing the writing you used to dread.",
+        content:
+          "Priced like a tool, not a tax. Start free. Upgrade when Syncd is doing the writing you used to dread.",
       },
       { property: "og:title", content: "Pricing — Syncd" },
       {
@@ -68,7 +69,7 @@ const tiers: TierDef[] = [
     description: "For creators who post weekly.",
     features: [
       "150 credits every month",
-      "Voice profile — Syncd learns your writing style",
+      "Voice map — calibrate it from your own posts",
       "Scheduling — queue posts for the perfect moment",
       "Priority generation — no waiting in line",
       "5 GB media storage",
@@ -83,10 +84,10 @@ const tiers: TierDef[] = [
     annual: 144,
     description: "For teams who ship together.",
     features: [
-      "150 credits per seat, pooled across the team",
+      "350 credits per seat, pooled across the team",
       "Shared draft library — everyone drafts in one place",
       "Review before publish — nothing goes live unvetted",
-      "Team voice consistency",
+      "Consistent voice for every teammate",
       "20 GB media storage",
     ],
     cta: "Get Teams",
@@ -243,8 +244,12 @@ function PricingPage() {
                 t.id === "trial"
                   ? "forever"
                   : t.id === "teams"
-                    ? interval === "year" ? "/ seat / year" : "/ seat / month"
-                    : interval === "year" ? "per year" : "per month";
+                    ? interval === "year"
+                      ? "/ seat / year"
+                      : "/ seat / month"
+                    : interval === "year"
+                      ? "per year"
+                      : "per month";
               const planKey =
                 t.id === "studio"
                   ? interval === "year"
@@ -368,7 +373,8 @@ function PricingPage() {
           </div>
 
           <p className="mt-8 text-center text-[13px] text-muted-foreground">
-            Free forever for solo drafts. Pay only when you need scheduling, voice matching, or a team to draft alongside you.
+            Free forever for solo drafts. Pay only when you need scheduling, voice matching, or a
+            team to draft alongside you.
           </p>
 
           {/* Trust & FAQ */}
@@ -377,28 +383,32 @@ function PricingPage() {
               Good to know
             </h2>
             <div className="divide-y divide-border border border-border rounded-xl overflow-hidden">
-              {([
+              {(
                 [
-                  "What happens if a generation fails?",
-                  "If any AI generation fails or encounters an error, your credit is immediately restored to your workspace balance — automatically, no need to contact support.",
-                ],
-                [
-                  "How do pooled credits work for Teams?",
-                  "Your workspace has one shared credit pool. Any team member spending a credit draws from that pool. Buy more seats, get more pooled credits (150 per seat).",
-                ],
-                [
-                  "Do top-up credits expire?",
-                  "No. Top-up credits never expire and roll over month to month indefinitely. Subscription credits reset monthly.",
-                ],
-                [
-                  "Can I own multiple workspaces?",
-                  "Each account owns one workspace. You can join teammates' workspaces as a member on the Teams plan — your own workspace stays separate.",
-                ],
-              ] as [string, string][]).map(([q, a]) => (
+                  [
+                    "What happens if a generation fails?",
+                    "If any AI generation fails or encounters an error, your credit is immediately restored to your workspace balance — automatically, no need to contact support.",
+                  ],
+                  [
+                    "How do pooled credits work for Teams?",
+                    "Your workspace has one shared credit pool. Any team member spending a credit draws from that pool. Buy more seats, get more pooled credits (150 per seat).",
+                  ],
+                  [
+                    "Do top-up credits expire?",
+                    "No. Top-up credits never expire and roll over month to month indefinitely. Subscription credits reset monthly.",
+                  ],
+                  [
+                    "Can I own multiple workspaces?",
+                    "Each account owns one workspace. You can join teammates' workspaces as a member on the Teams plan — your own workspace stays separate.",
+                  ],
+                ] as [string, string][]
+              ).map(([q, a]) => (
                 <details key={q} className="group px-5 py-4 cursor-pointer">
                   <summary className="flex items-center justify-between text-[13px] font-medium text-ink list-none select-none">
                     {q}
-                    <span className="ml-4 shrink-0 text-muted-foreground text-[16px] leading-none group-open:rotate-45 transition-transform">+</span>
+                    <span className="ml-4 shrink-0 text-muted-foreground text-[16px] leading-none group-open:rotate-45 transition-transform">
+                      +
+                    </span>
                   </summary>
                   <p className="mt-2.5 text-[13px] text-muted-foreground leading-relaxed">{a}</p>
                 </details>

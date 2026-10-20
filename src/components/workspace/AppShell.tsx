@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useWorkspace, TONES, type Tone } from "@/lib/workspace-context";
+import { useWorkspace, TONES, TONE_LABELS, TONE_HINTS, type Tone } from "@/lib/workspace-context";
 import { SidebarShell, SidebarMenuButton } from "@/components/workspace/SidebarShell";
 import { Canvas } from "@/components/workspace/Canvas";
 import { AiChatPanel } from "@/components/workspace/AiChatPanel";
@@ -182,7 +182,9 @@ export function AppShell() {
               type="button"
               onClick={() => mobileAttachInputRef.current?.click()}
               disabled={attachments.length >= MAX_ATTACHMENTS}
-              title={attachments.length >= MAX_ATTACHMENTS ? "Attachment limit reached" : "Attach file"}
+              title={
+                attachments.length >= MAX_ATTACHMENTS ? "Attachment limit reached" : "Attach file"
+              }
               aria-label="Attach file"
               className="relative size-7 inline-flex items-center justify-center rounded-md border border-border bg-subtle/40 hover:bg-subtle text-ink transition-colors disabled:opacity-40"
             >
@@ -199,7 +201,7 @@ export function AppShell() {
                 className="h-7 inline-flex items-center gap-1 px-2 rounded-md text-[11px] font-medium text-ink border border-border bg-subtle/40 hover:bg-subtle transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
                 aria-label="Change tone"
               >
-                <span className="truncate max-w-[70px]">{tone.split(" ")[0]}</span>
+                <span className="truncate max-w-[70px]">{TONE_LABELS[tone].split(" ")[0]}</span>
                 <ChevronDown className="size-3 text-muted-foreground shrink-0" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={4} className="w-52">
@@ -210,10 +212,13 @@ export function AppShell() {
                   <DropdownMenuItem
                     key={t}
                     onClick={() => setTone(t)}
-                    className="flex items-center justify-between text-[13px] cursor-pointer"
+                    className="flex items-start justify-between gap-3 text-[13px] cursor-pointer"
                   >
-                    <span>{t}</span>
-                    {tone === t && <Check className="size-3.5 text-ink shrink-0" />}
+                    <span className="flex flex-col min-w-0">
+                      <span>{TONE_LABELS[t]}</span>
+                      <span className="text-[11px] text-muted-foreground">{TONE_HINTS[t]}</span>
+                    </span>
+                    {tone === t && <Check className="size-3.5 text-ink shrink-0 mt-0.5" />}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

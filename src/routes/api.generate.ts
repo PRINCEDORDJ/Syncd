@@ -8,6 +8,7 @@ import {
   type AiImageInput,
 } from "@/lib/ai-provider.server";
 import { PLAN_LIMITS, type PlanTier } from "@/lib/plans";
+import { renderVoiceProfileBlock, type VoiceProfile } from "@/lib/voice-profile";
 import { parseDualStream, isCanvasEditResult } from "@/lib/ai-reply-format";
 
 const SYSTEM_PROMPT_POST = `You are Syncd, an expert AI LinkedIn writing assistant and post generator.
@@ -69,12 +70,7 @@ Always structure your response using this exact delimiter:
 
 Do NOT include a <<<POST>>> section. You are in assistant mode — just provide helpful conversational responses.`;
 
-const VALID_TONES = [
-  "Authoritative & Warm",
-  "Conversational",
-  "Contrarian",
-  "Storytelling",
-] as const;
+const VALID_TONES = ["Authoritative & Warm", "Conversational", "Expert", "Storytelling"] as const;
 type Tone = (typeof VALID_TONES)[number];
 
 function isValidTone(t: unknown): t is Tone {
@@ -410,17 +406,32 @@ export const Route = createFileRoute("/api/generate")({
           if (draftRow) turnDraftId = draftRow.id;
         }
 
-        // 2. Resolve plan and check feature gating (voice notes require Studio or Teams)
-        const [planRes, profRes] = await Promise.all([
+        // 2. Resolve plan and check feature gating (voice notes require Studio or Teams).
+        //    Admins get full plan access server-side regardless of their
+        //    workspace's stored plan tier.
+        const [planRes, profRes, roleRes] = await Promise.all([
           resolvedWsId
             ? supabaseAdmin.rpc("get_workspace_plan", { p_workspace_id: resolvedWsId })
             : supabaseAdmin.rpc("get_user_plan", { _user_id: userId }),
-          supabaseAdmin.from("profiles").select("voice_notes").eq("user_id", userId).maybeSingle(),
+          supabaseAdmin
+            .from("profiles")
+            .select("voice_notes, voice_profile")
+            .eq("user_id", userId)
+            .maybeSingle(),
+          supabaseAdmin.from("user_roles").select("role").eq("user_id", userId),
         ]);
-        const userPlan = (planRes.data as PlanTier | null) ?? "trial";
+        const isAdminUser = !!roleRes.data?.some((r) => r.role === "admin");
+        const userPlan: PlanTier = isAdminUser
+          ? "teams"
+          : ((planRes.data as PlanTier | null) ?? "trial");
         const allowsVoiceMapping = PLAN_LIMITS[userPlan]?.voiceMapping ?? false;
         const rawVoiceNotes = (profRes.data?.voice_notes ?? "").trim();
         const voiceNotes = allowsVoiceMapping ? rawVoiceNotes : "";
+        const voiceMapBlock = allowsVoiceMapping
+          ? renderVoiceProfileBlock(
+              (profRes.data?.voice_profile ?? null) as unknown as VoiceProfile | null,
+            )
+          : "";
 
         // 3. Deduct credit from workspace
         const { data: creditRes, error: creditErr } = await supabaseAdmin.rpc("consume_credit", {
@@ -540,9 +551,14 @@ export const Route = createFileRoute("/api/generate")({
         }
 
         const safeTone: Tone = isValidTone(tone) ? tone : "Authoritative & Warm";
-        const voiceBlock = voiceNotes
-          ? `\n\nWriter's voice notes (follow these strictly):\n"""\n${voiceNotes.slice(0, 1500)}\n"""`
+        const voiceNotesBlock = voiceNotes
+          ? `\n\nFree-form voice notes (secondary context — the structured voice map above wins on conflicts):\n"""\n${voiceNotes.slice(0, 1500)}\n"""`
           : "";
+        const voiceBlock = voiceMapBlock
+          ? voiceNotesBlock
+            ? `\n\n${voiceMapBlock}${voiceNotesBlock}`
+            : `\n\n${voiceMapBlock}`
+          : voiceNotesBlock;
         const imageInstruction = imageInputs.length
           ? `\n\nThe writer attached ${imageInputs.length} image(s) as additional context. Weave relevant visual details (people, places, screenshots, products, moments) into the post naturally if they add specificity.`
           : "";
