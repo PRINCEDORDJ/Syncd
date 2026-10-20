@@ -50,7 +50,15 @@ function LoginPage() {
       search.redirect,
     );
     navigate({ to: dest, replace: true });
-  }, [user, loading, onboarding, onboarding?.onboarding_status, onboarding?.workspace_count, navigate, search.redirect]);
+  }, [
+    user,
+    loading,
+    onboarding,
+    onboarding?.onboarding_status,
+    onboarding?.workspace_count,
+    navigate,
+    search.redirect,
+  ]);
 
   async function handleGoogle() {
     setError(null);
@@ -121,9 +129,7 @@ function LoginPage() {
         <div className="px-6 md:px-8 h-14 max-w-7xl w-full mx-auto flex items-center">
           <Link to="/" className="inline-flex items-center gap-2 group">
             <BrandMark size={20} />
-            <span className="font-semibold tracking-tight text-[15px] text-ink">
-              Syncd
-            </span>
+            <span className="font-semibold tracking-tight text-[15px] text-ink">Syncd</span>
           </Link>
         </div>
       </header>
@@ -299,10 +305,22 @@ function Field({
 function GoogleGlyph() {
   return (
     <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.3l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.8 6C12.2 13.5 17.6 9.5 24 9.5z"/>
-      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.6-4.9 7.3l7.6 5.9c4.4-4.1 7.1-10.1 7.1-17.7z"/>
-      <path fill="#FBBC05" d="M10.3 28.7c-.5-1.4-.8-2.9-.8-4.7s.3-3.3.8-4.7l-7.8-6C.9 16.7 0 20.2 0 24s.9 7.3 2.5 10.7l7.8-6z"/>
-      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.8 2.3-8.3 2.3-6.4 0-11.8-4-13.7-9.8l-7.8 6C6.4 42.6 14.6 48 24 48z"/>
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.5 0 6.6 1.2 9 3.3l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.8 6C12.2 13.5 17.6 9.5 24 9.5z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.6-4.9 7.3l7.6 5.9c4.4-4.1 7.1-10.1 7.1-17.7z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M10.3 28.7c-.5-1.4-.8-2.9-.8-4.7s.3-3.3.8-4.7l-7.8-6C.9 16.7 0 20.2 0 24s.9 7.3 2.5 10.7l7.8-6z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.8 2.3-8.3 2.3-6.4 0-11.8-4-13.7-9.8l-7.8 6C6.4 42.6 14.6 48 24 48z"
+      />
     </svg>
   );
 }

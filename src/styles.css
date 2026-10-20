@@ -18,14 +18,16 @@
     font-style: normal;
     font-weight: 300 700;
     font-display: swap;
-    src: url("https://fonts.gstatic.com/s/outfit/v11/QGYyz_MVcBeNP4NjuGObqx1XmO1I4TC1O4a0Cw.woff2") format("woff2");
+    src: url("https://fonts.gstatic.com/s/outfit/v11/QGYyz_MVcBeNP4NjuGObqx1XmO1I4TC1O4a0Cw.woff2")
+      format("woff2");
   }
   @font-face {
     font-family: "JetBrains Mono";
     font-style: normal;
     font-weight: 400 600;
     font-display: swap;
-    src: url("https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPVmUsaaDhw.woff2") format("woff2");
+    src: url("https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPVmUsaaDhw.woff2")
+      format("woff2");
   }
 }
 
@@ -221,8 +223,13 @@
 
 /* Streaming cursor blink for AI generation */
 @keyframes cursor-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 @utility animate-cursor-blink {
   animation: cursor-blink 0.9s ease-in-out infinite;

@@ -6,11 +6,11 @@ one host — you can stand the database up in any Supabase project you control.
 
 ## What's in here
 
-| File | What it is |
-| --- | --- |
-| `schema.sql` | Every migration concatenated in order — extensions, enums, tables, grants, RLS policies, functions, triggers, cron jobs. Run it top-to-bottom on an empty database and you land on the current production schema. |
-| `data/<table>.csv` | All rows for that table, `CSV HEADER` format. |
-| `restore.md` | This file. |
+| File               | What it is                                                                                                                                                                                                        |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema.sql`       | Every migration concatenated in order — extensions, enums, tables, grants, RLS policies, functions, triggers, cron jobs. Run it top-to-bottom on an empty database and you land on the current production schema. |
+| `data/<table>.csv` | All rows for that table, `CSV HEADER` format.                                                                                                                                                                     |
+| `restore.md`       | This file.                                                                                                                                                                                                        |
 
 Regenerate the whole bundle any time with `./scripts/export-db.sh` (needs `psql`
 and `PG*` env vars pointing at the source database).
@@ -108,7 +108,7 @@ reset it afterwards.
 
 ## Step 5 — Storage objects
 
-Only the database rows that *reference* uploaded files are exported. The files
+Only the database rows that _reference_ uploaded files are exported. The files
 themselves (profile avatars in the `avatars` bucket, and any post media) are not
 in this bundle. To move them:
 

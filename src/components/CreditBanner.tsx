@@ -23,7 +23,7 @@ export function CreditBanner() {
   let message: React.ReactNode = null;
 
   if (isTrial) {
-    if (c.dailyCreditsUsed >= 5 || (monthly + c.topupCredits) <= 0) {
+    if (c.dailyCreditsUsed >= 5 || monthly + c.topupCredits <= 0) {
       tone = "block";
       message =
         c.dailyCreditsUsed >= 5

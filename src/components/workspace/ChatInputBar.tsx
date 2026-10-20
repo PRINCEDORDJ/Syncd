@@ -145,7 +145,11 @@ export function ChatInputBar({ variant = "full", value, onChange, onSend }: Chat
                 ? "bg-ink text-surface shadow-sm"
                 : "text-muted-foreground hover:text-ink"
             } ${!canEdit ? "opacity-40 cursor-not-allowed hover:text-muted-foreground" : ""}`}
-            title={canEdit ? "Post Generator — generate and refine posts on canvas" : "Viewers have read-only access"}
+            title={
+              canEdit
+                ? "Post Generator — generate and refine posts on canvas"
+                : "Viewers have read-only access"
+            }
           >
             <PenLine className="size-2.5" />
             Post

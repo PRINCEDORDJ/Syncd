@@ -11,10 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useWorkspace } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth";
-import {
-  fetchAccessibleWorkspaces,
-  type AccessibleWorkspace,
-} from "@/lib/workspace-access";
+import { fetchAccessibleWorkspaces, type AccessibleWorkspace } from "@/lib/workspace-access";
 import { cn } from "@/lib/utils";
 
 const ROLE_LABELS: Record<string, string> = {

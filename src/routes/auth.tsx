@@ -43,7 +43,15 @@ function AuthCallback() {
     }
     const t = setTimeout(() => setTimedOut(true), 4000);
     return () => clearTimeout(t);
-  }, [user, loading, onboarding, onboarding?.onboarding_status, onboarding?.workspace_count, navigate, redirect]);
+  }, [
+    user,
+    loading,
+    onboarding,
+    onboarding?.onboarding_status,
+    onboarding?.workspace_count,
+    navigate,
+    redirect,
+  ]);
 
   useEffect(() => {
     if (timedOut && !user) {

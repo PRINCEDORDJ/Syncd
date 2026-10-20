@@ -7,7 +7,7 @@
 ## 🚀 Key Features
 
 1. **Workspace & AI Studio (`/app`):**
-   - Raw thought/bullet input with tone selection (*Authoritative & Warm, Conversational, Contrarian, Storytelling*).
+   - Raw thought/bullet input with tone selection (_Authoritative & Warm, Conversational, Contrarian, Storytelling_).
    - Real-time SSE streaming generation (`/api/generate`) with credit consumption & refund handling.
    - Rich media management: Image carousel, document file attachments, and video uploads with validation and storage tracking.
    - Instant auto-saving drafts and one-click publishing to LinkedIn.
@@ -20,7 +20,7 @@
 3. **Team Workspaces & Settings (`/settings`):**
    - Profile customization, avatar upload, and voice notes dictation.
    - LinkedIn OAuth integration & token expiry monitoring.
-   - Subscription tier management (*Free*, *Studio*, *Teams*) via Polar checkout and customer portal.
+   - Subscription tier management (_Free_, _Studio_, _Teams_) via Polar checkout and customer portal.
    - Team member invitations and role management.
 
 4. **Marketing & Public Pages (`/`, `/pricing`, `/methodology`, `/privacy`, `/terms`):**
@@ -48,12 +48,14 @@ Ensure you have Node.js and Bun/npm installed.
 ### Installation
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/PRINCEDORDJ/Syncd.git
    cd ssyncd
    ```
 
 2. Install dependencies:
+
    ```bash
    npm install
    ```
@@ -67,6 +69,7 @@ Ensure you have Node.js and Bun/npm installed.
 ### Development
 
 Start the development server:
+
 ```bash
 npm run dev
 ```
@@ -76,11 +79,13 @@ The application will be running at `http://localhost:3000` (or the configured Vi
 ### Production Build & Verification
 
 To compile TypeScript and build the project for production:
+
 ```bash
 npm run build
 ```
 
 To run formatting and linting:
+
 ```bash
 npm run format
 npm run lint

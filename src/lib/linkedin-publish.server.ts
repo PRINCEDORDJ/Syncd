@@ -1,8 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase-admin.server";
 
 export type PublishResult =
-  | { ok: true; postId: string }
-  | { ok: false; status: number; error: string };
+  { ok: true; postId: string } | { ok: false; status: number; error: string };
 
 export async function publishToLinkedIn(
   userId: string,
@@ -18,8 +17,7 @@ export async function publishToLinkedIn(
     .select("access_token, expires_at, linkedin_member_urn")
     .eq("user_id", userId)
     .maybeSingle();
-  if (connErr || !conn)
-    return { ok: false, status: 400, error: "LinkedIn not connected." };
+  if (connErr || !conn) return { ok: false, status: 400, error: "LinkedIn not connected." };
   if (new Date(conn.expires_at).getTime() < Date.now())
     return { ok: false, status: 400, error: "LinkedIn connection expired." };
 
@@ -33,28 +31,24 @@ export async function publishToLinkedIn(
     if (!match) continue;
     const mime = match[1];
     const bytes = Uint8Array.from(atob(match[2]), (c) => c.charCodeAt(0));
-    const regResp = await fetch(
-      "https://api.linkedin.com/v2/assets?action=registerUpload",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${conn.access_token}`,
-          "Content-Type": "application/json",
-          "X-Restli-Protocol-Version": "2.0.0",
-        },
-        body: JSON.stringify({
-          registerUploadRequest: {
-            recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
-            owner: conn.linkedin_member_urn,
-            serviceRelationships: [
-              { relationshipType: "OWNER", identifier: "urn:li:userGeneratedContent" },
-            ],
-          },
-        }),
+    const regResp = await fetch("https://api.linkedin.com/v2/assets?action=registerUpload", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${conn.access_token}`,
+        "Content-Type": "application/json",
+        "X-Restli-Protocol-Version": "2.0.0",
       },
-    );
-    if (!regResp.ok)
-      return { ok: false, status: 502, error: "Image register failed." };
+      body: JSON.stringify({
+        registerUploadRequest: {
+          recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
+          owner: conn.linkedin_member_urn,
+          serviceRelationships: [
+            { relationshipType: "OWNER", identifier: "urn:li:userGeneratedContent" },
+          ],
+        },
+      }),
+    });
+    if (!regResp.ok) return { ok: false, status: 502, error: "Image register failed." };
     const reg = (await regResp.json()) as {
       value: {
         asset: string;
@@ -66,9 +60,8 @@ export async function publishToLinkedIn(
       };
     };
     const uploadUrl =
-      reg.value.uploadMechanism[
-        "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
-      ].uploadUrl;
+      reg.value.uploadMechanism["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]
+        .uploadUrl;
     const upResp = await fetch(uploadUrl, {
       method: "POST",
       headers: { Authorization: `Bearer ${conn.access_token}`, "Content-Type": mime },

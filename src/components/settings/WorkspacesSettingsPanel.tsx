@@ -33,15 +33,17 @@ import {
   Sparkles,
   Lock,
   ArrowUpRight,
-  EllipsisVertical
+  EllipsisVertical,
 } from "lucide-react";
+import { PLAN_LIMITS, PLAN_LABELS, type PlanTier, type PlanLimits } from "@/lib/plans";
 import {
-  PLAN_LIMITS,
-  PLAN_LABELS,
-  type PlanTier,
-  type PlanLimits,
-} from "@/lib/plans";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Card, ButtonPrimary, ButtonOutline, ButtonDanger, Badge, Eyebrow } from "./ui-primitives";
 import {
@@ -229,7 +231,6 @@ export function WorkspacesSettingsPanel() {
     }
   }
 
-
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12 text-[13px] font-mono text-muted-foreground">
@@ -292,7 +293,8 @@ export function WorkspacesSettingsPanel() {
             onClick={() => {
               if (isAtWorkspaceLimit) {
                 setError(
-                  `You have reached the limit of ${planLimits.maxWorkspaces} workspace${planLimits.maxWorkspaces === 1 ? "" : "s"
+                  `You have reached the limit of ${planLimits.maxWorkspaces} workspace${
+                    planLimits.maxWorkspaces === 1 ? "" : "s"
                   } on the ${PLAN_LABELS[planTier]} plan. Upgrade to create more workspaces.`,
                 );
               } else {
@@ -311,7 +313,7 @@ export function WorkspacesSettingsPanel() {
               key={ws.id}
               className={cn(
                 "w-[220px] shrink-0 p-4 cursor-pointer relative border-l-2 group",
-                selectedWorkspaceId === ws.id ? "border-l-cyan-400" : "border-l-transparent"
+                selectedWorkspaceId === ws.id ? "border-l-cyan-400" : "border-l-transparent",
               )}
               onClick={() => setSelectedWorkspaceId(ws.id)}
             >
@@ -322,41 +324,58 @@ export function WorkspacesSettingsPanel() {
                 <div className="opacity-0 group-hover:opacity-100 transition">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button type="button" className="p-1 rounded hover:bg-subtle" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="p-1 rounded hover:bg-subtle"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <EllipsisVertical className="size-4 text-muted-foreground" />
                         <span className="sr-only">Actions</span>
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => {
-                        setEditWsName(ws.name);
-                        setEditWsOpen(true);
-                        setSelectedWorkspaceId(ws.id);
-                      }}>Rename</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive" onClick={() => {
-                        setSelectedWorkspaceId(ws.id);
-                        setDeleteWsConfirmOpen(true);
-                      }}>Delete</DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setEditWsName(ws.name);
+                          setEditWsOpen(true);
+                          setSelectedWorkspaceId(ws.id);
+                        }}
+                      >
+                        Rename
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => {
+                          setSelectedWorkspaceId(ws.id);
+                          setDeleteWsConfirmOpen(true);
+                        }}
+                      >
+                        Delete
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               </div>
               <h4 className="font-semibold text-sm truncate">{ws.name}</h4>
               <p className="text-xs text-muted-foreground">
-                {ws.is_direct_owner ? "Owner" : ws.current_user_role ?? "Member"}
+                {ws.is_direct_owner ? "Owner" : (ws.current_user_role ?? "Member")}
               </p>
             </Card>
           ))}
-          <Card className="w-[220px] shrink-0 p-4 border-dashed flex items-center justify-center cursor-pointer hover:border-ink/20" onClick={() => {
+          <Card
+            className="w-[220px] shrink-0 p-4 border-dashed flex items-center justify-center cursor-pointer hover:border-ink/20"
+            onClick={() => {
               if (isAtWorkspaceLimit) {
                 setError(
-                  `You have reached the limit of ${planLimits.maxWorkspaces} workspace${planLimits.maxWorkspaces === 1 ? "" : "s"
+                  `You have reached the limit of ${planLimits.maxWorkspaces} workspace${
+                    planLimits.maxWorkspaces === 1 ? "" : "s"
                   } on the ${PLAN_LABELS[planTier]} plan. Upgrade to create more workspaces.`,
                 );
               } else {
                 setCreateWsOpen(true);
               }
-            }}>
+            }}
+          >
             <Plus className="size-6 text-muted-foreground" />
           </Card>
         </div>
@@ -370,9 +389,12 @@ export function WorkspacesSettingsPanel() {
               <div className="flex items-start gap-3">
                 <Lock className="size-5 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-[14px] font-semibold text-ink">Workspace Team Sharing is a Teams Plan feature</h4>
+                  <h4 className="text-[14px] font-semibold text-ink">
+                    Workspace Team Sharing is a Teams Plan feature
+                  </h4>
                   <p className="text-[12px] text-muted-foreground mt-0.5">
-                    Upgrade to the Teams plan to invite up to 5 collaborators with role-based permissions to this full workspace.
+                    Upgrade to the Teams plan to invite up to 5 collaborators with role-based
+                    permissions to this full workspace.
                   </p>
                 </div>
               </div>
@@ -384,43 +406,57 @@ export function WorkspacesSettingsPanel() {
                 <ArrowUpRight className="size-3.5" />
               </Link>
             </div>
-          ) : isManager && (
-            <div className="rounded-xl border border-border bg-subtle/30 p-4">
-              <h4 className="text-[13px] font-semibold text-ink mb-1">Invite member to full workspace</h4>
-              <p className="text-[12px] text-muted-foreground mb-3">
-                Workspace members can collaborate across all drafts in this workspace ({members.length}/{PLAN_LIMITS.teams.maxWorkspaceMembers} seats used, including pending invites).
-              </p>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <input
-                  type="email"
-                  value={inviteWsEmail}
-                  onChange={(e) => setInviteWsEmail(e.target.value)}
-                  placeholder="collaborator@company.com"
-                  className="h-9 flex-1 rounded-lg border border-border bg-background px-3 text-[13px] text-ink outline-none focus:border-ink"
-                />
-                <select
-                  value={inviteWsRole}
-                  onChange={(e) => setInviteWsRole(e.target.value as Exclude<WorkspaceRole, "owner">)}
-                  className="h-9 rounded-lg border border-border bg-background px-3 text-[13px] text-ink outline-none focus:border-ink"
-                >
-                  <option value="member">Member</option>
-                  <option value="admin">Admin</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={handleInviteWorkspace}
-                  disabled={invitingWs || !inviteWsEmail.trim()}
-                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-ink px-4 text-[13px] font-medium text-surface hover:bg-ink/90 disabled:opacity-50"
-                >
-                  {invitingWs ? <Loader2 className="size-3.5 animate-spin" /> : <Mail className="size-3.5" />}
-                  Invite
-                </button>
+          ) : (
+            isManager && (
+              <div className="rounded-xl border border-border bg-subtle/30 p-4">
+                <h4 className="text-[13px] font-semibold text-ink mb-1">
+                  Invite member to full workspace
+                </h4>
+                <p className="text-[12px] text-muted-foreground mb-3">
+                  Workspace members can collaborate across all drafts in this workspace (
+                  {members.length}/{PLAN_LIMITS.teams.maxWorkspaceMembers} seats used, including
+                  pending invites).
+                </p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <input
+                    type="email"
+                    value={inviteWsEmail}
+                    onChange={(e) => setInviteWsEmail(e.target.value)}
+                    placeholder="collaborator@company.com"
+                    className="h-9 flex-1 rounded-lg border border-border bg-background px-3 text-[13px] text-ink outline-none focus:border-ink"
+                  />
+                  <select
+                    value={inviteWsRole}
+                    onChange={(e) =>
+                      setInviteWsRole(e.target.value as Exclude<WorkspaceRole, "owner">)
+                    }
+                    className="h-9 rounded-lg border border-border bg-background px-3 text-[13px] text-ink outline-none focus:border-ink"
+                  >
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleInviteWorkspace}
+                    disabled={invitingWs || !inviteWsEmail.trim()}
+                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-ink px-4 text-[13px] font-medium text-surface hover:bg-ink/90 disabled:opacity-50"
+                  >
+                    {invitingWs ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Mail className="size-3.5" />
+                    )}
+                    Invite
+                  </button>
+                </div>
               </div>
-            </div>
+            )
           )}
 
           <div>
-            <h4 className="text-[14px] font-semibold text-ink mb-2">Active Members ({members.length})</h4>
+            <h4 className="text-[14px] font-semibold text-ink mb-2">
+              Active Members ({members.length})
+            </h4>
             {subLoading ? (
               <div className="p-4 text-[13px] text-muted-foreground">Loading members…</div>
             ) : (
@@ -432,9 +468,13 @@ export function WorkspacesSettingsPanel() {
                     </div>
                     <div>
                       <div className="font-medium text-ink">
-                        {currentWorkspace.is_direct_owner ? `${user?.email} (You)` : `Workspace Owner`}
+                        {currentWorkspace.is_direct_owner
+                          ? `${user?.email} (You)`
+                          : `Workspace Owner`}
                       </div>
-                      <div className="text-[11px] font-mono text-muted-foreground">Owner ID: {currentWorkspace.owner_id.slice(0, 8)}</div>
+                      <div className="text-[11px] font-mono text-muted-foreground">
+                        Owner ID: {currentWorkspace.owner_id.slice(0, 8)}
+                      </div>
                     </div>
                   </div>
                   <span className="rounded-full border border-border bg-subtle px-2 py-0.5 text-[11px] font-mono uppercase font-semibold text-ink">
@@ -455,7 +495,9 @@ export function WorkspacesSettingsPanel() {
                             {m.display_name || `Member #${m.user_id.slice(0, 6)}`}
                             {m.user_id === user?.id && " (You)"}
                           </div>
-                          <div className="text-[11px] font-mono text-muted-foreground">Status: {m.status}</div>
+                          <div className="text-[11px] font-mono text-muted-foreground">
+                            Status: {m.status}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -467,7 +509,8 @@ export function WorkspacesSettingsPanel() {
                             type="button"
                             onClick={async () => {
                               await removeWorkspaceMember(m.id);
-                              if (selectedWorkspaceId) await loadWorkspaceSubData(selectedWorkspaceId);
+                              if (selectedWorkspaceId)
+                                await loadWorkspaceSubData(selectedWorkspaceId);
                               showSuccess("Member removed.");
                             }}
                             className="text-[12px] text-destructive hover:underline"
@@ -484,13 +527,18 @@ export function WorkspacesSettingsPanel() {
 
           {pendingInvites.length > 0 && (
             <div>
-              <h4 className="text-[14px] font-semibold text-ink mb-2">Pending Invites ({pendingInvites.length})</h4>
+              <h4 className="text-[14px] font-semibold text-ink mb-2">
+                Pending Invites ({pendingInvites.length})
+              </h4>
               <div className="divide-y divide-border rounded-xl border border-border bg-background">
                 {pendingInvites.map((inv) => {
                   const expires = inv.expires_at ? new Date(inv.expires_at) : null;
                   const expired = expires ? expires.getTime() <= Date.now() : false;
                   return (
-                    <div key={inv.id} className="flex items-center justify-between p-3.5 text-[13px]">
+                    <div
+                      key={inv.id}
+                      className="flex items-center justify-between p-3.5 text-[13px]"
+                    >
                       <div className="flex items-center gap-3">
                         <Mail className="size-4 text-muted-foreground" />
                         <div>
@@ -500,7 +548,10 @@ export function WorkspacesSettingsPanel() {
                             {expires
                               ? expired
                                 ? "expired"
-                                : expires.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+                                : expires.toLocaleDateString(undefined, {
+                                    month: "short",
+                                    day: "numeric",
+                                  })
                               : "—"}
                           </div>
                         </div>
@@ -510,7 +561,8 @@ export function WorkspacesSettingsPanel() {
                           type="button"
                           onClick={async () => {
                             await revokeWorkspaceInvite(inv.id);
-                            if (selectedWorkspaceId) await loadWorkspaceSubData(selectedWorkspaceId);
+                            if (selectedWorkspaceId)
+                              await loadWorkspaceSubData(selectedWorkspaceId);
                             showSuccess("Invite revoked.");
                           }}
                           className="text-[12px] text-destructive hover:underline"
@@ -551,7 +603,10 @@ export function WorkspacesSettingsPanel() {
           />
           <DialogFooter>
             <ButtonOutline onClick={() => setCreateWsOpen(false)}>Cancel</ButtonOutline>
-            <ButtonPrimary onClick={() => void handleCreateWorkspace()} disabled={creatingWs || !newWsName.trim()}>
+            <ButtonPrimary
+              onClick={() => void handleCreateWorkspace()}
+              disabled={creatingWs || !newWsName.trim()}
+            >
               {creatingWs && <Loader2 className="size-3.5 animate-spin mr-1.5" />}
               Create
             </ButtonPrimary>
@@ -580,7 +635,10 @@ export function WorkspacesSettingsPanel() {
           />
           <DialogFooter>
             <ButtonOutline onClick={() => setEditWsOpen(false)}>Cancel</ButtonOutline>
-            <ButtonPrimary onClick={() => void handleUpdateWorkspace()} disabled={savingWs || !editWsName.trim()}>
+            <ButtonPrimary
+              onClick={() => void handleUpdateWorkspace()}
+              disabled={savingWs || !editWsName.trim()}
+            >
               {savingWs && <Loader2 className="size-3.5 animate-spin mr-1.5" />}
               Save
             </ButtonPrimary>

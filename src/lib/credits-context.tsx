@@ -138,9 +138,7 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
             ...s,
             subscriptionCredits: row.subscription_credits ?? s.subscriptionCredits,
             topupCredits: row.topup_credits ?? s.topupCredits,
-            dailyCreditsUsed: isSameDay
-              ? (row.daily_credits_used ?? s.dailyCreditsUsed)
-              : 0,
+            dailyCreditsUsed: isSameDay ? (row.daily_credits_used ?? s.dailyCreditsUsed) : 0,
             totalRemaining:
               (row.subscription_credits ?? s.subscriptionCredits) +
               (row.topup_credits ?? s.topupCredits),

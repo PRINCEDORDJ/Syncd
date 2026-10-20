@@ -123,7 +123,15 @@ export async function fetchUserWorkspaces(userId: string): Promise<Workspace[]> 
     .order("created_at", { ascending: false });
 
   if (!viewErr && viewData && viewData.length > 0) {
-    return (viewData as unknown as { id: string; name: string; owner_id: string; created_at: string; updated_at: string }[]).map((w) => ({
+    return (
+      viewData as unknown as {
+        id: string;
+        name: string;
+        owner_id: string;
+        created_at: string;
+        updated_at: string;
+      }[]
+    ).map((w) => ({
       id: w.id ?? "",
       name: w.name ?? "",
       owner_id: w.owner_id ?? userId,
@@ -240,10 +248,7 @@ export async function fetchAccessibleWorkspaces(userId: string): Promise<Accessi
  * Creates a new workspace and registers the creator as owner.
  * Enforces plan limits on maxWorkspaces.
  */
-export async function createWorkspace(
-  userId: string,
-  name: string,
-): Promise<Workspace> {
+export async function createWorkspace(userId: string, name: string): Promise<Workspace> {
   const trimmed = name.trim();
   if (!trimmed) throw new Error("Workspace name is required.");
 
@@ -287,10 +292,7 @@ export async function createWorkspace(
 /**
  * Updates a workspace name.
  */
-export async function updateWorkspace(
-  workspaceId: string,
-  name: string,
-): Promise<void> {
+export async function updateWorkspace(workspaceId: string, name: string): Promise<void> {
   const trimmed = name.trim();
   if (!trimmed) throw new Error("Workspace name cannot be empty.");
 
@@ -489,7 +491,8 @@ const INVITE_REASON_MESSAGES: Record<string, string> = {
   invite_not_found: "This invite no longer exists.",
   invite_not_pending: "This invite has already been handled.",
   invite_expired: "This invite has expired. Ask for a new one.",
-  email_mismatch: "This invite was sent to a different email address. Switch accounts to accept it.",
+  email_mismatch:
+    "This invite was sent to a different email address. Switch accounts to accept it.",
   email_not_verified: "Please verify your email address first.",
   seat_limit_reached: "This workspace is already full.",
   not_authenticated: "Not authenticated.",

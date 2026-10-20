@@ -1,12 +1,7 @@
 export const MAX_IMAGES = 4;
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB per image
 export const MAX_TOTAL_BYTES = 15 * 1024 * 1024; // 15MB combined
-export const ALLOWED_IMAGE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/gif",
-  "image/webp",
-] as const;
+export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -22,9 +17,7 @@ export function dataUrlByteSize(dataUrl: string): number {
   return Math.floor((b64.length * 3) / 4) - padding;
 }
 
-export type ImageValidation =
-  | { ok: true; file: File }
-  | { ok: false; reason: string };
+export type ImageValidation = { ok: true; file: File } | { ok: false; reason: string };
 
 export function validateImageFile(file: File): ImageValidation {
   if (!file.type.startsWith("image/")) {
@@ -163,4 +156,3 @@ export function validateAttachmentBatch(
 
   return { accepted, errors };
 }
-

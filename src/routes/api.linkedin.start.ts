@@ -25,14 +25,12 @@ export const Route = createFileRoute("/api/linkedin/start")({
           return jsonResponse({ error: "LinkedIn is not configured." }, 500);
         }
 
-        const authHeader =
-          getRequestHeader("authorization") ?? getRequestHeader("Authorization");
+        const authHeader = getRequestHeader("authorization") ?? getRequestHeader("Authorization");
         if (!authHeader?.startsWith("Bearer ")) {
           return jsonResponse({ error: "Not authenticated." }, 401);
         }
         const accessToken = authHeader.slice(7);
-        const { data: userData, error: userErr } =
-          await supabaseAdmin.auth.getUser(accessToken);
+        const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(accessToken);
         if (userErr || !userData.user) {
           return jsonResponse({ error: "Not authenticated." }, 401);
         }
@@ -44,12 +42,9 @@ export const Route = createFileRoute("/api/linkedin/start")({
         } catch {
           // empty body is fine
         }
-        const rawRedirect =
-          typeof body.redirect_to === "string" ? body.redirect_to : "/settings";
+        const rawRedirect = typeof body.redirect_to === "string" ? body.redirect_to : "/settings";
         // Only allow safe relative paths (no protocol, no host, no protocol-relative URLs).
-        const redirectTo = /^\/[a-zA-Z0-9/_-]*$/.test(rawRedirect)
-          ? rawRedirect
-          : "/settings";
+        const redirectTo = /^\/[a-zA-Z0-9/_-]*$/.test(rawRedirect) ? rawRedirect : "/settings";
 
         // CSRF state
         const state = crypto.randomUUID();

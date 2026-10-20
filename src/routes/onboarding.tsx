@@ -2,10 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { useAuth } from "@/lib/auth";
 import { useWorkspace } from "@/lib/workspace-context";
-import {
-  completeUserOnboarding,
-  createWorkspaceOnboarding,
-} from "@/lib/workspace-onboarding";
+import { completeUserOnboarding, createWorkspaceOnboarding } from "@/lib/workspace-onboarding";
 import { BrandMark } from "@/components/BrandMark";
 import { Loader2, Sparkles, LayoutGrid, Users } from "lucide-react";
 
@@ -139,14 +136,26 @@ function OnboardingRoute() {
               Create the workspace where your team will work.
             </h1>
             <p className="mt-5 max-w-lg text-[15px] leading-7 text-muted-foreground">
-              We'll create a workspace and unlock access for future invites. Your drafts live directly
-              inside the workspace — no extra nesting needed.
+              We'll create a workspace and unlock access for future invites. Your drafts live
+              directly inside the workspace — no extra nesting needed.
             </p>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              <Feature icon={LayoutGrid} title="Workspace" text="Shared container for your drafts and team access." />
-              <Feature icon={Users} title="Members" text="Invite collaborators with role-based permissions." />
-              <Feature icon={Sparkles} title="Drafts" text="Write, refine, and publish posts directly." />
+              <Feature
+                icon={LayoutGrid}
+                title="Workspace"
+                text="Shared container for your drafts and team access."
+              />
+              <Feature
+                icon={Users}
+                title="Members"
+                text="Invite collaborators with role-based permissions."
+              />
+              <Feature
+                icon={Sparkles}
+                title="Drafts"
+                text="Write, refine, and publish posts directly."
+              />
             </div>
 
             <div className="mt-8 rounded-2xl border border-border bg-card/90 p-4 sm:p-5 shadow-soft">
@@ -175,12 +184,10 @@ function OnboardingRoute() {
             <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
               Step 1 of 1
             </p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">
-              Name your workspace
-            </h2>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Name your workspace</h2>
             <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
-              Use your name or pick anything you like — this is the root space
-              your teammates will be invited into.
+              Use your name or pick anything you like — this is the root space your teammates will
+              be invited into.
             </p>
 
             <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
@@ -217,9 +224,7 @@ function OnboardingRoute() {
                 label="Workspace name"
                 value={workspaceName}
                 onChange={(v) => {
-                  setNameMode(
-                    personalName && v === personalName ? "personal" : "custom",
-                  );
+                  setNameMode(personalName && v === personalName ? "personal" : "custom");
                   setWorkspaceName(v);
                 }}
                 placeholder="Marketing team"
