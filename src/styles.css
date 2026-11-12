@@ -234,3 +234,143 @@
 @utility animate-cursor-blink {
   animation: cursor-blink 0.9s ease-in-out infinite;
 }
+
+/* ---------- Landing page motion ---------- */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@utility animate-fade-up {
+  animation: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Headline line rising out of an overflow-hidden mask */
+@keyframes line-up {
+  from {
+    transform: translateY(110%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@utility animate-line-up {
+  animation: line-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Slow ambient glow behind the hero grid */
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.06);
+  }
+}
+@utility animate-glow-pulse {
+  animation: glow-pulse 12s ease-in-out infinite;
+}
+
+/* Floating "published" toast on the scheduling mock */
+@keyframes toast-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@utility animate-toast-float {
+  animation: toast-float 4s ease-in-out infinite;
+}
+
+/* Shimmer sweep across the generating draft mockup */
+@keyframes shimmer-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(400%);
+  }
+}
+@utility animate-shimmer {
+  animation: shimmer-sweep 1.2s ease-in-out infinite;
+}
+
+/* Scroll reveal: Reveal adds .reveal-pending on mount, swaps to [data-revealed]
+   when the element enters the viewport. Without JS nothing is ever hidden. */
+.reveal.reveal-pending {
+  opacity: 0;
+  transform: translateY(14px);
+}
+.reveal[data-revealed="true"] {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+/* Stagger mode: wrapper stays put, direct children animate in sequence */
+.reveal[data-stagger].reveal-pending {
+  opacity: 1;
+  transform: none;
+}
+.reveal[data-stagger][data-revealed="true"] {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+.reveal[data-stagger][data-revealed="true"] > * {
+  animation: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.reveal[data-stagger][data-revealed="true"] > *:nth-child(2) {
+  animation-delay: 70ms;
+}
+.reveal[data-stagger][data-revealed="true"] > *:nth-child(3) {
+  animation-delay: 140ms;
+}
+.reveal[data-stagger][data-revealed="true"] > *:nth-child(4) {
+  animation-delay: 210ms;
+}
+.reveal[data-stagger][data-revealed="true"] > *:nth-child(5) {
+  animation-delay: 280ms;
+}
+.reveal[data-stagger][data-revealed="true"] > *:nth-child(6) {
+  animation-delay: 350ms;
+}
+.reveal[data-stagger][data-revealed="true"] > *:nth-child(7) {
+  animation-delay: 420ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal.reveal-pending {
+    opacity: 1;
+    transform: none;
+  }
+  .reveal[data-revealed="true"] {
+    transition: none;
+  }
+  .reveal[data-stagger][data-revealed="true"] > * {
+    animation: none;
+  }
+  .animate-fade-up,
+  .animate-line-up,
+  .animate-glow-pulse,
+  .animate-toast-float,
+  .animate-shimmer,
+  .animate-cursor-blink {
+    animation: none;
+  }
+}
