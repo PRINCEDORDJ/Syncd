@@ -423,7 +423,7 @@ export function WorkspacesSettingsPanel() {
                     value={inviteWsEmail}
                     onChange={(e) => setInviteWsEmail(e.target.value)}
                     placeholder="collaborator@company.com"
-                    className="h-9 flex-1 rounded-lg border border-border bg-background px-3 text-[13px] text-ink outline-none focus:border-ink"
+                    className="h-9 flex-1 rounded-lg border border-border bg-background px-3 text-[13px] text-ink outline-none focus:border-ink max-lg:py-2"
                   />
                   <select
                     value={inviteWsRole}
