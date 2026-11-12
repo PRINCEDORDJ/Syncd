@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useWorkspace } from "@/lib/workspace-context";
 import { completeUserOnboarding, createWorkspaceOnboarding } from "@/lib/workspace-onboarding";
 import { BrandMark } from "@/components/BrandMark";
-import { Loader2, Sparkles, LayoutGrid, Users } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -42,7 +42,6 @@ function OnboardingRoute() {
   const { setActiveWorkspace } = useWorkspace();
   const navigate = useNavigate();
   const [workspaceName, setWorkspaceName] = useState("");
-  const [nameMode, setNameMode] = useState<"personal" | "custom">("personal");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fieldRef = useRef<HTMLInputElement>(null);
@@ -68,10 +67,8 @@ function OnboardingRoute() {
       // Pre-fill with the personal suggestion, but never clobber an
       // already-entered value.
       setWorkspaceName((prev) => prev || personalName);
-    } else {
-      // Nothing to suggest — the user must type their own name.
-      setNameMode("custom");
     }
+    fieldRef.current?.focus();
   }, [user, personalName]);
 
   async function handleSubmit(e: FormEvent) {
@@ -80,7 +77,7 @@ function OnboardingRoute() {
 
     const trimmed = workspaceName.trim();
     if (!trimmed) {
-      setError("Enter a workspace name, or pick the suggestion with your name.");
+      setError("Enter a workspace name.");
       return;
     }
     if (trimmed.length > 80) {
@@ -120,165 +117,45 @@ function OnboardingRoute() {
   }
 
   return (
-    <div className="min-h-dvh bg-[radial-gradient(circle_at_top_left,_rgba(0,0,0,0.04),_transparent_36%),linear-gradient(180deg,_rgba(255,255,255,0.92),_rgba(248,249,250,1))] text-ink">
-      <div className="mx-auto grid min-h-dvh max-w-7xl lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="flex flex-col justify-between px-6 py-8 sm:px-8 lg:px-10 lg:py-10">
-          <div className="flex items-center gap-2">
-            <BrandMark size={22} />
-            <span className="font-semibold tracking-tight text-[15px] text-ink">Syncd</span>
-          </div>
+    <div className="min-h-dvh bg-background text-ink flex items-center justify-center px-6 py-10">
+      <div className="w-full max-w-md">
+        <div className="mb-8 flex flex-col items-center gap-2">
+          <BrandMark size={26} />
+          <span className="font-semibold tracking-tight text-[15px] text-ink">Syncd</span>
+        </div>
 
-          <div className="max-w-xl py-10 lg:py-0">
-            <p className="mb-3 text-[11px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
-              Workspace setup
-            </p>
-            <h1 className="max-w-lg text-4xl sm:text-5xl tracking-[-0.04em] font-semibold leading-[0.95]">
-              Create the workspace where your team will work.
-            </h1>
-            <p className="mt-5 max-w-lg text-[15px] leading-7 text-muted-foreground">
-              We'll create a workspace and unlock access for future invites. Your drafts live
-              directly inside the workspace — no extra nesting needed.
-            </p>
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-soft sm:p-7">
+          <h1 className="text-2xl font-semibold tracking-[-0.03em]">Name your workspace</h1>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              <Feature
-                icon={LayoutGrid}
-                title="Workspace"
-                text="Shared container for your drafts and team access."
-              />
-              <Feature
-                icon={Users}
-                title="Members"
-                text="Invite collaborators with role-based permissions."
-              />
-              <Feature
-                icon={Sparkles}
-                title="Drafts"
-                text="Write, refine, and publish posts directly."
-              />
-            </div>
+          <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
+            <Field
+              label="Workspace name"
+              value={workspaceName}
+              onChange={setWorkspaceName}
+              placeholder="Marketing team"
+              autoComplete="organization"
+              inputRef={fieldRef}
+            />
 
-            <div className="mt-8 rounded-2xl border border-border bg-card/90 p-4 sm:p-5 shadow-soft">
-              <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
-                <span className="rounded-full border border-border bg-subtle px-2 py-0.5 font-mono uppercase tracking-[0.12em]">
-                  Signed in
-                </span>
-                <span>{user.email}</span>
-                {onboarding?.workspace_count ? (
-                  <span className="rounded-full border border-border bg-subtle px-2 py-0.5 font-mono uppercase tracking-[0.12em]">
-                    {onboarding.workspace_count} workspace
-                    {onboarding.workspace_count === 1 ? "" : "s"}
-                  </span>
-                ) : null}
+            {error && (
+              <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-[13px] text-destructive">
+                {error}
               </div>
-            </div>
-          </div>
+            )}
 
-          <p className="mt-8 text-[12px] text-muted-foreground">
-            Need to change something later? You can manage access from Settings.
-          </p>
-        </section>
-
-        <section className="flex items-center px-6 py-8 sm:px-8 lg:px-10 lg:py-12">
-          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-xl">
-            <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
-              Step 1 of 1
-            </p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Name your workspace</h2>
-            <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
-              Use your name or pick anything you like — this is the root space your teammates will
-              be invited into.
-            </p>
-
-            <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-              <div className="flex flex-wrap gap-2">
-                {personalName ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNameMode("personal");
-                      setWorkspaceName(personalName);
-                    }}
-                    className={chipClass(nameMode === "personal")}
-                    title={personalName}
-                  >
-                    <Users className="size-3.5 shrink-0" />
-                    <span className="max-w-[200px] truncate">{personalName}</span>
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNameMode("custom");
-                    setWorkspaceName("");
-                    fieldRef.current?.focus();
-                  }}
-                  className={chipClass(nameMode === "custom")}
-                >
-                  <Sparkles className="size-3.5 shrink-0" />
-                  Choose my own
-                </button>
-              </div>
-
-              <Field
-                label="Workspace name"
-                value={workspaceName}
-                onChange={(v) => {
-                  setNameMode(personalName && v === personalName ? "personal" : "custom");
-                  setWorkspaceName(v);
-                }}
-                placeholder="Marketing team"
-                autoComplete="organization"
-                inputRef={fieldRef}
-              />
-
-              {error && (
-                <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-[13px] text-destructive">
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-ink px-4 text-[14px] font-medium text-surface transition-colors hover:bg-ink/90 disabled:opacity-60"
-              >
-                {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
-                {submitting ? "Creating workspace…" : "Create workspace"}
-              </button>
-            </form>
-          </div>
-        </section>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-ink px-4 text-[14px] font-medium text-surface transition-colors hover:bg-ink/90 disabled:opacity-60"
+            >
+              {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
+              {submitting ? "Creating workspace…" : "Create workspace"}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
-}
-
-function Feature({
-  icon: Icon,
-  title,
-  text,
-}: {
-  icon: typeof LayoutGrid;
-  title: string;
-  text: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-border bg-card/80 p-4">
-      <Icon className="size-4 text-muted-foreground" />
-      <h3 className="mt-3 text-[14px] font-medium">{title}</h3>
-      <p className="mt-1 text-[13px] leading-6 text-muted-foreground">{text}</p>
-    </div>
-  );
-}
-
-function chipClass(active: boolean): string {
-  return [
-    "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-[13px] transition-colors",
-    active
-      ? "border-ink bg-ink text-surface"
-      : "border-border bg-background text-ink hover:border-ink/40",
-  ].join(" ");
 }
 
 function Field({
