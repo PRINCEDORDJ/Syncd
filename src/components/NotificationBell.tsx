@@ -60,15 +60,14 @@ export function NotificationBell() {
       <PopoverContent align="end" className="w-80 p-0">
         <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
           <span className="text-[13px] font-semibold text-ink">Notifications</span>
-          {unreadCount > 0 && (
-            <button
-              type="button"
-              onClick={() => void markAllRead()}
-              className="text-[11px] text-muted-foreground hover:text-ink transition-colors"
-            >
-              Mark all read
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => void markAllRead()}
+            disabled={unreadCount === 0}
+            className="text-[11px] text-muted-foreground hover:text-ink transition-colors disabled:opacity-50 disabled:hover:text-muted-foreground disabled:cursor-not-allowed"
+          >
+            Mark all as read
+          </button>
         </div>
         <div className="max-h-96 overflow-y-auto p-2">
           {isLoading ? (
@@ -81,12 +80,7 @@ export function NotificationBell() {
             <div className="space-y-1.5">
               {notifications.map((n) =>
                 n.type === "workspace_invite" ? (
-                  <InviteNotificationCard
-                    key={n.id}
-                    notification={n}
-                    compact
-                    onDone={() => setOpen(false)}
-                  />
+                  <InviteNotificationCard key={n.id} notification={n} compact />
                 ) : (
                   <GenericNotificationItem key={n.id} notification={n} />
                 ),
