@@ -1,6 +1,6 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Bell, CheckCheck } from "lucide-react";
+import { ArrowLeft, Bell, CheckCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useNotifications, type AppNotification } from "@/lib/notifications-context";
 import { InviteNotificationCard } from "@/components/notifications/InviteNotificationCard";
@@ -64,6 +64,13 @@ function GenericNotificationRow({ notification }: { notification: AppNotificatio
 
 function NotificationsPage() {
   const { notifications, unreadCount, markAllRead, isLoading, refresh } = useNotifications();
+  const navigate = useNavigate();
+  const router = useRouter();
+
+  function goBack() {
+    if (window.history.length > 1) router.history.back();
+    else void navigate({ to: "/app" });
+  }
 
   useEffect(() => {
     void refresh();
@@ -81,25 +88,34 @@ function NotificationsPage() {
   return (
     <SidebarShell>
       <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-ink">Notifications</h1>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
-              {unreadCount > 0
-                ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
-                : "You're all caught up."}
-            </p>
-          </div>
-          {unreadCount > 0 && (
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
-              onClick={() => void markAllRead()}
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-3 text-[12px] font-medium text-muted-foreground hover:text-ink transition-colors"
+              onClick={goBack}
+              aria-label="Go back"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-ink hover:bg-subtle transition-colors"
             >
-              <CheckCheck className="size-3.5" />
-              Mark all read
+              <ArrowLeft className="size-4" />
             </button>
-          )}
+            <div className="min-w-0">
+              <h1 className="text-xl font-semibold text-ink">Notifications</h1>
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                {unreadCount > 0
+                  ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
+                  : "You're all caught up."}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => void markAllRead()}
+            disabled={unreadCount === 0}
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border px-3 text-[12px] font-medium text-muted-foreground hover:text-ink transition-colors disabled:opacity-50 disabled:hover:text-muted-foreground disabled:cursor-not-allowed"
+          >
+            <CheckCheck className="size-3.5" />
+            Mark all as read
+          </button>
         </div>
 
         {isLoading ? (
