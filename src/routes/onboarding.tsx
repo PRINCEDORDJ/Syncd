@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { useAuth } from "@/lib/auth";
 import { useWorkspace } from "@/lib/workspace-context";
+import { hasAnyWorkspaceAccess } from "@/lib/workspace-access";
 import { completeUserOnboarding, createWorkspaceOnboarding } from "@/lib/workspace-onboarding";
 import { BrandMark } from "@/components/BrandMark";
 import { Loader2 } from "lucide-react";
@@ -55,11 +56,48 @@ function OnboardingRoute() {
     }
   }, [loading, user, navigate]);
 
+  // Context is stale or unknown (RPC failure): probe workspace access directly
+  // so an existing user with access is never trapped on this page. Mirrors the
+  // fail-open behavior in useWorkspaceGate.
+  const status = onboarding?.onboarding_status;
+  const uncertain = !!user && (status === "unknown" || status === undefined);
+  const [fallbackAccess, setFallbackAccess] = useState<boolean | null>(null);
+
   useEffect(() => {
-    if (!loading && user && (onboarding?.workspace_count ?? 0) > 0) {
+    setFallbackAccess(null);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!uncertain || !user) return;
+    let cancelled = false;
+    void hasAnyWorkspaceAccess(user.id)
+      .then((ok) => {
+        if (cancelled) return;
+        setFallbackAccess(ok);
+        if (ok) void refreshOnboarding();
+      })
+      .catch(() => {
+        // Never lock users out on a transient probe failure
+        if (!cancelled) setFallbackAccess(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [uncertain, user, refreshOnboarding]);
+
+  useEffect(() => {
+    if (loading || !user) return;
+    if ((onboarding?.workspace_count ?? 0) > 0 || fallbackAccess === true) {
       navigate({ to: "/app", replace: true });
     }
-  }, [loading, user, onboarding?.onboarding_status, onboarding?.workspace_count, navigate]);
+  }, [
+    loading,
+    user,
+    onboarding?.onboarding_status,
+    onboarding?.workspace_count,
+    fallbackAccess,
+    navigate,
+  ]);
 
   useEffect(() => {
     if (!user) return;
@@ -102,7 +140,9 @@ function OnboardingRoute() {
     }
   }
 
-  if (loading || !user) {
+  // While probing access (unknown context) show the loading screen instead of
+  // flashing the setup form to a user who is about to be redirected.
+  if (loading || !user || (uncertain && fallbackAccess === null)) {
     return (
       <div className="min-h-dvh bg-background text-ink flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
