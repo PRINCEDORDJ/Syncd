@@ -10,26 +10,26 @@ const BASE_URL = process.env.APP_URL;
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Syncd — AI LinkedIn posts, scheduling & team drafts" },
+      { title: "Syncd — AI LinkedIn posts, scheduling, done solo or as a team" },
       {
         name: "description",
         content:
-          "Write, schedule & ship LinkedIn posts as a team. AI drafts in your voice, 30 free credits every month.",
+          "Write, schedule & ship LinkedIn posts — solo or with your team. AI drafts in your voice, 30 free credits every month.",
       },
-      { property: "og:title", content: "Syncd — AI LinkedIn posts, scheduling & team drafts" },
+      { property: "og:title", content: "Syncd — AI LinkedIn posts, scheduling, done solo or as a team" },
       {
         property: "og:description",
         content:
-          "AI drafts in your voice. Scheduling. Shared team libraries. One-click LinkedIn publishing.",
+          "AI drafts in your voice. Scheduling. Shared libraries. One-click LinkedIn publishing — solo or as a team.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: `${BASE_URL}/` },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Syncd — AI LinkedIn posts, scheduling & team drafts" },
+      { name: "twitter:title", content: "Syncd — AI LinkedIn posts, scheduling, done solo or as a team" },
       {
         name: "twitter:description",
         content:
-          "AI drafts in your voice. Scheduling. Shared team libraries. One-click LinkedIn publishing.",
+          "AI drafts in your voice. Scheduling. Shared libraries. One-click LinkedIn publishing — solo or as a team.",
       },
     ],
     links: [{ rel: "canonical", href: `${BASE_URL}/` }],
@@ -63,7 +63,7 @@ function LandingPage() {
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl tracking-[-0.03em] font-semibold leading-[1.02] text-balance">
             Write, schedule &amp; ship
             <br />
-            LinkedIn posts as a team.
+            LinkedIn posts. Solo or as a team.
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-[56ch] text-pretty leading-relaxed">
