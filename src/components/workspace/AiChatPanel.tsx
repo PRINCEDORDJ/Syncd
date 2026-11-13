@@ -9,6 +9,12 @@ import { Sparkles, PanelRightClose, Wand2, Plus, History } from "lucide-react";
 
 interface AiChatPanelProps {
   onToggleCollapse?: () => void;
+  /** Controlled input value — mobile shares the pinned bottom bar's state so
+   *  suggestion taps land in the input the user can actually see. */
+  input?: string;
+  onInputChange?: (value: string) => void;
+  /** Called after a suggestion is picked — e.g. focus the pinned mobile input. */
+  onRequestInputFocus?: () => void;
 }
 
 const POST_GENERATOR_SUGGESTIONS = [
@@ -23,9 +29,16 @@ const ASSISTANT_SUGGESTIONS = [
   "What's the best posting schedule on LinkedIn?",
 ];
 
-export function AiChatPanel({ onToggleCollapse }: AiChatPanelProps) {
+export function AiChatPanel({
+  onToggleCollapse,
+  input: externalInput,
+  onInputChange,
+  onRequestInputFocus,
+}: AiChatPanelProps) {
   const { messages, sendMessage, generating, aiMode, error, newChat } = useWorkspace();
-  const [input, setInput] = useState("");
+  const [internalInput, setInternalInput] = useState("");
+  const input = externalInput ?? internalInput;
+  const setInput = onInputChange ?? setInternalInput;
   const [historyOpen, setHistoryOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -116,8 +129,11 @@ export function AiChatPanel({ onToggleCollapse }: AiChatPanelProps) {
                 <button
                   key={s}
                   type="button"
-                  onClick={() => setInput(s)}
-                  className="w-full text-left text-[11px] text-muted-foreground hover:text-ink bg-card hover:bg-subtle border border-border/80 px-2.5 py-1.5 rounded-lg transition-colors truncate"
+                  onClick={() => {
+                    setInput(s);
+                    onRequestInputFocus?.();
+                  }}
+                  className="w-full text-left text-[11px] text-muted-foreground hover:text-ink bg-card hover:bg-subtle border border-border/80 px-2.5 py-2 rounded-lg transition-colors truncate min-h-[32px]"
                 >
                   {s}
                 </button>

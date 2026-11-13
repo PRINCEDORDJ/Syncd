@@ -23,9 +23,17 @@ interface ChatInputBarProps {
   value: string;
   onChange: (v: string) => void;
   onSend: () => void;
+  /** Optional external ref to the textarea (e.g. focus it from outside). */
+  textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
 
-export function ChatInputBar({ variant = "full", value, onChange, onSend }: ChatInputBarProps) {
+export function ChatInputBar({
+  variant = "full",
+  value,
+  onChange,
+  onSend,
+  textareaRef,
+}: ChatInputBarProps) {
   const {
     generating,
     images,
@@ -43,13 +51,18 @@ export function ChatInputBar({ variant = "full", value, onChange, onSend }: Chat
   const isBlocked = useIsGenerationBlocked();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachInputRef = useRef<HTMLInputElement | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const innerRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const setRefs = (el: HTMLTextAreaElement | null) => {
+    innerRef.current = el;
+    if (textareaRef) textareaRef.current = el;
+  };
 
   // Voice notes: record with the mic, transcribe via /api/transcribe (Gemini),
   // then drop the transcript into the input for review before sending.
   const insertTranscript = (text: string) => {
     onChange(value.trim() ? `${value.trimEnd()} ${text}` : text);
-    requestAnimationFrame(() => textareaRef.current?.focus());
+    requestAnimationFrame(() => innerRef.current?.focus());
   };
 
   const transcribeRecording = async (blob: Blob): Promise<string> => {
@@ -99,7 +112,7 @@ export function ChatInputBar({ variant = "full", value, onChange, onSend }: Chat
   // Auto-grow the textarea so typed text is never hidden behind a height cap;
   // only past the max does it scroll instead.
   useEffect(() => {
-    const el = textareaRef.current;
+    const el = innerRef.current;
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
@@ -151,7 +164,7 @@ export function ChatInputBar({ variant = "full", value, onChange, onSend }: Chat
 
       {/* Textarea */}
       <textarea
-        ref={textareaRef}
+        ref={setRefs}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
