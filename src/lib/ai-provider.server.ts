@@ -153,3 +153,36 @@ export async function generateAiText(input: AiGenerationInput): Promise<string> 
   }
   return result;
 }
+
+// ── Voice transcription (Gemini-only) ──────────────────────────────────────
+
+const TRANSCRIBE_PROMPT =
+  "Transcribe this audio recording verbatim. Output ONLY the transcribed text — no commentary, " +
+  "no labels, no markdown. Preserve the speaker's words, numbers, and natural punctuation. " +
+  "If the audio is silent or unintelligible, output an empty string.";
+
+/** Transcribes a short voice recording with Gemini, independent of the AI_PROVIDER router. */
+export async function transcribeAudio(input: {
+  base64: string;
+  mimeType: string;
+}): Promise<string> {
+  const apiKey = readEnv("GEMINI_API_KEY");
+  if (!apiKey) {
+    throw new AiConfigurationError("Voice transcription needs GEMINI_API_KEY configured.");
+  }
+
+  const client = new GoogleGenAI({ apiKey });
+  const response = await client.models.generateContent({
+    model: readEnv("GEMINI_TRANSCRIBE_MODEL") ?? "gemini-2.5-flash",
+    contents: [
+      {
+        role: "user" as const,
+        parts: [
+          { inlineData: { data: input.base64, mimeType: input.mimeType } },
+          { text: TRANSCRIBE_PROMPT },
+        ],
+      },
+    ],
+  });
+  return (response.text ?? "").trim();
+}
