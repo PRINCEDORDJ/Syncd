@@ -15,6 +15,7 @@ import {
   Paperclip,
   CalendarClock,
   Trash2,
+  BarChart2,
 } from "lucide-react";
 import { formatBytes, MAX_IMAGES, MAX_ATTACHMENTS } from "@/lib/image-validation";
 import type { AttachmentItem } from "@/lib/image-validation";
@@ -63,6 +64,7 @@ export function Canvas() {
     linkedinConnectionId,
     setLinkedinConnectionId,
     publishing,
+    isPublished,
     publish,
     draftId,
     activeWorkspaceId,
@@ -262,6 +264,16 @@ export function Canvas() {
             {charCount} / 3000
           </span>
           {saving && <span className="text-muted-foreground animate-pulse">Saving…</span>}
+          {draftId && isPublished && (
+            <Link
+              to="/analytics"
+              search={{ postId: draftId }}
+              className="ml-auto inline-flex items-center gap-1 text-[11px] text-accent-cyan hover:underline font-sans font-medium"
+            >
+              <BarChart2 className="size-3" />
+              View Analytics →
+            </Link>
+          )}
         </div>
 
         {/* Empty state prompt when canvas is blank */}
@@ -463,6 +475,17 @@ export function Canvas() {
         </div>
 
         <div className="flex items-center gap-2">
+          {draftId && isPublished && (
+            <Link
+              to="/analytics"
+              search={{ postId: draftId }}
+              className="h-8 px-3 rounded-md text-[13px] font-medium text-accent-cyan border border-accent-cyan/30 bg-accent-cyan/10 hover:bg-accent-cyan/20 transition-colors inline-flex items-center gap-1.5"
+              title="View post analytics"
+            >
+              <BarChart2 className="size-4" />
+              <span className="hidden sm:inline">Analytics</span>
+            </Link>
+          )}
           {draftId && canEdit && (
             <button
               type="button"

@@ -17,6 +17,7 @@ interface DraftRow {
   attachments: AttachmentItem[];
   raw_input: string;
   thread_id?: string | null;
+  published?: boolean;
 }
 
 interface DraftListProps {
@@ -58,7 +59,9 @@ export function DraftList({ collapsed = false, onSelect }: DraftListProps) {
     setLoading(true);
     const { data } = await supabase
       .from("drafts")
-      .select("id, title, content, tone, updated_at, images, attachments, raw_input, thread_id")
+      .select(
+        "id, title, content, tone, updated_at, images, attachments, raw_input, thread_id, published",
+      )
       .eq("workspace_id", activeWorkspaceId)
       .order("updated_at", { ascending: false })
       .limit(10);
@@ -72,6 +75,7 @@ export function DraftList({ collapsed = false, onSelect }: DraftListProps) {
       attachments: (r.attachments as unknown as AttachmentItem[] | null) ?? [],
       raw_input: (r.raw_input as string | null) ?? "",
       thread_id: r.thread_id ?? null,
+      published: Boolean((r as { published?: boolean }).published),
     }));
     setDrafts(rows);
     setLoading(false);
@@ -165,6 +169,7 @@ export function DraftList({ collapsed = false, onSelect }: DraftListProps) {
                 attachments: (d.attachments as AttachmentItem[]) ?? [],
                 raw_input: d.raw_input ?? "",
                 thread_id: d.thread_id ?? null,
+                published: d.published,
               });
               onSelect?.();
             }}

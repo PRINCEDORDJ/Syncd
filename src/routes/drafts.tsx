@@ -3,7 +3,17 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarShell } from "@/components/workspace/SidebarShell";
-import { Trash2, Clock, FileText, File, ThumbsUp, MessageCircle, Repeat2 } from "lucide-react";
+import {
+  Trash2,
+  Clock,
+  FileText,
+  File,
+  ThumbsUp,
+  MessageCircle,
+  Repeat2,
+  BarChart2,
+  ArrowRight,
+} from "lucide-react";
 import { useWorkspace } from "@/lib/workspace-context";
 import {
   formatBytes,
@@ -76,11 +86,7 @@ function EngagementBadges({ stats }: { stats: PostStats }) {
   return (
     <>
       {items.map(({ icon: Icon, value, label }) => (
-        <span
-          key={label}
-          title={label}
-          className="inline-flex items-center gap-1 tabular-nums"
-        >
+        <span key={label} title={label} className="inline-flex items-center gap-1 tabular-nums">
           <Icon className="size-3" />
           {value}
         </span>
@@ -142,6 +148,7 @@ function DraftsList() {
       })),
       raw_input: "",
       thread_id: r.thread_id ?? null,
+      published: r.published,
     });
     navigate({ to: "/app" });
   }
@@ -349,9 +356,7 @@ function DraftsList() {
   // Engagement stats for published posts (RLS-scoped; only rows with stats show).
   const [statsById, setStatsById] = useState<Record<string, PostStats>>({});
   useEffect(() => {
-    const ids = (rows ?? [])
-      .filter((r) => r.published && r.linkedin_post_urn)
-      .map((r) => r.id);
+    const ids = (rows ?? []).filter((r) => r.published && r.linkedin_post_urn).map((r) => r.id);
     if (!ids.length) {
       setStatsById({});
       return;
@@ -627,9 +632,7 @@ function DraftsList() {
               <span className="text-ink font-medium uppercase tracking-[0.1em] text-[10px]">
                 Via Syncd
               </span>
-              <span className="tabular-nums">
-                {aggregate.total} published
-              </span>
+              <span className="tabular-nums">{aggregate.total} published</span>
               {aggregate.tracked > 0 && (
                 <>
                   <span className="inline-flex items-center gap-1 tabular-nums">
@@ -646,6 +649,13 @@ function DraftsList() {
                   </span>
                 </>
               )}
+              <Link
+                to="/analytics"
+                className="ml-auto inline-flex items-center gap-1 text-[11px] text-accent-cyan hover:underline font-sans font-medium"
+              >
+                View Analytics
+                <ArrowRight className="size-3" />
+              </Link>
             </div>
           )}
 
@@ -698,8 +708,21 @@ function DraftsList() {
                             {r.published ? "Published" : "Draft"}
                           </span>
                         )}
-                        {r.published && statsById[r.id] && (
-                          <EngagementBadges stats={statsById[r.id]} />
+                        {r.published && (
+                          <Link
+                            to="/analytics"
+                            search={{ postId: r.id }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-accent-cyan/30 bg-accent-cyan/10 text-accent-cyan hover:bg-accent-cyan/20 transition-colors"
+                            title="View analytics for this post"
+                          >
+                            <BarChart2 className="size-3" />
+                            {statsById[r.id] ? (
+                              <EngagementBadges stats={statsById[r.id]} />
+                            ) : (
+                              <span>Analytics</span>
+                            )}
+                          </Link>
                         )}
                         <span>{r.tone.split(" ")[0]}</span>
                         <span>·</span>
@@ -729,19 +752,33 @@ function DraftsList() {
                         )}
                       </div>
                     </div>
-                    {canEdit && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          remove(r.id);
-                        }}
-                        className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-                        aria-label="Delete"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {r.published && (
+                        <Link
+                          to="/analytics"
+                          search={{ postId: r.id }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1.5 text-muted-foreground hover:text-accent-cyan transition-colors"
+                          title="View post analytics"
+                          aria-label="View post analytics"
+                        >
+                          <BarChart2 className="size-4" />
+                        </Link>
+                      )}
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            remove(r.id);
+                          }}
+                          className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+                          aria-label="Delete"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   {r.images.length > 0 && (
                     <div

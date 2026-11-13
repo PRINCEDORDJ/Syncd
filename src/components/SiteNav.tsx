@@ -21,6 +21,7 @@ import {
   Moon,
   Sun,
   BookOpen,
+  BarChart3,
 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useTheme } from "@/lib/theme";
@@ -158,6 +159,12 @@ export function SiteNav() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link to="/analytics" className="cursor-pointer">
+                      <BarChart3 className="h-4 w-4" />
+                      Analytics
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link to="/methodology" className="cursor-pointer">
                       <BookOpen className="h-4 w-4" />
                       Methodology
@@ -271,6 +278,9 @@ export function SiteNav() {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
                     <Link to="/drafts">Posts</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
+                    <Link to="/analytics">Analytics</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild onSelect={() => setMobileOpen(false)}>
                     <Link to="/methodology">Methodology</Link>
