@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarShell } from "@/components/workspace/SidebarShell";
-import { Trash2, Clock, FileText, File } from "lucide-react";
+import { Trash2, Clock, FileText, File, ThumbsUp, MessageCircle, Repeat2 } from "lucide-react";
 import { useWorkspace } from "@/lib/workspace-context";
 import {
   formatBytes,
@@ -56,7 +56,38 @@ type DraftRow = {
   scheduled_at: string | null;
   schedule_status: string | null;
   thread_id?: string | null;
+  linkedin_post_urn?: string | null;
 };
+
+type PostStats = {
+  reactions: number;
+  comments: number;
+  shares: number;
+  reposts: number;
+};
+
+function EngagementBadges({ stats }: { stats: PostStats }) {
+  const items = [
+    { icon: ThumbsUp, value: stats.reactions, label: "Reactions" },
+    { icon: MessageCircle, value: stats.comments, label: "Comments" },
+    { icon: Repeat2, value: stats.shares + stats.reposts, label: "Shares" },
+  ].filter((i) => i.value > 0);
+  if (!items.length) return null;
+  return (
+    <>
+      {items.map(({ icon: Icon, value, label }) => (
+        <span
+          key={label}
+          title={label}
+          className="inline-flex items-center gap-1 tabular-nums"
+        >
+          <Icon className="size-3" />
+          {value}
+        </span>
+      ))}
+    </>
+  );
+}
 
 import { DraftsSkeleton, DraftItemSkeleton } from "@/components/skeletons/DraftsSkeleton";
 
@@ -288,7 +319,7 @@ function DraftsList() {
       const { data, error: err } = await supabase
         .from("drafts")
         .select(
-          "id, title, content, tone, char_count, published, updated_at, images, attachments, scheduled_at, schedule_status, thread_id",
+          "id, title, content, tone, char_count, published, updated_at, images, attachments, scheduled_at, schedule_status, thread_id, linkedin_post_urn",
         )
         .eq("workspace_id", activeWorkspaceId)
         .order("updated_at", { ascending: false });
@@ -314,6 +345,39 @@ function DraftsList() {
       cancelled = true;
     };
   }, [user, activeWorkspaceId]);
+
+  // Engagement stats for published posts (RLS-scoped; only rows with stats show).
+  const [statsById, setStatsById] = useState<Record<string, PostStats>>({});
+  useEffect(() => {
+    const ids = (rows ?? [])
+      .filter((r) => r.published && r.linkedin_post_urn)
+      .map((r) => r.id);
+    if (!ids.length) {
+      setStatsById({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("linkedin_post_stats")
+        .select("draft_id, reactions, comments, shares, reposts")
+        .in("draft_id", ids);
+      if (cancelled) return;
+      const map: Record<string, PostStats> = {};
+      for (const s of data ?? []) {
+        map[s.draft_id] = {
+          reactions: s.reactions ?? 0,
+          comments: s.comments ?? 0,
+          shares: s.shares ?? 0,
+          reposts: s.reposts ?? 0,
+        };
+      }
+      setStatsById(map);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [rows]);
 
   async function remove(id: string) {
     if (!user) return;
@@ -361,6 +425,7 @@ function DraftsList() {
           content: contentToSend,
           images: imagesToSend,
           attachments: modalAttachments.length ? modalAttachments : row.attachments,
+          draft_id: row.id,
         }),
       });
       const data = (await resp.json().catch(() => ({}))) as {
@@ -500,6 +565,26 @@ function DraftsList() {
       filter === "all" ? true : filter === "published" ? r.published : !r.published,
     ) ?? null;
 
+  // Aggregate engagement across everything published via Syncd (this workspace's
+  // list is already workspace-scoped; stats rows only exist for tracked posts).
+  const aggregate = useMemo(() => {
+    const publishedRows = (rows ?? []).filter((r) => r.published);
+    let reactions = 0;
+    let comments = 0;
+    let shares = 0;
+    let tracked = 0;
+    for (const r of publishedRows) {
+      const s = statsById[r.id];
+      if (s) {
+        tracked++;
+        reactions += s.reactions;
+        comments += s.comments;
+        shares += s.shares + s.reposts;
+      }
+    }
+    return { total: publishedRows.length, tracked, reactions, comments, shares };
+  }, [rows, statsById]);
+
   return (
     <SidebarShell mobileTitle="Posts / Drafts">
       <div className="h-full min-h-0 w-full overflow-y-auto">
@@ -534,6 +619,33 @@ function DraftsList() {
           {error && (
             <div className="mb-4 px-3 py-2.5 rounded-md bg-destructive/5 border border-destructive/20 text-[13px] text-destructive">
               {error}
+            </div>
+          )}
+
+          {aggregate.total > 0 && (
+            <div className="mb-5 px-3 py-2.5 rounded-lg border border-border bg-card flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] font-mono text-muted-foreground">
+              <span className="text-ink font-medium uppercase tracking-[0.1em] text-[10px]">
+                Via Syncd
+              </span>
+              <span className="tabular-nums">
+                {aggregate.total} published
+              </span>
+              {aggregate.tracked > 0 && (
+                <>
+                  <span className="inline-flex items-center gap-1 tabular-nums">
+                    <ThumbsUp className="size-3" />
+                    {aggregate.reactions}
+                  </span>
+                  <span className="inline-flex items-center gap-1 tabular-nums">
+                    <MessageCircle className="size-3" />
+                    {aggregate.comments}
+                  </span>
+                  <span className="inline-flex items-center gap-1 tabular-nums">
+                    <Repeat2 className="size-3" />
+                    {aggregate.shares}
+                  </span>
+                </>
+              )}
             </div>
           )}
 
@@ -585,6 +697,9 @@ function DraftsList() {
                           >
                             {r.published ? "Published" : "Draft"}
                           </span>
+                        )}
+                        {r.published && statsById[r.id] && (
+                          <EngagementBadges stats={statsById[r.id]} />
                         )}
                         <span>{r.tone.split(" ")[0]}</span>
                         <span>·</span>

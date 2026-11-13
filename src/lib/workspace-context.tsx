@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { createUniqueChannel } from "@/lib/realtime";
+import { normalizeLinkedInPostUrn } from "@/lib/linkedin-post-urn";
 import type { Json } from "@/integrations/supabase/types";
 import type { Workspace } from "@/lib/workspace-access";
 import {
@@ -792,22 +793,65 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         content: draft,
         images,
         ...(linkedinConnectionId ? { connection_id: linkedinConnectionId } : {}),
+        ...(draftId ? { draft_id: draftId } : {}),
       }),
     });
     const data = (await resp.json().catch(() => ({}))) as {
       success?: boolean;
       error?: string;
       code?: string;
+      postId?: string;
     };
     setPublishing(false);
     if (resp.ok && data.success) {
       setSuccess("Published to LinkedIn successfully.");
-      if (user) await saveDraft(true);
+      if (user) {
+        const savedId = await saveDraft(true);
+        // When the publish created a brand-new draft (no draft_id existed at
+        // publish time), attach the post URN + seed its stats row client-side.
+        // Otherwise the server already did this via the draft_id in the body.
+        const urn = normalizeLinkedInPostUrn(data.postId);
+        if (savedId && urn) {
+          try {
+            const { error: urnErr } = await supabase
+              .from("drafts")
+              .update({
+                linkedin_post_urn: urn,
+                published_at: new Date().toISOString(),
+              })
+              .eq("id", savedId)
+              .eq("user_id", user.id);
+            if (!urnErr) {
+              await supabase.from("linkedin_post_stats").upsert(
+                {
+                  draft_id: savedId,
+                  user_id: user.id,
+                  linkedin_connection_id: linkedinConnectionId,
+                  linkedin_post_urn: urn,
+                  refresh_after: new Date().toISOString(),
+                },
+                { onConflict: "draft_id" },
+              );
+            }
+          } catch (e) {
+            console.error("post stats seeding failed", e);
+          }
+        }
+      }
     } else {
       if (data.code === "LINKEDIN_TOKEN_EXPIRED") setLinkedinConnected(false);
       setError(data.error ?? "Failed to publish.");
     }
-  }, [overLimit, draft, publishing, images, user, saveDraft, linkedinConnectionId]);
+  }, [
+    overLimit,
+    draft,
+    publishing,
+    images,
+    user,
+    saveDraft,
+    linkedinConnectionId,
+    draftId,
+  ]);
 
   // ── Chat transcript helpers ────────────────────────────────────────────────
   const fetchThreadMessages = useCallback(async (threadUid: string, seq: number) => {

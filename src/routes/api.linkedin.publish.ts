@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getRequestHeader } from "@tanstack/react-start/server";
+import { recordPublishedPost } from "@/lib/linkedin-stats.server";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -29,12 +30,18 @@ export const Route = createFileRoute("/api/linkedin/publish")({
         const auth = await authenticate();
         if ("error" in auth) return auth.error;
 
-        let body: { content?: unknown; images?: unknown; connection_id?: unknown };
+        let body: {
+          content?: unknown;
+          images?: unknown;
+          connection_id?: unknown;
+          draft_id?: unknown;
+        };
         try {
           body = (await request.json()) as {
             content?: unknown;
             images?: unknown;
             connection_id?: unknown;
+            draft_id?: unknown;
           };
         } catch {
           return jsonResponse({ error: "Invalid JSON body." }, 400);
@@ -203,6 +210,24 @@ export const Route = createFileRoute("/api/linkedin/publish")({
         }
 
         const postId = ugcResp.headers.get("x-restli-id") ?? "";
+
+        // Persist the published post URN on the draft (when the caller knows
+        // it) and seed its stats row for engagement tracking.
+        const draftId = typeof body.draft_id === "string" && body.draft_id ? body.draft_id : null;
+        if (draftId && postId) {
+          try {
+            await recordPublishedPost({
+              draftId,
+              userId: auth.userId,
+              connectionId: conn.id,
+              postId,
+            });
+          } catch (e) {
+            // Stats persistence is best-effort; never fail the publish for it.
+            console.error("[linkedin/publish] post stat recording failed", e);
+          }
+        }
+
         return jsonResponse({ success: true, postId });
       },
     },
