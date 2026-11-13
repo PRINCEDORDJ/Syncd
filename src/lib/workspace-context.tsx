@@ -63,6 +63,15 @@ export interface ChatMessage {
   canvasEdited?: boolean;
 }
 
+/** An active (non-expired) LinkedIn connection available for publishing. */
+export interface LinkedInConnectionInfo {
+  id: string;
+  linkedin_name: string | null;
+  linkedin_picture_url: string | null;
+  linkedin_member_urn: string;
+  expires_at: string;
+}
+
 export interface WorkspaceState {
   // Workspace
   activeWorkspaceId: string | null;
@@ -87,6 +96,10 @@ export interface WorkspaceState {
   // Publish
   publishing: boolean;
   linkedinConnected: boolean | null;
+  /** Active LinkedIn connections for the signed-in user (oldest first). */
+  linkedinConnections: LinkedInConnectionInfo[];
+  /** Currently selected connection for publish/schedule. Null = most recent. */
+  linkedinConnectionId: string | null;
   // Counts
   charCount: number;
   wordCount: number;
@@ -125,6 +138,7 @@ export interface WorkspaceActions {
    */
   openThread: (thread: { thread_id: string; draft_id: string | null }) => Promise<void>;
   publish: () => Promise<void>;
+  setLinkedinConnectionId: (id: string | null) => void;
   loadDraft: (row: {
     id: string;
     content: string;
@@ -276,6 +290,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [publishing, setPublishing] = useState(false);
   const [linkedinConnected, setLinkedinConnected] = useState<boolean | null>(null);
+  const [linkedinConnections, setLinkedinConnections] = useState<LinkedInConnectionInfo[]>([]);
+  const [linkedinConnectionId, setLinkedinConnectionId] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
   // Latest committed canvas text — used to validate targeted edit ops at stream
@@ -385,17 +401,31 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [user?.id]);
 
   // ── LinkedIn connection check ───────────────────────────────────────────────
+  // Loads ALL active connections (Teams users may have up to 10) and keeps the
+  // selected publish account in sync with the live list.
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     const check = async () => {
       const { data } = await supabase
         .from("linkedin_connections")
-        .select("user_id, expires_at")
+        .select(
+          "id, linkedin_name, linkedin_picture_url, linkedin_member_urn, expires_at",
+        )
         .eq("user_id", user.id)
-        .maybeSingle();
+        .order("created_at", { ascending: true });
       if (cancelled) return;
-      setLinkedinConnected(!!data && new Date(data.expires_at).getTime() > Date.now());
+      const now = Date.now();
+      const active = (data ?? []).filter(
+        (c) => new Date(c.expires_at).getTime() > now,
+      ) as LinkedInConnectionInfo[];
+      setLinkedinConnections(active);
+      setLinkedinConnected(active.length > 0);
+      // Keep selection valid: default to the most recently connected account
+      setLinkedinConnectionId((prev) => {
+        if (prev && active.some((c) => c.id === prev)) return prev;
+        return active.length ? active[active.length - 1].id : null;
+      });
     };
     void check();
     const channel = createUniqueChannel(`linkedin-ws-${user.id}`)
@@ -758,7 +788,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const resp = await fetch("/api/linkedin/publish", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ content: draft, images }),
+      body: JSON.stringify({
+        content: draft,
+        images,
+        ...(linkedinConnectionId ? { connection_id: linkedinConnectionId } : {}),
+      }),
     });
     const data = (await resp.json().catch(() => ({}))) as {
       success?: boolean;
@@ -773,7 +807,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (data.code === "LINKEDIN_TOKEN_EXPIRED") setLinkedinConnected(false);
       setError(data.error ?? "Failed to publish.");
     }
-  }, [overLimit, draft, publishing, images, user, saveDraft]);
+  }, [overLimit, draft, publishing, images, user, saveDraft, linkedinConnectionId]);
 
   // ── Chat transcript helpers ────────────────────────────────────────────────
   const fetchThreadMessages = useCallback(async (threadUid: string, seq: number) => {
@@ -1019,6 +1053,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     messages,
     publishing,
     linkedinConnected,
+    linkedinConnections,
+    linkedinConnectionId,
     charCount,
     wordCount,
     overLimit,
@@ -1040,6 +1076,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     sendMessage,
     abortGeneration,
     publish,
+    setLinkedinConnectionId,
     loadDraft,
     openThread,
     newChat,

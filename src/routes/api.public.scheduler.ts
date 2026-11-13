@@ -25,7 +25,7 @@ export const Route = createFileRoute("/api/public/scheduler")({
         const nowIso = new Date().toISOString();
         const { data: due, error } = await supabaseAdmin
           .from("drafts")
-          .select("id, user_id, content, images")
+          .select("id, user_id, content, images, linkedin_connection_id")
           .in("schedule_status", ["scheduled", "pending"])
           .lte("scheduled_at", nowIso)
           .limit(20);
@@ -46,7 +46,11 @@ export const Route = createFileRoute("/api/public/scheduler")({
 
           try {
             const imgs = Array.isArray(d.images) ? (d.images as string[]) : [];
-            const result = await publishToLinkedIn(d.user_id, d.content, imgs);
+            const connId =
+              typeof d.linkedin_connection_id === "string" && d.linkedin_connection_id
+                ? d.linkedin_connection_id
+                : null;
+            const result = await publishToLinkedIn(d.user_id, d.content, imgs, connId);
             if (result.ok) {
               ok++;
               await supabaseAdmin
