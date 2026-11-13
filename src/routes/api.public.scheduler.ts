@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/lib/supabase-admin.server";
 import { publishToLinkedIn } from "@/lib/linkedin-publish.server";
+import {
+  recordPublishedPost,
+  refreshLinkedInPostStats,
+} from "@/lib/linkedin-stats.server";
 
 export const Route = createFileRoute("/api/public/scheduler")({
   server: {
@@ -22,6 +26,10 @@ export const Route = createFileRoute("/api/public/scheduler")({
         // Cleanup any expired LinkedIn connections (triggers Realtime DELETE events)
         await supabaseAdmin.rpc("expire_linkedin_connections" as any);
 
+        // Best-effort refresh of engagement stats for recently published posts.
+        // Bounded (≤5 API calls/tick) and never blocks publishing below.
+        const stats = await refreshLinkedInPostStats();
+
         const nowIso = new Date().toISOString();
         const { data: due, error } = await supabaseAdmin
           .from("drafts")
@@ -33,7 +41,13 @@ export const Route = createFileRoute("/api/public/scheduler")({
         if (error) {
           return Response.json({ error: error.message }, { status: 500 });
         }
-        if (!due?.length) return Response.json({ processed: 0, expiredCleaned: true });
+        if (!due?.length) {
+          return Response.json({
+            processed: 0,
+            expiredCleaned: true,
+            statsRefreshed: stats.refreshed,
+          });
+        }
 
         let ok = 0;
         let failed = 0;
@@ -53,6 +67,9 @@ export const Route = createFileRoute("/api/public/scheduler")({
             const result = await publishToLinkedIn(d.user_id, d.content, imgs, connId);
             if (result.ok) {
               ok++;
+              // Persist the returned post id (normalized to a full URN) and
+              // seed its stats row so engagement tracking starts on the next
+              // scheduler tick.
               await supabaseAdmin
                 .from("drafts")
                 .update({
@@ -61,6 +78,14 @@ export const Route = createFileRoute("/api/public/scheduler")({
                   schedule_error: null,
                 })
                 .eq("id", d.id);
+              if (result.postId) {
+                await recordPublishedPost({
+                  draftId: d.id,
+                  userId: d.user_id,
+                  connectionId: connId,
+                  postId: result.postId,
+                });
+              }
             } else {
               failed++;
               await supabaseAdmin
@@ -83,7 +108,12 @@ export const Route = createFileRoute("/api/public/scheduler")({
           }
         }
 
-        return Response.json({ processed: due.length, published: ok, failed });
+        return Response.json({
+          processed: due.length,
+          published: ok,
+          failed,
+          statsRefreshed: stats.refreshed,
+        });
       },
     },
   },

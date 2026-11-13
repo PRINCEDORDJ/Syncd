@@ -163,8 +163,10 @@ export type Database = {
           id: string;
           images: string[];
           linkedin_connection_id: string | null;
+          linkedin_post_urn: string | null;
           media_bytes: number;
           published: boolean;
+          published_at: string | null;
           raw_input: string;
           schedule_error: string | null;
           schedule_status: string;
@@ -186,8 +188,10 @@ export type Database = {
           id?: string;
           images?: string[];
           linkedin_connection_id?: string | null;
+          linkedin_post_urn?: string | null;
           media_bytes?: number;
           published?: boolean;
+          published_at?: string | null;
           raw_input?: string;
           schedule_error?: string | null;
           schedule_status?: string;
@@ -209,8 +213,10 @@ export type Database = {
           id?: string;
           images?: string[];
           linkedin_connection_id?: string | null;
+          linkedin_post_urn?: string | null;
           media_bytes?: number;
           published?: boolean;
+          published_at?: string | null;
           raw_input?: string;
           schedule_error?: string | null;
           schedule_status?: string;
@@ -289,6 +295,66 @@ export type Database = {
           user_id?: string;
         };
         Relationships: [];
+      };
+      linkedin_post_stats: {
+        Row: {
+          comments: number;
+          draft_id: string;
+          fetched_at: string;
+          last_refresh_error: string | null;
+          linkedin_connection_id: string | null;
+          linkedin_post_urn: string;
+          reactions: number;
+          refresh_after: string;
+          reposts: number;
+          shares: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          comments?: number;
+          draft_id: string;
+          fetched_at?: string;
+          last_refresh_error?: string | null;
+          linkedin_connection_id?: string | null;
+          linkedin_post_urn: string;
+          reactions?: number;
+          refresh_after?: string;
+          reposts?: number;
+          shares?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          comments?: number;
+          draft_id?: string;
+          fetched_at?: string;
+          last_refresh_error?: string | null;
+          linkedin_connection_id?: string | null;
+          linkedin_post_urn?: string;
+          reactions?: number;
+          refresh_after?: string;
+          reposts?: number;
+          shares?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "linkedin_post_stats_draft_id_fkey";
+            columns: ["draft_id"];
+            isOneToOne: true;
+            referencedRelation: "drafts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "linkedin_post_stats_linkedin_connection_id_fkey";
+            columns: ["linkedin_connection_id"];
+            isOneToOne: false;
+            referencedRelation: "linkedin_connections";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       linkedin_oauth_states: {
         Row: {
