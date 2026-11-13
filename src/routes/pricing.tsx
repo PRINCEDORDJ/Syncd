@@ -391,7 +391,7 @@ function PricingPage() {
                   ],
                   [
                     "How do pooled credits work for Teams?",
-                    "Your workspace has one shared credit pool. Any team member spending a credit draws from that pool. Buy more seats, get more pooled credits (150 per seat).",
+                    "Your workspace has one shared credit pool. Any team member spending a credit draws from that pool. Buy more seats, get more pooled credits (350 per seat).",
                   ],
                   [
                     "Do top-up credits expire?",

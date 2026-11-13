@@ -59,6 +59,9 @@ export function Canvas() {
     wordCount,
     overLimit,
     linkedinConnected,
+    linkedinConnections,
+    linkedinConnectionId,
+    setLinkedinConnectionId,
     publishing,
     publish,
     draftId,
@@ -93,6 +96,9 @@ export function Canvas() {
       .update({
         scheduled_at: iso,
         schedule_status: "scheduled",
+        // Remember which LinkedIn account should publish this post (Teams
+        // multi-account). Null keeps the legacy default (most recent).
+        linkedin_connection_id: linkedinConnectionId,
       })
       .eq("id", draftId);
     if (err) setError(err.message);
@@ -485,17 +491,33 @@ export function Canvas() {
           </button>
           {canEdit &&
             (linkedinConnected ? (
-              <button
-                type="button"
-                onClick={() => void publish()}
-                disabled={!draft.trim() || overLimit || publishing}
-                className="h-8 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
-              >
-                {publishing ? "Publishing…" : "Publish"}
-                <span aria-hidden className="text-surface/60">
-                  ↗
-                </span>
-              </button>
+              <>
+                {linkedinConnections.length > 1 && (
+                  <select
+                    aria-label="Publish to LinkedIn account"
+                    value={linkedinConnectionId ?? ""}
+                    onChange={(e) => setLinkedinConnectionId(e.target.value || null)}
+                    className="h-8 max-w-[11rem] px-2 rounded-md text-[13px] font-medium text-ink border border-border bg-card hover:bg-subtle transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    {linkedinConnections.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.linkedin_name ?? "LinkedIn member"}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void publish()}
+                  disabled={!draft.trim() || overLimit || publishing}
+                  className="h-8 px-4 rounded-md text-[13px] font-medium bg-ink text-surface hover:bg-ink/90 disabled:opacity-50 transition-colors inline-flex items-center gap-1.5"
+                >
+                  {publishing ? "Publishing…" : "Publish"}
+                  <span aria-hidden className="text-surface/60">
+                    ↗
+                  </span>
+                </button>
+              </>
             ) : (
               <Link
                 to="/settings"

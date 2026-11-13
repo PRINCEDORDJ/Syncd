@@ -166,7 +166,7 @@ ssyncd/
 ## 2026-09-17
 
 - **Workspace-Scoped Credits & Storage**: Added workspace-level credit tracking and storage accounting. Credits are now tracked per-workspace, and storage quotas are workspace-scoped. New migrations: `20260917100000_workspace_scoped_credits_and_storage.sql`, `20260917110000_update_handle_plan_change_workspace_scoped.sql`.
-- **Pricing Update**: Revised pricing — Studio $12/month ($115/year), Teams $15/seat/month ($144/seat/year). Studio: 150 credits/month, single workspace. Teams: 150 credits/seat (pooled), 1 workspace per user. Top-up packs unchanged ($4/50, $10/150, $25/500).
+- **Pricing Update**: Revised pricing — Studio $12/month ($115/year), Teams $15/seat/month ($144/seat/year). Studio: 150 credits/month, single workspace. Teams: 350 credits/seat (pooled), 1 workspace per user. Top-up packs unchanged ($4/50, $10/150, $25/500).
 - **Plan Limits Update**: Studio `monthlyCredits` 100→150, `maxWorkspaces` 999→1. Teams `maxWorkspaces` 999→1. Both plans now limited to 1 workspace per user.
 
 ## 2026-09-12

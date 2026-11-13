@@ -162,6 +162,7 @@ export type Database = {
           created_at: string;
           id: string;
           images: string[];
+          linkedin_connection_id: string | null;
           media_bytes: number;
           published: boolean;
           raw_input: string;
@@ -184,6 +185,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           images?: string[];
+          linkedin_connection_id?: string | null;
           media_bytes?: number;
           published?: boolean;
           raw_input?: string;
@@ -206,6 +208,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           images?: string[];
+          linkedin_connection_id?: string | null;
           media_bytes?: number;
           published?: boolean;
           raw_input?: string;
@@ -234,6 +237,13 @@ export type Database = {
             columns: ["workspace_id"];
             isOneToOne: false;
             referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "drafts_linkedin_connection_id_fkey";
+            columns: ["linkedin_connection_id"];
+            isOneToOne: false;
+            referencedRelation: "linkedin_connections";
             referencedColumns: ["id"];
           },
         ];

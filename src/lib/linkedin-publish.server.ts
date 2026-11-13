@@ -7,16 +7,26 @@ export async function publishToLinkedIn(
   userId: string,
   content: string,
   images: string[] = [],
+  connectionId: string | null = null,
 ): Promise<PublishResult> {
   if (!content.trim()) return { ok: false, status: 400, error: "Empty content." };
   if (content.length > 3000)
     return { ok: false, status: 400, error: "Exceeds LinkedIn 3,000 char limit." };
 
-  const { data: conn, error: connErr } = await supabaseAdmin
+  let connQuery = supabaseAdmin
     .from("linkedin_connections")
-    .select("access_token, expires_at, linkedin_member_urn")
-    .eq("user_id", userId)
-    .maybeSingle();
+    .select("id, access_token, expires_at, linkedin_member_urn")
+    .eq("user_id", userId);
+
+  if (connectionId) {
+    connQuery = connQuery.eq("id", connectionId);
+  } else {
+    // Legacy default: most recently connected account
+    connQuery = connQuery.order("created_at", { ascending: false }).limit(1);
+  }
+
+  const { data: connRows, error: connErr } = await connQuery;
+  const conn = connRows?.[0] ?? null;
   if (connErr || !conn) return { ok: false, status: 400, error: "LinkedIn not connected." };
   if (new Date(conn.expires_at).getTime() < Date.now())
     return { ok: false, status: 400, error: "LinkedIn connection expired." };
