@@ -64,6 +64,8 @@ export function AppShell() {
   const prevMsgCountRef = useRef(0);
   const mobileImageInputRef = useRef<HTMLInputElement | null>(null);
   const mobileAttachInputRef = useRef<HTMLInputElement | null>(null);
+  // Pinned mobile textarea — focused when a chat suggestion is picked.
+  const mobileTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     persistBool(CHAT_COLLAPSED_KEY, chatCollapsed);
@@ -230,7 +232,13 @@ export function AppShell() {
           active={activeTab}
           onChange={setActiveTab}
           canvas={<Canvas />}
-          chat={<AiChatPanel />}
+          chat={
+            <AiChatPanel
+              input={mobileInput}
+              onInputChange={setMobileInput}
+              onRequestInputFocus={() => mobileTextareaRef.current?.focus()}
+            />
+          }
         />
 
         {/* Pinned bottom input, shared between both tabs */}
@@ -240,6 +248,7 @@ export function AppShell() {
             value={mobileInput}
             onChange={setMobileInput}
             onSend={handleMobileSend}
+            textareaRef={mobileTextareaRef}
           />
         </div>
       </div>
