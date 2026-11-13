@@ -96,6 +96,7 @@ export interface WorkspaceState {
   messages: ChatMessage[];
   // Publish
   publishing: boolean;
+  isPublished: boolean;
   linkedinConnected: boolean | null;
   /** Active LinkedIn connections for the signed-in user (oldest first). */
   linkedinConnections: LinkedInConnectionInfo[];
@@ -149,6 +150,7 @@ export interface WorkspaceActions {
     attachments: AttachmentItem[];
     raw_input: string;
     thread_id?: string | null;
+    published?: boolean;
   }) => void;
   newDraft: () => void;
 }
@@ -290,6 +292,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [success, setSuccess] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [publishing, setPublishing] = useState(false);
+  const [isPublished, setIsPublished] = useState(false);
   const [linkedinConnected, setLinkedinConnected] = useState<boolean | null>(null);
   const [linkedinConnections, setLinkedinConnections] = useState<LinkedInConnectionInfo[]>([]);
   const [linkedinConnectionId, setLinkedinConnectionId] = useState<string | null>(null);
@@ -320,6 +323,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setMessages([]);
     setError(null);
     setSuccess(null);
+    setIsPublished(false);
   }, [userId]);
 
   // Ensure active workspace is resolved and valid for current user.
@@ -410,9 +414,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const check = async () => {
       const { data } = await supabase
         .from("linkedin_connections")
-        .select(
-          "id, linkedin_name, linkedin_picture_url, linkedin_member_urn, expires_at",
-        )
+        .select("id, linkedin_name, linkedin_picture_url, linkedin_member_urn, expires_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: true });
       if (cancelled) return;
@@ -779,6 +781,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setPublishing(true);
     setError(null);
     setSuccess(null);
+    setIsPublished(false);
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
     if (!token) {
@@ -804,6 +807,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     };
     setPublishing(false);
     if (resp.ok && data.success) {
+      setIsPublished(true);
       setSuccess("Published to LinkedIn successfully.");
       if (user) {
         const savedId = await saveDraft(true);
@@ -842,16 +846,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (data.code === "LINKEDIN_TOKEN_EXPIRED") setLinkedinConnected(false);
       setError(data.error ?? "Failed to publish.");
     }
-  }, [
-    overLimit,
-    draft,
-    publishing,
-    images,
-    user,
-    saveDraft,
-    linkedinConnectionId,
-    draftId,
-  ]);
+  }, [overLimit, draft, publishing, images, user, saveDraft, linkedinConnectionId, draftId]);
 
   // ── Chat transcript helpers ────────────────────────────────────────────────
   const fetchThreadMessages = useCallback(async (threadUid: string, seq: number) => {
@@ -888,10 +883,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         attachments: AttachmentItem[];
         raw_input: string;
         thread_id?: string | null;
+        published?: boolean;
       },
       seq: number,
     ) => {
       setDraftId(row.id);
+      setIsPublished(Boolean(row.published));
       setThreadId(row.thread_id ?? newThreadId());
       setDraft(row.content);
       draftRef.current = row.content;
@@ -970,7 +967,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (thread.draft_id) {
         const { data: row, error: fetchErr } = await supabase
           .from("drafts")
-          .select("id, content, title, tone, images, attachments, raw_input, thread_id")
+          .select("id, content, title, tone, images, attachments, raw_input, thread_id, published")
           .eq("id", thread.draft_id)
           .maybeSingle();
         if (fetchErr) {
@@ -988,6 +985,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
               attachments: (row.attachments as unknown as AttachmentItem[] | null) ?? [],
               raw_input: (row.raw_input as string | null) ?? "",
               thread_id: (row as { thread_id?: string | null }).thread_id ?? null,
+              published: Boolean(row.published),
             },
             seq,
           );
@@ -1028,6 +1026,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setMessages([]);
     setError(null);
     setSuccess(null);
+    setIsPublished(false);
   }, []);
 
   // ── New chat ───────────────────────────────────────────────────────────────
@@ -1045,6 +1044,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setMessages([]);
     setError(null);
     setSuccess(null);
+    setIsPublished(false);
   }, [draftId, newDraft]);
 
   // ── AI Mode ────────────────────────────────────────────────────────────────
@@ -1077,6 +1077,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setMessages([]);
     setError(null);
     setSuccess(null);
+    setIsPublished(false);
   }, []);
 
   const ctx: WorkspaceCtx = {
@@ -1096,6 +1097,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     success,
     messages,
     publishing,
+    isPublished,
     linkedinConnected,
     linkedinConnections,
     linkedinConnectionId,

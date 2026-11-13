@@ -37,6 +37,7 @@ import {
   Book,
   CreditCard,
   CalendarClock,
+  BarChart3,
   Bell,
 } from "lucide-react";
 
@@ -55,7 +56,7 @@ const SETTINGS_SEARCH = {
 };
 
 interface NavLink {
-  to: "/app" | "/drafts" | "/schedule" | "/methodology";
+  to: "/app" | "/drafts" | "/schedule" | "/analytics" | "/methodology";
   label: string;
   icon: typeof LayoutGrid;
 }
@@ -64,6 +65,7 @@ const NAV_LINKS: NavLink[] = [
   { to: "/app", label: "Workspace", icon: LayoutGrid },
   { to: "/drafts", label: "Drafts", icon: FileText },
   { to: "/schedule", label: "Schedule", icon: CalendarClock },
+  { to: "/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/methodology", label: "Methodology", icon: Book },
 ];
 
