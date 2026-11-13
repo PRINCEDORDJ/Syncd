@@ -1,7 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
+import { createUniqueChannel } from "@/lib/realtime";
 import { SidebarShell } from "@/components/workspace/SidebarShell";
 import {
   Trash2,
@@ -129,7 +131,7 @@ function DraftsList() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileAttachInputRef = useRef<HTMLInputElement | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const { loadDraft, activeWorkspaceId } = useWorkspace();
+  const { loadDraft, activeWorkspaceId, draftId, newDraft } = useWorkspace();
   const canEdit = useWorkspaceCanEdit(activeWorkspaceId, user?.id);
   const navigate = useNavigate();
 
@@ -277,7 +279,7 @@ function DraftsList() {
           content: nextContent,
           char_count: nextCharCount,
           images: modalImages,
-          attachments: modalAttachments as any,
+          attachments: modalAttachments as unknown as Json,
           media_bytes: mediaBytes,
         })
         .eq("id", selected.id)
@@ -316,42 +318,57 @@ function DraftsList() {
     }
   }
 
-  useEffect(() => {
+  const fetchRows = useCallback(async () => {
     if (!user || !activeWorkspaceId) {
       setRows([]);
       return;
     }
-    let cancelled = false;
-    (async () => {
-      const { data, error: err } = await supabase
-        .from("drafts")
-        .select(
-          "id, title, content, tone, char_count, published, updated_at, images, attachments, scheduled_at, schedule_status, thread_id, linkedin_post_urn",
-        )
-        .eq("workspace_id", activeWorkspaceId)
-        .order("updated_at", { ascending: false });
-      if (cancelled) return;
-      if (err) {
-        setError(err.message);
-        setRows([]);
-      } else {
-        setRows(
-          (data ?? []).map((r) => ({
-            ...r,
-            images: Array.isArray(r.images) ? (r.images as string[]) : [],
-            attachments: Array.isArray(r.attachments)
-              ? (r.attachments as unknown as DraftAttachment[])
-              : [],
-            scheduled_at: (r as { scheduled_at?: string | null }).scheduled_at ?? null,
-            schedule_status: (r as { schedule_status?: string | null }).schedule_status ?? null,
-          })),
-        );
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    const { data, error: err } = await supabase
+      .from("drafts")
+      .select(
+        "id, title, content, tone, char_count, published, updated_at, images, attachments, scheduled_at, schedule_status, thread_id, linkedin_post_urn",
+      )
+      .eq("workspace_id", activeWorkspaceId)
+      .order("updated_at", { ascending: false });
+    if (err) {
+      setError(err.message);
+      setRows([]);
+    } else {
+      setRows(
+        (data ?? []).map((r) => ({
+          ...r,
+          images: Array.isArray(r.images) ? (r.images as string[]) : [],
+          attachments: Array.isArray(r.attachments)
+            ? (r.attachments as unknown as DraftAttachment[])
+            : [],
+          scheduled_at: (r as { scheduled_at?: string | null }).scheduled_at ?? null,
+          schedule_status: (r as { schedule_status?: string | null }).schedule_status ?? null,
+        })),
+      );
+    }
   }, [user, activeWorkspaceId]);
+
+  useEffect(() => {
+    void fetchRows();
+  }, [fetchRows]);
+
+  // Realtime subscription — keep the list in sync with DB changes.
+  useEffect(() => {
+    if (!activeWorkspaceId) return;
+    const ch = createUniqueChannel(`drafts-page-${activeWorkspaceId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "drafts",
+          filter: `workspace_id=eq.${activeWorkspaceId}`,
+        },
+        () => void fetchRows(),
+      )
+      .subscribe();
+    return () => void supabase.removeChannel(ch);
+  }, [activeWorkspaceId, fetchRows]);
 
   // Engagement stats for published posts (RLS-scoped; only rows with stats show).
   const [statsById, setStatsById] = useState<Record<string, PostStats>>({});
@@ -404,6 +421,8 @@ function DraftsList() {
     }
     setRows((prev) => (prev ? prev.filter((r) => r.id !== id) : prev));
     if (selected?.id === id) closeModal();
+    // If this is the currently-open draft in the canvas, clear it.
+    if (draftId === id) newDraft();
   }
 
   async function publishDraft(row: DraftRow) {
@@ -457,7 +476,7 @@ function DraftsList() {
           content: contentToSend,
           char_count: contentToSend.length,
           images: imagesToSend,
-          attachments: attachmentsToSend as any,
+          attachments: attachmentsToSend as unknown as Json,
         })
         .eq("id", row.id)
         .eq("user_id", user.id);

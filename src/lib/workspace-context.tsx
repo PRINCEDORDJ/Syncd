@@ -1080,6 +1080,28 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setIsPublished(false);
   }, []);
 
+  // When active draft is deleted in the database, immediately clear canvas
+  useEffect(() => {
+    if (!draftId) return;
+    const ch = createUniqueChannel(`canvas-draft-${draftId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "drafts",
+          filter: `id=eq.${draftId}`,
+        },
+        () => {
+          newDraft();
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [draftId, newDraft]);
+
   const ctx: WorkspaceCtx = {
     activeWorkspaceId,
     draftId,

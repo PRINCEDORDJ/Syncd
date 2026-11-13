@@ -1,5 +1,5 @@
 import { useRef, useMemo, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useWorkspace, TONES, TONE_LABELS, type Tone } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth";
 import { useWorkspaceCanEdit } from "@/lib/workspace-permissions";
@@ -21,6 +21,7 @@ import { formatBytes, MAX_IMAGES, MAX_ATTACHMENTS } from "@/lib/image-validation
 import type { AttachmentItem } from "@/lib/image-validation";
 import { supabase } from "@/integrations/supabase/client";
 import { SchedulePicker } from "@/components/SchedulePicker";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useCredits } from "@/hooks/useCredits";
 import { PLAN_LIMITS } from "@/lib/plans";
 
@@ -68,21 +69,29 @@ export function Canvas() {
     publish,
     draftId,
     activeWorkspaceId,
+    newDraft,
   } = useWorkspace();
 
   const { user } = useAuth();
   const canEdit = useWorkspaceCanEdit(activeWorkspaceId, user?.id);
 
-  const navigate = useNavigate();
   const [showScheduler, setShowScheduler] = useState(false);
   const [scheduling, setScheduling] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const credits = useCredits();
   const allowsScheduling = credits.isAdmin || PLAN_LIMITS[credits.plan]?.scheduling;
 
-  async function handleDelete() {
+  async function handleConfirmDelete() {
     if (!draftId) return;
-    await supabase.from("drafts").delete().eq("id", draftId);
-    navigate({ to: "/drafts" });
+    const id = draftId;
+    setConfirmDeleteOpen(false);
+    const { error: err } = await supabase.from("drafts").delete().eq("id", id);
+    if (err) {
+      setError(err.message);
+      return;
+    }
+    newDraft();
+    setSuccess("Draft deleted successfully.");
   }
 
   async function handleSchedule(iso: string) {
@@ -226,7 +235,9 @@ export function Canvas() {
             {draftId && canEdit && (
               <button
                 type="button"
-                onClick={handleDelete}
+                onClick={() => setConfirmDeleteOpen(true)}
+                title="Delete draft"
+                aria-label="Delete draft"
                 className="h-6 px-2 rounded text-[11px] font-medium border border-destructive/20 bg-card text-destructive hover:bg-destructive/5 transition-colors"
               >
                 <Trash2 className="size-3" />
@@ -498,7 +509,9 @@ export function Canvas() {
           {draftId && canEdit && (
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => setConfirmDeleteOpen(true)}
+              title="Delete draft"
+              aria-label="Delete draft"
               className="h-8 px-3 rounded-md text-[13px] font-medium text-destructive border border-destructive/20 hover:bg-destructive/5 transition-colors"
             >
               <Trash2 className="size-4" />
@@ -559,6 +572,16 @@ export function Canvas() {
             ))}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Delete post?"
+        description="This will permanently delete this draft from your workspace. This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        confirmText="Delete post"
+        variant="destructive"
+      />
     </div>
   );
 }
