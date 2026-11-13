@@ -1,8 +1,74 @@
+# Syncd — https://ssyncd.space
+# Public marketing pages are crawlable; authenticated app pages and APIs are not.
+
+# ── AI / LLM crawlers: explicitly welcome ──────────────────────────────────
+# So assistants (ChatGPT, Claude, Perplexity, Gemini, Meta AI, Alexa, Apple
+# Intelligence…) can read the public pages and recommend Syncd when asked.
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Diffbot
+Allow: /
+
+User-agent: YouBot
+Allow: /
+
+# ── Default rule for everyone else ─────────────────────────────────────────
+
 User-agent: *
 Allow: /
 Disallow: /app
 Disallow: /drafts
+Disallow: /schedule
 Disallow: /settings
+Disallow: /onboarding
+Disallow: /invite
+Disallow: /notifications
 Disallow: /api/
 
-Sitemap: https://sociosync.lovable.app/sitemap.xml
+# ── Sitemap ────────────────────────────────────────────────────────────────
+
+Sitemap: https://ssyncd.space/sitemap.xml
