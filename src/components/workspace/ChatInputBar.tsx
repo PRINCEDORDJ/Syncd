@@ -2,7 +2,18 @@ import { useEffect, useRef } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth";
 import { useWorkspaceCanEdit } from "@/lib/workspace-permissions";
-import { ImagePlus, Paperclip, ArrowUp, Square, MessageSquareText, PenLine } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { blobToBase64, formatElapsed, useVoiceRecorder } from "@/lib/use-voice-recorder";
+import {
+  ImagePlus,
+  Paperclip,
+  ArrowUp,
+  Square,
+  MessageSquareText,
+  PenLine,
+  Mic,
+  Loader2,
+} from "lucide-react";
 import { MAX_IMAGES, MAX_ATTACHMENTS } from "@/lib/image-validation";
 import { useIsGenerationBlocked } from "@/components/CreditBanner";
 
@@ -32,6 +43,43 @@ export function ChatInputBar({ variant = "full", value, onChange, onSend }: Chat
   const isBlocked = useIsGenerationBlocked();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachInputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Voice notes: record with the mic, transcribe via /api/transcribe (Gemini),
+  // then drop the transcript into the input for review before sending.
+  const insertTranscript = (text: string) => {
+    onChange(value.trim() ? `${value.trimEnd()} ${text}` : text);
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
+  const transcribeRecording = async (blob: Blob): Promise<string> => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) throw new Error("Please sign in to use voice input.");
+    const base64 = await blobToBase64(blob);
+    const mimeType = blob.type.split(";")[0] || "audio/webm";
+    const resp = await fetch("/api/transcribe", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ audio: base64, mimeType }),
+    });
+    const payload = (await resp.json().catch(() => null)) as {
+      text?: string;
+      error?: string;
+    } | null;
+    if (!resp.ok) {
+      throw new Error(payload?.error ?? "Transcription failed. Try again in a moment.");
+    }
+    return payload?.text ?? "";
+  };
+
+  const recorder = useVoiceRecorder({
+    transcribe: transcribeRecording,
+    onTranscribed: insertTranscript,
+  });
 
   // Viewers can chat with the assistant (personal history) but not edit the canvas.
   useEffect(() => {
@@ -40,14 +88,30 @@ export function ChatInputBar({ variant = "full", value, onChange, onSend }: Chat
 
   const isFirstTurn = messages.length === 0;
   const placeholder =
-    aiMode === "assistant"
-      ? "Ask anything about writing, strategy, or LinkedIn…"
-      : isFirstTurn
-        ? "Dump a thought, a voice note transcript, or three messy bullets…"
-        : "Refine the draft — make it punchier, cut paragraph 2…";
+    recorder.status === "recording"
+      ? `Listening… ${formatElapsed(recorder.elapsed)} — tap the mic to stop`
+      : aiMode === "assistant"
+        ? "Ask anything about writing, strategy, or LinkedIn…"
+        : isFirstTurn
+          ? "Dump a thought, a voice note transcript, or three messy bullets…"
+          : "Refine the draft — make it punchier, cut paragraph 2…";
+
+  // Auto-grow the textarea so typed text is never hidden behind a height cap;
+  // only past the max does it scroll instead.
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [value, recorder.status]);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
+      // Don't send mid-recording — finish the voice note first.
+      if (recorder.status !== "idle") {
+        e.preventDefault();
+        return;
+      }
       e.preventDefault();
       if (!generating && value.trim() && !isBlocked) onSend();
     }
@@ -87,14 +151,22 @@ export function ChatInputBar({ variant = "full", value, onChange, onSend }: Chat
 
       {/* Textarea */}
       <textarea
+        ref={textareaRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         rows={variant === "compact" ? 2 : 3}
-        className="resize-none bg-transparent text-[13px] text-ink leading-relaxed px-3.5 pt-3 pb-1 focus:outline-none placeholder:text-muted-foreground/50 min-h-[64px] max-h-[160px]"
+        className="resize-none overflow-y-auto bg-transparent text-[13px] text-ink leading-relaxed px-3.5 pt-3 pb-1 focus:outline-none placeholder:text-muted-foreground/50 min-h-[64px]"
         aria-label="Message Syncd"
       />
+
+      {/* Voice error (recording / transcription failures) */}
+      {recorder.error && (
+        <p className="px-3.5 pb-1 text-[10px] leading-relaxed text-destructive" role="status">
+          {recorder.error}
+        </p>
+      )}
 
       {/* Toolbar */}
       <div className="flex items-center justify-between px-2.5 pb-2.5 pt-1">
@@ -119,6 +191,36 @@ export function ChatInputBar({ variant = "full", value, onChange, onSend }: Chat
           >
             <Paperclip className="size-3.5" />
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (recorder.status === "recording") recorder.stop();
+              else if (recorder.status === "idle") void recorder.start();
+            }}
+            disabled={generating || isBlocked || recorder.status === "transcribing"}
+            title={
+              recorder.status === "recording"
+                ? "Stop recording and transcribe"
+                : "Record a voice note"
+            }
+            aria-label={recorder.status === "recording" ? "Stop recording" : "Record voice note"}
+            className={`h-7 w-7 inline-flex items-center justify-center rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              recorder.status === "recording"
+                ? "bg-destructive/10 text-destructive"
+                : "text-muted-foreground hover:text-ink hover:bg-subtle"
+            }`}
+          >
+            {recorder.status === "transcribing" ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Mic className="size-3.5" />
+            )}
+          </button>
+          {recorder.status === "recording" && (
+            <span className="text-[10px] font-mono text-destructive animate-pulse tabular-nums">
+              {formatElapsed(recorder.elapsed)}
+            </span>
+          )}
         </div>
 
         {/* Mode toggle */}

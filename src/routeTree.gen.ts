@@ -25,6 +25,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ApiGenerateRouteImport } from './routes/api.generate'
+import { Route as ApiTranscribeRouteImport } from './routes/api.transcribe'
 import { Route as ApiLinkedinCallbackRouteImport } from './routes/api.linkedin.callback'
 import { Route as ApiLinkedinDisconnectRouteImport } from './routes/api.linkedin.disconnect'
 import { Route as ApiLinkedinPublishRouteImport } from './routes/api.linkedin.publish'
@@ -116,6 +117,11 @@ const ApiGenerateRoute = ApiGenerateRouteImport.update({
   path: '/api/generate',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTranscribeRoute = ApiTranscribeRouteImport.update({
+  id: '/api/transcribe',
+  path: '/api/transcribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiLinkedinCallbackRoute = ApiLinkedinCallbackRouteImport.update({
   id: '/api/linkedin/callback',
   path: '/api/linkedin/callback',
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/api/generate': typeof ApiGenerateRoute
+  '/api/transcribe': typeof ApiTranscribeRoute
   '/api/linkedin/callback': typeof ApiLinkedinCallbackRoute
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
   '/api/linkedin/publish': typeof ApiLinkedinPublishRoute
@@ -212,6 +219,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/api/generate': typeof ApiGenerateRoute
+  '/api/transcribe': typeof ApiTranscribeRoute
   '/api/linkedin/callback': typeof ApiLinkedinCallbackRoute
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
   '/api/linkedin/publish': typeof ApiLinkedinPublishRoute
@@ -241,6 +249,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/api/generate': typeof ApiGenerateRoute
+  '/api/transcribe': typeof ApiTranscribeRoute
   '/api/linkedin/callback': typeof ApiLinkedinCallbackRoute
   '/api/linkedin/disconnect': typeof ApiLinkedinDisconnectRoute
   '/api/linkedin/publish': typeof ApiLinkedinPublishRoute
@@ -271,6 +280,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terms'
     | '/api/generate'
+    | '/api/transcribe'
     | '/api/linkedin/callback'
     | '/api/linkedin/disconnect'
     | '/api/linkedin/publish'
@@ -299,6 +309,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terms'
     | '/api/generate'
+    | '/api/transcribe'
     | '/api/linkedin/callback'
     | '/api/linkedin/disconnect'
     | '/api/linkedin/publish'
@@ -327,6 +338,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terms'
     | '/api/generate'
+    | '/api/transcribe'
     | '/api/linkedin/callback'
     | '/api/linkedin/disconnect'
     | '/api/linkedin/publish'
@@ -356,6 +368,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   ApiGenerateRoute: typeof ApiGenerateRoute
+  ApiTranscribeRoute: typeof ApiTranscribeRoute
   ApiLinkedinCallbackRoute: typeof ApiLinkedinCallbackRoute
   ApiLinkedinDisconnectRoute: typeof ApiLinkedinDisconnectRoute
   ApiLinkedinPublishRoute: typeof ApiLinkedinPublishRoute
@@ -482,6 +495,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGenerateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/transcribe': {
+      id: '/api/transcribe'
+      path: '/api/transcribe'
+      fullPath: '/api/transcribe'
+      preLoaderRoute: typeof ApiTranscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/linkedin/callback': {
       id: '/api/linkedin/callback'
       path: '/api/linkedin/callback'
@@ -572,6 +592,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   ApiGenerateRoute: ApiGenerateRoute,
+  ApiTranscribeRoute: ApiTranscribeRoute,
   ApiLinkedinCallbackRoute: ApiLinkedinCallbackRoute,
   ApiLinkedinDisconnectRoute: ApiLinkedinDisconnectRoute,
   ApiLinkedinPublishRoute: ApiLinkedinPublishRoute,
