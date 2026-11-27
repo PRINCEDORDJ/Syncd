@@ -18,18 +18,44 @@ export interface MessageAttachmentMeta {
 /** A composer attachment while it is waiting to be sent. */
 export interface MessageAttachment extends MessageAttachmentMeta {
   id: string;
+  /** Full (compressed where possible) content sent to the server. */
   dataUrl: string;
+  /** Small preview for images, persisted so it renders after a reload. */
+  thumbnail?: string;
 }
 
-/** Metadata attached to a chat message in the UI. Live messages may carry a preview. */
+/**
+ * Metadata attached to a chat message in the UI. Live messages may carry the
+ * full `dataUrl`; messages restored from the database carry `id` + `preview`
+ * and fetch the full content on demand.
+ */
 export interface ChatMessageAttachment extends MessageAttachmentMeta {
+  /** Persisted attachment id (present after a thread reload). */
+  id?: string;
+  /** Small thumbnail data URL for images (persisted, safe to render). */
   preview?: string;
+  /** Full data URL for a just-sent message that has not been reloaded. */
+  dataUrl?: string;
 }
 
-/** Persisted on `chat_messages.attachments` (metadata + extracted text only). */
+/** Persisted on `chat_messages.attachments` (metadata + extracted text). */
 export interface StoredMessageAttachment extends MessageAttachmentMeta {
+  id: string;
   text?: string | null;
   truncated?: boolean;
+  /** Small image thumbnail (data URL) for rendering after a reload. */
+  thumbnail?: string | null;
+}
+
+/**
+ * Persisted on `chat_messages.attachment_data` (the actual bytes as data URLs).
+ * Loaded lazily, only when a user opens or downloads an attachment.
+ */
+export interface StoredAttachmentData {
+  id: string;
+  name: string;
+  mimeType: string;
+  dataUrl: string;
 }
 
 export const MAX_MESSAGE_ATTACHMENTS = 5;
@@ -186,14 +212,18 @@ export function toChatMessageAttachments(raw: unknown): ChatMessageAttachment[] 
   const attachments: ChatMessageAttachment[] = [];
   for (const entry of raw) {
     if (!entry || typeof entry !== "object") continue;
-    const { name, size, mimeType, kind } = entry as Record<string, unknown>;
+    const { id, name, size, mimeType, kind, thumbnail } = entry as Record<string, unknown>;
     if (typeof name !== "string" || !name.trim()) continue;
     if (kind !== "image" && kind !== "document") continue;
+    const preview =
+      typeof thumbnail === "string" && thumbnail.startsWith("data:image/") ? thumbnail : undefined;
     attachments.push({
+      ...(typeof id === "string" && id ? { id } : {}),
       name,
       size: typeof size === "number" && Number.isFinite(size) ? size : 0,
       mimeType: typeof mimeType === "string" ? mimeType : "application/octet-stream",
       kind,
+      ...(preview ? { preview } : {}),
     });
   }
   return attachments.length ? attachments : undefined;

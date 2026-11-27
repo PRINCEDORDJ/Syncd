@@ -37,6 +37,7 @@ import {
   type ChatMessageAttachment,
   type MessageAttachment,
 } from "@/lib/attachments";
+import { prepareMessageAttachment } from "@/lib/attachment-preview";
 
 const ACTIVE_WORKSPACE_KEY = "syncd:active-workspace";
 const AI_MODE_KEY = "syncd:ai-mode";
@@ -144,6 +145,8 @@ export interface WorkspaceActions {
   handleMessageFiles: (files: FileList | null) => Promise<void>;
   removePendingAttachment: (id: string) => void;
   clearPendingAttachments: () => void;
+  /** Loads the persisted bytes for an attachment on demand (lazy, per click). */
+  getAttachmentDataUrl: (messageId: string, attachmentId: string) => Promise<string | null>;
   saveDraft: (asPublished?: boolean) => Promise<string | null>;
   /** Send a message: first turn = generate, subsequent = refine */
   sendMessage: (userInput: string) => Promise<void>;
@@ -579,23 +582,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setAttachmentsPreparing(true);
       try {
         const items = await Promise.all(
-          accepted.map(
-            (f) =>
-              new Promise<MessageAttachment>((res, rej) => {
-                const r = new FileReader();
-                r.onload = () =>
-                  res({
-                    id: makeId(),
-                    name: f.name,
-                    size: f.size,
-                    mimeType: f.type || "application/octet-stream",
-                    kind: inferAttachmentKind(f),
-                    dataUrl: String(r.result),
-                  });
-                r.onerror = () => rej(r.error);
-                r.readAsDataURL(f);
-              }),
-          ),
+          accepted.map(async (f): Promise<MessageAttachment> => {
+            const prepared = await prepareMessageAttachment(f);
+            return {
+              id: makeId(),
+              name: f.name,
+              size: prepared.size,
+              mimeType: prepared.mimeType,
+              kind: inferAttachmentKind(f),
+              dataUrl: prepared.dataUrl,
+              ...(prepared.thumbnail ? { thumbnail: prepared.thumbnail } : {}),
+            };
+          }),
         );
         // Discard the result if the chat was reset while reading.
         if (seq !== loadSeqRef.current) return;
@@ -711,7 +709,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         size: a.size,
         mimeType: a.mimeType,
         kind: a.kind,
-        ...(a.kind === "image" ? { preview: a.dataUrl } : {}),
+        dataUrl: a.dataUrl,
+        ...(a.thumbnail ? { preview: a.thumbnail } : {}),
       }));
       const userMsg: ChatMessage = {
         id: makeId(),
@@ -790,6 +789,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
               size: a.size,
               mimeType: a.mimeType,
               dataUrl: a.dataUrl,
+              ...(a.thumbnail ? { thumbnail: a.thumbnail } : {}),
             })),
             mode: aiMode,
             workspaceId: activeWorkspaceId ?? undefined,
@@ -1000,6 +1000,37 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       console.error("chat history load failed", e);
     }
   }, []);
+
+  /**
+   * Fetches the persisted bytes for one attachment. Thread loads only select
+   * lightweight metadata, so blobs are pulled only when the user opens or
+   * downloads a file.
+   */
+  const getAttachmentDataUrl = useCallback(
+    async (messageId: string, attachmentId: string): Promise<string | null> => {
+      try {
+        const { data, error } = await supabase
+          .from("chat_messages")
+          .select("attachment_data")
+          .eq("id", messageId)
+          .maybeSingle();
+        if (error) throw error;
+        const list = Array.isArray(data?.attachment_data) ? data.attachment_data : [];
+        for (const entry of list) {
+          if (!entry || typeof entry !== "object") continue;
+          const { id, dataUrl } = entry as { id?: unknown; dataUrl?: unknown };
+          if (id === attachmentId && typeof dataUrl === "string" && dataUrl) {
+            return dataUrl;
+          }
+        }
+        return null;
+      } catch (e) {
+        console.error("attachment content load failed", e);
+        return null;
+      }
+    },
+    [],
+  );
 
   const applyDraftRow = useCallback(
     (
@@ -1280,6 +1311,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     handleMessageFiles,
     removePendingAttachment,
     clearPendingAttachments,
+    getAttachmentDataUrl,
     saveDraft,
     sendMessage,
     abortGeneration,

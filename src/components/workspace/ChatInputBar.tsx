@@ -181,7 +181,11 @@ export function ChatInputBar({
               className="flex items-center gap-1.5 rounded-lg border border-border bg-subtle px-1.5 py-1"
             >
               {a.kind === "image" ? (
-                <img src={a.dataUrl} alt="" className="size-6 rounded object-cover" />
+                <img
+                  src={a.thumbnail ?? a.dataUrl}
+                  alt=""
+                  className="size-6 rounded object-cover"
+                />
               ) : (
                 <FileText className="size-3.5 shrink-0 text-muted-foreground" />
               )}

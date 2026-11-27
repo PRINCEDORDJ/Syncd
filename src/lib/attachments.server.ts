@@ -8,12 +8,14 @@ import {
   MAX_MESSAGE_ATTACHMENT_BYTES,
   MAX_MESSAGE_ATTACHMENT_TOTAL_BYTES,
   MAX_MESSAGE_IMAGES,
+  type StoredAttachmentData,
   type StoredMessageAttachment,
 } from "@/lib/attachments";
 
 const MAX_DOCUMENT_CHARS_PER_FILE = 15_000;
 const MAX_DOCUMENT_CHARS_TOTAL = 30_000;
 const MAX_IMAGE_TEXT_CHARS = 2_000;
+const MAX_THUMBNAIL_CHARS = 400_000; // ~300 KB decoded
 const IMAGE_DESCRIBE_TIMEOUT_MS = 8_000;
 const SCANNED_PDF_TEXT_THRESHOLD = 200;
 
@@ -30,6 +32,8 @@ export class ChatAttachmentError extends Error {
 export interface ParsedChatAttachments {
   /** Metadata + extracted text, persisted with the user's chat message. */
   stored: StoredMessageAttachment[];
+  /** Full attachment bytes (data URLs), persisted separately and loaded lazily. */
+  attachmentData: StoredAttachmentData[];
   /** Image attachments sent to the model as vision input for this turn. */
   imageInputs: AiImageInput[];
   /** Native PDF fallback for scanned documents with no usable text layer. */
@@ -44,6 +48,18 @@ function safeName(value: unknown): string {
   }
   // eslint-disable-next-line no-control-regex
   return value.replace(/[\u0000-\u001f\\/]/g, "_").slice(0, 200);
+}
+
+/**
+ * Client-supplied image thumbnails are only a rendering hint. Reject anything
+ * that is not a small raster data URL; an invalid thumbnail is dropped rather
+ * than failing the whole message.
+ */
+function safeThumbnail(value: unknown): string | null {
+  if (typeof value !== "string" || !value.startsWith("data:image/")) return null;
+  if (!/^data:image\/(jpeg|png|webp|gif);base64,/i.test(value)) return null;
+  if (value.length > MAX_THUMBNAIL_CHARS) return null;
+  return value;
 }
 
 function decodeDataUrl(dataUrl: unknown): { mimeType: string; base64: string; buffer: Buffer } {
@@ -243,7 +259,7 @@ function validateImageMime(name: string, mimeType: string): void {
  */
 export async function parseChatAttachments(raw: unknown): Promise<ParsedChatAttachments> {
   if (raw === undefined || raw === null) {
-    return { stored: [], imageInputs: [], fileInputs: [], documentTexts: [] };
+    return { stored: [], attachmentData: [], imageInputs: [], fileInputs: [], documentTexts: [] };
   }
   if (!Array.isArray(raw)) {
     throw new ChatAttachmentError("Invalid attachment payload.");
@@ -255,6 +271,7 @@ export async function parseChatAttachments(raw: unknown): Promise<ParsedChatAtta
   }
 
   const stored: StoredMessageAttachment[] = [];
+  const attachmentData: StoredAttachmentData[] = [];
   const imageInputs: AiImageInput[] = [];
   const fileInputs: AiFileInput[] = [];
   const documentTexts: { name: string; text: string }[] = [];
@@ -268,9 +285,18 @@ export async function parseChatAttachments(raw: unknown): Promise<ParsedChatAtta
     if (!entry || typeof entry !== "object") {
       throw new ChatAttachmentError("Invalid attachment payload.");
     }
-    const { name: rawName, dataUrl } = entry as { name?: unknown; dataUrl?: unknown };
+    const {
+      name: rawName,
+      dataUrl,
+      thumbnail,
+    } = entry as {
+      name?: unknown;
+      dataUrl?: unknown;
+      thumbnail?: unknown;
+    };
     const name = safeName(rawName);
     const { mimeType, base64, buffer } = decodeDataUrl(dataUrl);
+    const id = crypto.randomUUID();
 
     totalBytes += buffer.length;
     if (totalBytes > MAX_MESSAGE_ATTACHMENT_TOTAL_BYTES) {
@@ -286,7 +312,16 @@ export async function parseChatAttachments(raw: unknown): Promise<ParsedChatAtta
           `You can attach up to ${MAX_MESSAGE_IMAGES} images per message.`,
         );
       }
-      stored.push({ name, size: buffer.length, mimeType, kind: "image", text: null });
+      stored.push({
+        id,
+        name,
+        size: buffer.length,
+        mimeType,
+        kind: "image",
+        text: null,
+        thumbnail: safeThumbnail(thumbnail),
+      });
+      attachmentData.push({ id, name, mimeType, dataUrl: dataUrl as string });
       imageJobs.push({ index: stored.length - 1, base64, mimeType });
       imageInputs.push({ dataUrl: dataUrl as string, mimeType, base64 });
       continue;
@@ -311,6 +346,7 @@ export async function parseChatAttachments(raw: unknown): Promise<ParsedChatAtta
     remainingDocChars -= capped.text.length;
 
     stored.push({
+      id,
       name,
       size: buffer.length,
       mimeType,
@@ -318,6 +354,7 @@ export async function parseChatAttachments(raw: unknown): Promise<ParsedChatAtta
       text: capped.text,
       truncated: capped.truncated,
     });
+    attachmentData.push({ id, name, mimeType, dataUrl: dataUrl as string });
     documentTexts.push({ name, text: capped.text });
 
     // A PDF with no usable text layer is probably scanned. Send the actual PDF
@@ -357,5 +394,5 @@ export async function parseChatAttachments(raw: unknown): Promise<ParsedChatAtta
     entry.truncated = capped.truncated;
   });
 
-  return { stored, imageInputs, fileInputs, documentTexts };
+  return { stored, attachmentData, imageInputs, fileInputs, documentTexts };
 }

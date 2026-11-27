@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useWorkspace } from "@/lib/workspace-context";
+import { useWorkspace, type ChatMessage } from "@/lib/workspace-context";
 import { ChatInputBar } from "@/components/workspace/ChatInputBar";
 import { ChatThreadList } from "@/components/workspace/ChatThreadList";
 import { CreditBanner } from "@/components/CreditBanner";
@@ -13,8 +13,12 @@ import {
   History,
   FileText,
   Image as ImageIcon,
+  Loader2,
+  Download,
+  X,
 } from "lucide-react";
 import { formatBytes } from "@/lib/image-validation";
+import type { ChatMessageAttachment } from "@/lib/attachments";
 
 interface AiChatPanelProps {
   onToggleCollapse?: () => void;
@@ -53,11 +57,15 @@ export function AiChatPanel({
     newChat,
     pendingAttachments,
     attachmentsPreparing,
+    getAttachmentDataUrl,
   } = useWorkspace();
   const [internalInput, setInternalInput] = useState("");
   const input = externalInput ?? internalInput;
   const setInput = onInputChange ?? setInternalInput;
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [attachmentBusy, setAttachmentBusy] = useState<string | null>(null);
+  const [attachmentNotice, setAttachmentNotice] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<{ url: string; name: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const suggestions = aiMode === "assistant" ? ASSISTANT_SUGGESTIONS : POST_GENERATOR_SUGGESTIONS;
@@ -72,6 +80,52 @@ export function AiChatPanel({
     const text = input;
     setInput("");
     void sendMessage(text);
+  };
+
+  const triggerDownload = (name: string, dataUrl: string) => {
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = name || "attachment";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  /**
+   * Opens/downloads an attachment. Live messages carry the bytes; messages
+   * restored from the database fetch them lazily by message + attachment id.
+   */
+  const openAttachment = async (message: ChatMessage, attachment: ChatMessageAttachment) => {
+    setAttachmentNotice(null);
+    if (attachment.dataUrl) {
+      if (attachment.kind === "image") {
+        setImagePreview({ url: attachment.dataUrl, name: attachment.name });
+      } else {
+        triggerDownload(attachment.name, attachment.dataUrl);
+      }
+      return;
+    }
+    if (!attachment.id) {
+      setAttachmentNotice("This attachment was saved before file storage was added.");
+      return;
+    }
+
+    const key = `${message.id}:${attachment.id}`;
+    setAttachmentBusy(key);
+    try {
+      const dataUrl = await getAttachmentDataUrl(message.id, attachment.id);
+      if (!dataUrl) {
+        setAttachmentNotice(`Could not load "${attachment.name}".`);
+        return;
+      }
+      if (attachment.kind === "image") {
+        setImagePreview({ url: dataUrl, name: attachment.name });
+      } else {
+        triggerDownload(attachment.name, dataUrl);
+      }
+    } finally {
+      setAttachmentBusy(null);
+    }
   };
 
   return (
@@ -166,21 +220,43 @@ export function AiChatPanel({
                 <div key={m.id} className="flex flex-col items-end gap-1">
                   {m.attachments && m.attachments.length > 0 && (
                     <div className="flex max-w-[88%] flex-wrap justify-end gap-1.5">
-                      {m.attachments.map((a, i) =>
-                        a.kind === "image" && a.preview ? (
-                          <img
-                            key={`${a.name}-${i}`}
-                            src={a.preview}
-                            alt={a.name}
-                            title={a.name}
-                            className="size-16 rounded-lg border border-border object-cover"
-                          />
-                        ) : (
-                          <div
-                            key={`${a.name}-${i}`}
-                            className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2 py-1"
+                      {m.attachments.map((a, i) => {
+                        const key = a.id ? `${m.id}:${a.id}` : `${m.id}:${i}`;
+                        const busy = attachmentBusy === key;
+                        if (a.kind === "image" && a.preview) {
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => void openAttachment(m, a)}
+                              title={`Open ${a.name}`}
+                              aria-label={`Open ${a.name}`}
+                              className="relative overflow-hidden rounded-lg border border-border transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-cyan"
+                            >
+                              <img src={a.preview} alt={a.name} className="size-16 object-cover" />
+                              {busy && (
+                                <span className="absolute inset-0 grid place-items-center bg-ink/50">
+                                  <Loader2 className="size-4 animate-spin text-surface" />
+                                </span>
+                              )}
+                            </button>
+                          );
+                        }
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => void openAttachment(m, a)}
+                            disabled={busy}
+                            title={a.kind === "image" ? `Open ${a.name}` : `Download ${a.name}`}
+                            aria-label={
+                              a.kind === "image" ? `Open ${a.name}` : `Download ${a.name}`
+                            }
+                            className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2 py-1 text-left transition-colors hover:bg-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-cyan disabled:opacity-60"
                           >
-                            {a.kind === "image" ? (
+                            {busy ? (
+                              <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />
+                            ) : a.kind === "image" ? (
                               <ImageIcon className="size-3 shrink-0 text-muted-foreground" />
                             ) : (
                               <FileText className="size-3 shrink-0 text-muted-foreground" />
@@ -194,9 +270,12 @@ export function AiChatPanel({
                             <span className="text-[9px] tabular-nums text-muted-foreground">
                               {formatBytes(a.size)}
                             </span>
-                          </div>
-                        ),
-                      )}
+                            {!busy && (
+                              <Download className="size-3 shrink-0 text-muted-foreground" />
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                   {m.content && (
@@ -248,6 +327,12 @@ export function AiChatPanel({
         <div ref={messagesEndRef} />
       </div>
 
+      {attachmentNotice && (
+        <div className="px-4 pb-1 text-[10px] leading-relaxed text-destructive" role="status">
+          {attachmentNotice}
+        </div>
+      )}
+
       {/* Input bar (desktop sidechat only — mobile uses the pinned bar) */}
       <div className="hidden lg:flex flex-col gap-2 p-3 bg-card/60 border-t border-border shrink-0">
         {error && (
@@ -261,6 +346,42 @@ export function AiChatPanel({
         <CreditBanner />
         <ChatInputBar variant="full" value={input} onChange={setInput} onSend={handleSend} />
       </div>
+
+      {imagePreview && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/80 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={imagePreview.name}
+          onClick={() => setImagePreview(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setImagePreview(null)}
+            aria-label="Close image preview"
+            className="absolute right-4 top-4 rounded-full bg-surface/10 p-2 text-surface transition-colors hover:bg-surface/20"
+          >
+            <X className="size-5" />
+          </button>
+          <img
+            src={imagePreview.url}
+            alt={imagePreview.name}
+            className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          />
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              triggerDownload(imagePreview.name, imagePreview.url);
+            }}
+            className="absolute bottom-4 inline-flex items-center gap-1.5 rounded-full bg-surface/10 px-3 py-2 text-[11px] text-surface transition-colors hover:bg-surface/20"
+          >
+            <Download className="size-3.5" />
+            Download
+          </button>
+        </div>
+      )}
     </div>
   );
 }

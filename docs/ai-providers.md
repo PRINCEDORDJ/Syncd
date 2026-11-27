@@ -39,8 +39,20 @@ before any credit is consumed:
   is persisted on `chat_messages.attachments` so later turns can refer to the
   file without re-attaching it.
 - Images are sent as vision input for the current turn. A compact OCR +
-  description is persisted (best-effort) for later turns; image bytes are never
-  stored.
+  description is persisted (best-effort) for later turns.
+
+The actual attachment content is persisted too, so files survive a reload and
+can be opened/downloaded later:
+
+- `chat_messages.attachment_data` holds the full bytes as data URLs
+  (`[{ id, name, mimeType, dataUrl }]`).
+- `chat_messages.attachments` holds lightweight metadata, extracted text, and a
+  small image thumbnail for rendering.
+- Thread loads only select `attachments`; `attachment_data` is fetched lazily
+  (RLS-scoped) when the user clicks an attachment, so transcripts stay light.
+- Images are downscaled to at most 1600 px and re-encoded as JPEG (quality
+  ~0.82) in the browser; thumbnails are at most 320 px. GIFs keep their original
+  bytes so animation survives.
 
 Scanned PDFs with no usable text layer are passed to the provider natively for
 the current turn.

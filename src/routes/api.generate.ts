@@ -9,7 +9,11 @@ import {
 import { PLAN_LIMITS, type PlanTier } from "@/lib/plans";
 import { renderVoiceProfileBlock, type VoiceProfile } from "@/lib/voice-profile";
 import { parseDualStream, isCanvasEditResult } from "@/lib/ai-reply-format";
-import { DEFAULT_ATTACHMENT_PROMPT, type StoredMessageAttachment } from "@/lib/attachments";
+import {
+  DEFAULT_ATTACHMENT_PROMPT,
+  type StoredAttachmentData,
+  type StoredMessageAttachment,
+} from "@/lib/attachments";
 import { ChatAttachmentError, parseChatAttachments } from "@/lib/attachments.server";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -167,6 +171,8 @@ interface TurnContext {
   isAssistantMode: boolean;
   /** Validated attachments (metadata + extracted text) persisted with the turn. */
   attachments: StoredMessageAttachment[];
+  /** Full attachment bytes persisted separately and loaded on demand. */
+  attachmentData: StoredAttachmentData[];
 }
 
 /**
@@ -370,6 +376,7 @@ async function persistUserTurn(ctx: TurnContext): Promise<string | null> {
       is_canvas_update: false,
       canvas_edited: false,
       attachments: ctx.attachments as unknown as Json,
+      attachment_data: ctx.attachmentData as unknown as Json,
     });
     if (insertErr) console.error("[generate] user message persist failed", insertErr);
   } catch (e) {
@@ -673,6 +680,7 @@ export const Route = createFileRoute("/api/generate")({
             input: turnInput,
             isAssistantMode,
             attachments: parsedAttachments.stored,
+            attachmentData: parsedAttachments.attachmentData,
           };
           // Server-authoritative memory: rebuild the conversation from
           // persisted rows BEFORE the current turn is stored (ordering keeps
