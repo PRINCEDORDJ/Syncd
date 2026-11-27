@@ -8,6 +8,18 @@ export type AiImageInput = {
   base64: string;
 };
 
+/**
+ * A non-image document sent natively to the provider. Only PDFs are supported
+ * by both provider paths; it is used as a fallback for scanned PDFs whose text
+ * layer could not be extracted.
+ */
+export type AiFileInput = {
+  dataUrl: string;
+  mimeType: string;
+  base64: string;
+  filename: string;
+};
+
 export type AiChatMessage = {
   role: "user" | "assistant";
   content: string;
@@ -17,6 +29,8 @@ export type AiGenerationInput = {
   systemPrompt: string;
   userPrompt: string;
   images: AiImageInput[];
+  /** Native document inputs (currently PDFs only). */
+  files?: AiFileInput[];
   /** Prior turns of the conversation (text-only), oldest first. */
   history?: AiChatMessage[];
 };
@@ -79,6 +93,9 @@ function toGeminiParts(input: AiGenerationInput) {
     ...input.images.map((image) => ({
       inlineData: { data: image.base64, mimeType: image.mimeType },
     })),
+    ...(input.files ?? []).map((file) => ({
+      inlineData: { data: file.base64, mimeType: file.mimeType },
+    })),
   ];
 }
 
@@ -96,6 +113,12 @@ async function createOpenAiStream(
     ...input.images.map((image) => ({
       type: "image" as const,
       image: image.dataUrl,
+    })),
+    ...(input.files ?? []).map((file) => ({
+      type: "file" as const,
+      data: file.base64,
+      mediaType: file.mimeType,
+      filename: file.filename,
     })),
   ];
   const provider = createOpenAICompatible({
@@ -185,4 +208,47 @@ export async function transcribeAudio(input: {
     ],
   });
   return (response.text ?? "").trim();
+}
+
+// ── Image context for persisted chat attachments (Gemini-only, best-effort) ──
+
+const IMAGE_DESCRIBE_PROMPT =
+  "Describe this image for later reference in a writing assistant. " +
+  "Transcribe all visible text verbatim (OCR). Then give a concise, factual description: " +
+  "people, objects, setting, colors, style, and anything that could matter for a LinkedIn post. " +
+  "Output plain text only, no markdown, under 1500 characters. " +
+  "Do not speculate about things that are not visible.";
+
+/**
+ * Produces a compact text representation of an image so later chat turns can
+ * refer back to it. The current turn still receives the actual image as vision
+ * input. Returns null when Gemini is not configured or the call fails.
+ */
+export async function describeImageForPersistence(input: {
+  base64: string;
+  mimeType: string;
+}): Promise<string | null> {
+  const apiKey = readEnv("GEMINI_API_KEY");
+  if (!apiKey) return null;
+
+  try {
+    const client = new GoogleGenAI({ apiKey });
+    const response = await client.models.generateContent({
+      model: readEnv("GEMINI_VISION_MODEL") ?? "gemini-2.5-flash",
+      contents: [
+        {
+          role: "user" as const,
+          parts: [
+            { inlineData: { data: input.base64, mimeType: input.mimeType } },
+            { text: IMAGE_DESCRIBE_PROMPT },
+          ],
+        },
+      ],
+    });
+    const text = (response.text ?? "").trim();
+    return text ? text.slice(0, 2000) : null;
+  } catch (e) {
+    console.error("[generate] image description failed", e);
+    return null;
+  }
 }

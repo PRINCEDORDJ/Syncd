@@ -13,8 +13,11 @@ import {
   PenLine,
   Mic,
   Loader2,
+  FileText,
+  X,
 } from "lucide-react";
-import { MAX_IMAGES, MAX_ATTACHMENTS } from "@/lib/image-validation";
+import { formatBytes } from "@/lib/image-validation";
+import { MAX_MESSAGE_ATTACHMENTS, MAX_MESSAGE_IMAGES } from "@/lib/attachments";
 import { useIsGenerationBlocked } from "@/components/CreditBanner";
 
 interface ChatInputBarProps {
@@ -36,10 +39,11 @@ export function ChatInputBar({
 }: ChatInputBarProps) {
   const {
     generating,
-    images,
-    attachments,
-    handleFiles,
-    handleAttachFiles,
+    pendingAttachments,
+    attachmentsPreparing,
+    attachmentError,
+    handleMessageFiles,
+    removePendingAttachment,
     messages,
     aiMode,
     setAiMode,
@@ -118,6 +122,12 @@ export function ChatInputBar({
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [value, recorder.status]);
 
+  const canSend =
+    !generating &&
+    !isBlocked &&
+    !attachmentsPreparing &&
+    (value.trim().length > 0 || pendingAttachments.length > 0);
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       // Don't send mid-recording — finish the voice note first.
@@ -126,11 +136,11 @@ export function ChatInputBar({
         return;
       }
       e.preventDefault();
-      if (!generating && value.trim() && !isBlocked) onSend();
+      if (canSend) onSend();
     }
   }
 
-  const canSend = !generating && !!value.trim() && !isBlocked;
+  const imageCount = pendingAttachments.filter((a) => a.kind === "image").length;
 
   return (
     <div
@@ -138,7 +148,7 @@ export function ChatInputBar({
         variant === "compact" ? "mx-3 mb-3" : ""
       }`}
     >
-      {/* Hidden file inputs */}
+      {/* Hidden file inputs — chat attachments only; canvas media uses its own pickers */}
       <input
         ref={fileInputRef}
         type="file"
@@ -146,21 +156,74 @@ export function ChatInputBar({
         multiple
         className="hidden"
         onChange={(e) => {
-          void handleFiles(e.target.files);
+          void handleMessageFiles(e.target.files);
           if (fileInputRef.current) fileInputRef.current.value = "";
         }}
       />
       <input
         ref={attachInputRef}
         type="file"
-        accept=".pdf,.doc,.docx,.csv,.txt,.xls,.xlsx,.ppt,.pptx"
+        accept=".pdf,.doc,.docx,.csv,.txt,.xls,.xlsx,.pptx"
         multiple
         className="hidden"
         onChange={(e) => {
-          void handleAttachFiles(e.target.files);
+          void handleMessageFiles(e.target.files);
           if (attachInputRef.current) attachInputRef.current.value = "";
         }}
       />
+
+      {/* Pending chat attachments */}
+      {pendingAttachments.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">
+          {pendingAttachments.map((a) => (
+            <div
+              key={a.id}
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-subtle px-1.5 py-1"
+            >
+              {a.kind === "image" ? (
+                <img
+                  src={a.thumbnail ?? a.dataUrl}
+                  alt=""
+                  className="size-6 rounded object-cover"
+                />
+              ) : (
+                <FileText className="size-3.5 shrink-0 text-muted-foreground" />
+              )}
+              <span className="max-w-[130px] truncate text-[10px] text-ink" title={a.name}>
+                {a.name}
+              </span>
+              <span className="text-[9px] tabular-nums text-muted-foreground">
+                {formatBytes(a.size)}
+              </span>
+              <button
+                type="button"
+                onClick={() => removePendingAttachment(a.id)}
+                aria-label={`Remove ${a.name}`}
+                title="Remove attachment"
+                className="ml-0.5 inline-flex size-4 items-center justify-center rounded text-muted-foreground hover:bg-border/60 hover:text-ink transition-colors"
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {attachmentsPreparing && (
+        <span
+          className="flex items-center gap-1 px-3.5 pt-2 text-[10px] text-muted-foreground"
+          role="status"
+        >
+          <Loader2 className="size-3 animate-spin" />
+          Preparing attachments…
+        </span>
+      )}
+
+      {attachmentError && (
+        <p className="px-3.5 pt-2 text-[10px] leading-relaxed text-destructive" role="status">
+          {attachmentError}
+        </p>
+      )}
 
       {/* Textarea */}
       <textarea
@@ -187,7 +250,7 @@ export function ChatInputBar({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={!canEdit || images.length >= MAX_IMAGES}
+            disabled={!canEdit || imageCount >= MAX_MESSAGE_IMAGES || attachmentsPreparing}
             title={canEdit ? "Add image" : "Viewers have read-only access"}
             aria-label="Add image"
             className="h-7 w-7 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -197,7 +260,11 @@ export function ChatInputBar({
           <button
             type="button"
             onClick={() => attachInputRef.current?.click()}
-            disabled={!canEdit || attachments.length >= MAX_ATTACHMENTS}
+            disabled={
+              !canEdit ||
+              pendingAttachments.length >= MAX_MESSAGE_ATTACHMENTS ||
+              attachmentsPreparing
+            }
             title={canEdit ? "Attach file" : "Viewers have read-only access"}
             aria-label="Attach file"
             className="h-7 w-7 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-ink hover:bg-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
