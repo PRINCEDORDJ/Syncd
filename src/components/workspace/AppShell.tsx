@@ -48,6 +48,8 @@ export function AppShell() {
     setTone,
     messages,
     sendMessage,
+    pendingAttachments,
+    attachmentsPreparing,
     images,
     attachments,
     handleFiles,
@@ -90,7 +92,8 @@ export function AppShell() {
   }, [messages, aiMode]);
 
   const handleMobileSend = () => {
-    if (!mobileInput.trim()) return;
+    if (attachmentsPreparing) return;
+    if (!mobileInput.trim() && pendingAttachments.length === 0) return;
     mobileSendTabRef.current = activeTab;
     const text = mobileInput;
     setMobileInput("");

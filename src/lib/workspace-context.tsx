@@ -28,6 +28,15 @@ import {
   EDIT_FAILURE_MESSAGE,
   type EditOp,
 } from "@/lib/ai-reply-format";
+import {
+  DEFAULT_ATTACHMENT_PROMPT,
+  MAX_MESSAGE_ATTACHMENTS,
+  inferAttachmentKind,
+  toChatMessageAttachments,
+  validateMessageAttachmentBatch,
+  type ChatMessageAttachment,
+  type MessageAttachment,
+} from "@/lib/attachments";
 
 const ACTIVE_WORKSPACE_KEY = "syncd:active-workspace";
 const AI_MODE_KEY = "syncd:ai-mode";
@@ -58,6 +67,8 @@ export interface ChatMessage {
   id: string;
   role: ChatRole;
   content: string;
+  /** Files attached to this chat message (chat attachments, not canvas media). */
+  attachments?: ChatMessageAttachment[];
   /** If true, this message is a canvas update summary, not a conversational reply */
   isCanvasUpdate?: boolean;
   /** If true, this turn changed the canvas (rendered as a "Canvas updated" chip) */
@@ -85,6 +96,12 @@ export interface WorkspaceState {
   aiMode: AiMode;
   images: string[];
   attachments: AttachmentItem[];
+  /** Files attached to the next chat message (independent of canvas media). */
+  pendingAttachments: MessageAttachment[];
+  /** True while pending chat attachments are being read into memory. */
+  attachmentsPreparing: boolean;
+  /** Validation/read errors for chat attachments (shown in the composer). */
+  attachmentError: string | null;
   saving: boolean;
   /** Conversation thread id — shared with chat_messages / drafts.thread_id */
   threadId: string;
@@ -123,6 +140,10 @@ export interface WorkspaceActions {
   removeImage: (idx: number) => void;
   handleAttachFiles: (files: FileList | null) => Promise<void>;
   removeAttachment: (idx: number) => void;
+  /** Attach files to the AI chat message (separate from canvas media). */
+  handleMessageFiles: (files: FileList | null) => Promise<void>;
+  removePendingAttachment: (id: string) => void;
+  clearPendingAttachments: () => void;
   saveDraft: (asPublished?: boolean) => Promise<string | null>;
   /** Send a message: first turn = generate, subsequent = refine */
   sendMessage: (userInput: string) => Promise<void>;
@@ -286,6 +307,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [aiMode, setAiModeState] = useState<AiMode>(() => readStoredAiMode());
   const [images, setImages] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  const [pendingAttachments, setPendingAttachments] = useState<MessageAttachment[]>([]);
+  const [attachmentsPreparing, setAttachmentsPreparing] = useState(false);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -320,6 +344,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setTone("Authoritative & Warm");
     setImages([]);
     setAttachments([]);
+    setPendingAttachments([]);
     setMessages([]);
     setError(null);
     setSuccess(null);
@@ -538,6 +563,70 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setAttachments((prev) => prev.filter((_, i) => i !== idx));
   }, []);
 
+  // ── Chat message attachments (separate from canvas media) ───────────────────
+  const handleMessageFiles = useCallback(
+    async (files: FileList | null) => {
+      if (!files?.length) return;
+      const { accepted, errors } = validateMessageAttachmentBatch(
+        Array.from(files),
+        pendingAttachments,
+      );
+      if (errors.length) setAttachmentError(errors.join(" "));
+      else setAttachmentError(null);
+      if (!accepted.length) return;
+
+      const seq = loadSeqRef.current;
+      setAttachmentsPreparing(true);
+      try {
+        const items = await Promise.all(
+          accepted.map(
+            (f) =>
+              new Promise<MessageAttachment>((res, rej) => {
+                const r = new FileReader();
+                r.onload = () =>
+                  res({
+                    id: makeId(),
+                    name: f.name,
+                    size: f.size,
+                    mimeType: f.type || "application/octet-stream",
+                    kind: inferAttachmentKind(f),
+                    dataUrl: String(r.result),
+                  });
+                r.onerror = () => rej(r.error);
+                r.readAsDataURL(f);
+              }),
+          ),
+        );
+        // Discard the result if the chat was reset while reading.
+        if (seq !== loadSeqRef.current) return;
+        setPendingAttachments((prev) => [...prev, ...items].slice(0, MAX_MESSAGE_ATTACHMENTS));
+      } catch (e) {
+        console.error("message attachment read failed", e);
+        if (seq === loadSeqRef.current) {
+          setAttachmentError("Could not read one of the attached files.");
+        }
+      } finally {
+        if (seq === loadSeqRef.current) setAttachmentsPreparing(false);
+      }
+    },
+    [pendingAttachments],
+  );
+
+  const removePendingAttachment = useCallback((id: string) => {
+    setPendingAttachments((prev) => prev.filter((a) => a.id !== id));
+    setAttachmentError(null);
+  }, []);
+
+  const clearPendingAttachments = useCallback(() => {
+    setPendingAttachments([]);
+  }, []);
+
+  // An error only describes the current attachment batch; clear it whenever the
+  // batch empties (send, reset, or removing the last file).
+  useEffect(() => {
+    if (pendingAttachments.length === 0) setAttachmentError(null);
+  }, [pendingAttachments.length]);
+
   // ── Save draft ──────────────────────────────────────────────────────────────
   const saveDraft = useCallback(
     async (asPublished = false): Promise<string | null> => {
@@ -607,12 +696,29 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   // ── Send message (generate / refine) ───────────────────────────────────────
   const sendMessage = useCallback(
     async (userInput: string) => {
-      if (!userInput.trim() || generating) return;
+      const trimmedInput = userInput.trim();
+      const pendingSnapshot = pendingAttachments;
+      if ((!trimmedInput && pendingSnapshot.length === 0) || generating || attachmentsPreparing) {
+        return;
+      }
       setError(null);
       setSuccess(null);
 
-      const trimmedInput = userInput.trim();
-      const userMsg: ChatMessage = { id: makeId(), role: "user", content: trimmedInput };
+      // An attachment-only message still needs an instruction for the model.
+      const turnInput = trimmedInput || DEFAULT_ATTACHMENT_PROMPT;
+      const attachmentMeta: ChatMessageAttachment[] = pendingSnapshot.map((a) => ({
+        name: a.name,
+        size: a.size,
+        mimeType: a.mimeType,
+        kind: a.kind,
+        ...(a.kind === "image" ? { preview: a.dataUrl } : {}),
+      }));
+      const userMsg: ChatMessage = {
+        id: makeId(),
+        role: "user",
+        content: trimmedInput,
+        ...(attachmentMeta.length ? { attachments: attachmentMeta } : {}),
+      };
       const assistantMsgId = makeId();
       // `messages` is the conversation BEFORE this turn — the placeholder below
       // only exists in state, never in this closure.
@@ -630,6 +736,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         userMsg,
         { id: assistantMsgId, role: "assistant", content: "", isCanvasUpdate: false },
       ]);
+      // Attachments now belong to this message; clear the composer immediately.
+      setPendingAttachments([]);
       setGenerating(true);
 
       abortRef.current?.abort();
@@ -641,6 +749,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (!token) {
         setGenerating(false);
         setError("Please sign in to generate posts.");
+        setPendingAttachments(pendingSnapshot);
         setMessages((prev) => prev.filter((m) => m.id !== userMsg.id && m.id !== assistantMsgId));
         return;
       }
@@ -648,10 +757,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const history = messages
         .filter(
           (m) =>
-            (m.role === "user" || m.role === "assistant") && !m.isCanvasUpdate && m.content.trim(),
+            (m.role === "user" || m.role === "assistant") &&
+            !m.isCanvasUpdate &&
+            (m.content.trim() || m.attachments?.length),
         )
         .slice(-12)
-        .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
+        .map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content.trim() || DEFAULT_ATTACHMENT_PROMPT,
+        }));
 
       try {
         if (isPostMode && isFirstTurn && !hasCanvas) {
@@ -669,9 +783,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            input: trimmedInput,
+            input: turnInput,
             tone,
-            images,
+            attachments: pendingSnapshot.map((a) => ({
+              name: a.name,
+              size: a.size,
+              mimeType: a.mimeType,
+              dataUrl: a.dataUrl,
+            })),
             mode: aiMode,
             workspaceId: activeWorkspaceId ?? undefined,
             threadId,
@@ -748,10 +867,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         if ((e as Error).name === "AbortError") {
           setMessages((prev) => prev.filter((m) => m.id !== userMsg.id && m.id !== assistantMsgId));
+          setPendingAttachments(pendingSnapshot);
           return;
         }
         setError(e instanceof Error ? e.message : "Something went wrong.");
         setMessages((prev) => prev.filter((m) => m.id !== userMsg.id && m.id !== assistantMsgId));
+        setPendingAttachments(pendingSnapshot);
       } finally {
         setGenerating(false);
       }
@@ -761,7 +882,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       messages,
       draft,
       tone,
-      images,
+      pendingAttachments,
+      attachmentsPreparing,
       titleEdited,
       aiMode,
       activeWorkspaceId,
@@ -853,18 +975,25 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     try {
       const { data: rows, error: fetchErr } = await supabase
         .from("chat_messages")
-        .select("id, role, content, is_canvas_update, canvas_edited")
+        .select("id, role, content, is_canvas_update, canvas_edited, attachments")
         .eq("thread_id", threadUid)
         .order("created_at", { ascending: true })
         .limit(200);
       if (fetchErr) throw fetchErr;
-      const restored: ChatMessage[] = (rows ?? []).map((r) => ({
-        id: r.id,
-        role: r.role as ChatRole,
-        content: r.content,
-        canvasEdited:
-          r.role === "assistant" && (r.canvas_edited || r.is_canvas_update) ? true : undefined,
-      }));
+      const restored: ChatMessage[] = (rows ?? []).map((r) => {
+        const attachments = toChatMessageAttachments(r.attachments);
+        // Attachment-only turns persist the default instruction as their text;
+        // don't echo it back to the user as if they typed it.
+        const content = attachments && r.content === DEFAULT_ATTACHMENT_PROMPT ? "" : r.content;
+        return {
+          id: r.id,
+          role: r.role as ChatRole,
+          content,
+          attachments,
+          canvasEdited:
+            r.role === "assistant" && (r.canvas_edited || r.is_canvas_update) ? true : undefined,
+        };
+      });
       if (seq !== loadSeqRef.current) return;
       if (restored.length) setMessages(restored);
     } catch (e) {
@@ -897,6 +1026,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setTone((TONES.includes(row.tone as Tone) ? row.tone : TONES[0]) as Tone);
       setImages(row.images ?? []);
       setAttachments(row.attachments ?? []);
+      setPendingAttachments([]);
       setError(null);
       setSuccess(null);
       // Immediate fallback (drafts whose thread is being resolved)…
@@ -1003,6 +1133,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setTone("Authoritative & Warm");
       setImages([]);
       setAttachments([]);
+      setPendingAttachments([]);
       setMessages([]);
       setThreadId(thread.thread_id);
       await fetchThreadMessages(thread.thread_id, seq);
@@ -1023,6 +1154,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setTone("Authoritative & Warm");
     setImages([]);
     setAttachments([]);
+    setPendingAttachments([]);
     setMessages([]);
     setError(null);
     setSuccess(null);
@@ -1041,6 +1173,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     loadSeqRef.current += 1;
     abortRef.current?.abort();
     setThreadId(newThreadId());
+    setPendingAttachments([]);
     setMessages([]);
     setError(null);
     setSuccess(null);
@@ -1074,6 +1207,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setTone("Authoritative & Warm");
     setImages([]);
     setAttachments([]);
+    setPendingAttachments([]);
     setMessages([]);
     setError(null);
     setSuccess(null);
@@ -1113,6 +1247,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     aiMode,
     images,
     attachments,
+    pendingAttachments,
+    attachmentsPreparing,
+    attachmentError,
     saving,
     generating,
     error,
@@ -1140,6 +1277,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     removeImage,
     handleAttachFiles,
     removeAttachment,
+    handleMessageFiles,
+    removePendingAttachment,
+    clearPendingAttachments,
     saveDraft,
     sendMessage,
     abortGeneration,

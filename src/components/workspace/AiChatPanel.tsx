@@ -5,7 +5,16 @@ import { ChatThreadList } from "@/components/workspace/ChatThreadList";
 import { CreditBanner } from "@/components/CreditBanner";
 import { Markdown } from "@/components/ui/markdown";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Sparkles, PanelRightClose, Wand2, Plus, History } from "lucide-react";
+import {
+  Sparkles,
+  PanelRightClose,
+  Wand2,
+  Plus,
+  History,
+  FileText,
+  Image as ImageIcon,
+} from "lucide-react";
+import { formatBytes } from "@/lib/image-validation";
 
 interface AiChatPanelProps {
   onToggleCollapse?: () => void;
@@ -35,7 +44,16 @@ export function AiChatPanel({
   onInputChange,
   onRequestInputFocus,
 }: AiChatPanelProps) {
-  const { messages, sendMessage, generating, aiMode, error, newChat } = useWorkspace();
+  const {
+    messages,
+    sendMessage,
+    generating,
+    aiMode,
+    error,
+    newChat,
+    pendingAttachments,
+    attachmentsPreparing,
+  } = useWorkspace();
   const [internalInput, setInternalInput] = useState("");
   const input = externalInput ?? internalInput;
   const setInput = onInputChange ?? setInternalInput;
@@ -49,7 +67,8 @@ export function AiChatPanel({
   }, [messages, generating]);
 
   const handleSend = () => {
-    if (!input.trim() || generating) return;
+    if (generating || attachmentsPreparing) return;
+    if (!input.trim() && pendingAttachments.length === 0) return;
     const text = input;
     setInput("");
     void sendMessage(text);
@@ -144,10 +163,47 @@ export function AiChatPanel({
           messages.map((m) => {
             if (m.role === "user") {
               return (
-                <div key={m.id} className="flex flex-col items-end">
-                  <div className="max-w-[88%] px-3.5 py-2.5 rounded-2xl rounded-tr-sm bg-ink text-surface text-[13px] leading-relaxed shadow-soft">
-                    {m.content}
-                  </div>
+                <div key={m.id} className="flex flex-col items-end gap-1">
+                  {m.attachments && m.attachments.length > 0 && (
+                    <div className="flex max-w-[88%] flex-wrap justify-end gap-1.5">
+                      {m.attachments.map((a, i) =>
+                        a.kind === "image" && a.preview ? (
+                          <img
+                            key={`${a.name}-${i}`}
+                            src={a.preview}
+                            alt={a.name}
+                            title={a.name}
+                            className="size-16 rounded-lg border border-border object-cover"
+                          />
+                        ) : (
+                          <div
+                            key={`${a.name}-${i}`}
+                            className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2 py-1"
+                          >
+                            {a.kind === "image" ? (
+                              <ImageIcon className="size-3 shrink-0 text-muted-foreground" />
+                            ) : (
+                              <FileText className="size-3 shrink-0 text-muted-foreground" />
+                            )}
+                            <span
+                              className="max-w-[140px] truncate text-[10px] text-ink"
+                              title={a.name}
+                            >
+                              {a.name}
+                            </span>
+                            <span className="text-[9px] tabular-nums text-muted-foreground">
+                              {formatBytes(a.size)}
+                            </span>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  )}
+                  {m.content && (
+                    <div className="max-w-[88%] px-3.5 py-2.5 rounded-2xl rounded-tr-sm bg-ink text-surface text-[13px] leading-relaxed shadow-soft">
+                      {m.content}
+                    </div>
+                  )}
                 </div>
               );
             }

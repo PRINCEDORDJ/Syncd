@@ -22,3 +22,35 @@ For local development, place these values in `.env`. For Cloudflare deployment,
 configure the same names as encrypted Wrangler/Cloudflare Worker secrets or
 runtime environment variables. Do not add them to `VITE_*` variables, client
 bundles, committed files, or browser requests.
+
+## Chat attachments
+
+Files attached in the AI chat are separate from Canvas media. Canvas images and
+files are publish-only and are **not** sent to the model; only Canvas text
+(`currentDraft`) is included as context.
+
+Chat attachments are sent with the user's message and validated server-side
+before any credit is consumed:
+
+- Up to 5 files per message (max 4 images), 10 MB per file, 15 MB total.
+- Images: JPEG, PNG, GIF, WebP. Documents: `.pdf`, `.doc`, `.docx`, `.csv`,
+  `.txt`, `.xls`, `.xlsx`, `.pptx`. `.ppt` is rejected (save it as `.pptx`).
+- Documents are extracted to text (per file and per message caps) and the text
+  is persisted on `chat_messages.attachments` so later turns can refer to the
+  file without re-attaching it.
+- Images are sent as vision input for the current turn. A compact OCR +
+  description is persisted (best-effort) for later turns; image bytes are never
+  stored.
+
+Scanned PDFs with no usable text layer are passed to the provider natively for
+the current turn.
+
+Image descriptions use Gemini when `GEMINI_API_KEY` is set, independent of
+`AI_PROVIDER`. The model defaults to `gemini-2.5-flash`; override it with:
+
+```env
+GEMINI_VISION_MODEL=gemini-2.5-flash
+```
+
+If the key is missing or the description call fails/times out, the turn still
+proceeds and the image is persisted with metadata only.

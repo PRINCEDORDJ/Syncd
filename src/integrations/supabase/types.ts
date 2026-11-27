@@ -10,6 +10,7 @@ export type Database = {
     Tables: {
       chat_messages: {
         Row: {
+          attachments: Json;
           canvas_edited: boolean;
           content: string;
           created_at: string;
@@ -22,6 +23,7 @@ export type Database = {
           workspace_id: string;
         };
         Insert: {
+          attachments?: Json;
           canvas_edited?: boolean;
           content: string;
           created_at?: string;
@@ -34,6 +36,7 @@ export type Database = {
           workspace_id: string;
         };
         Update: {
+          attachments?: Json;
           canvas_edited?: boolean;
           content?: string;
           created_at?: string;
