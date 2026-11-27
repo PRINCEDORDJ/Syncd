@@ -76,8 +76,9 @@ async function decodeImage(
 }
 
 function encodeResized(drawable: Drawable, maxDimension: number, quality: number): string | null {
-  const width = drawable instanceof HTMLImageElement ? drawable.naturalWidth : drawable.width;
-  const height = drawable instanceof HTMLImageElement ? drawable.naturalHeight : drawable.height;
+  const isHtmlImage = "naturalWidth" in drawable;
+  const width = isHtmlImage ? drawable.naturalWidth : drawable.width;
+  const height = isHtmlImage ? drawable.naturalHeight : drawable.height;
   if (!width || !height) return null;
 
   const scale = Math.min(1, maxDimension / Math.max(width, height));
