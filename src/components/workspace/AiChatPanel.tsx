@@ -83,12 +83,31 @@ export function AiChatPanel({
   };
 
   const triggerDownload = (name: string, dataUrl: string) => {
+    // Convert to a Blob first: large data URLs can exceed browser URL limits.
+    const comma = dataUrl.indexOf(",");
+    const header = comma >= 0 ? dataUrl.slice(0, comma) : "";
+    const meta = /^data:([^;,]+)?(;base64)?/i.exec(header);
+    const mimeType = meta?.[1] || "application/octet-stream";
+    const payload = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
+
+    let blob: Blob;
+    if (meta?.[2]) {
+      const binary = atob(payload);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      blob = new Blob([bytes], { type: mimeType });
+    } else {
+      blob = new Blob([decodeURIComponent(payload)], { type: mimeType });
+    }
+
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = dataUrl;
+    link.href = url;
     link.download = name || "attachment";
     document.body.appendChild(link);
     link.click();
     link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
   };
 
   /**
