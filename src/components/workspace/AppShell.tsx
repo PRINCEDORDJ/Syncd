@@ -14,6 +14,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Check, PanelRightOpen, ImagePlus, Paperclip } from "lucide-react";
 import { MAX_IMAGES, MAX_ATTACHMENTS } from "@/lib/image-validation";
+import {
+  MAX_MESSAGE_ATTACHMENTS,
+  MAX_MESSAGE_IMAGES,
+  ALLOWED_MESSAGE_DOCUMENT_EXTENSIONS,
+} from "@/lib/attachments";
 
 const CHAT_COLLAPSED_KEY = "syncd:chat-collapsed";
 
@@ -54,6 +59,7 @@ export function AppShell() {
     attachments,
     handleFiles,
     handleAttachFiles,
+    handleMessageFiles,
     aiMode,
   } = useWorkspace();
 
@@ -66,6 +72,8 @@ export function AppShell() {
   const prevMsgCountRef = useRef(0);
   const mobileImageInputRef = useRef<HTMLInputElement | null>(null);
   const mobileAttachInputRef = useRef<HTMLInputElement | null>(null);
+  // Which tab the picker was opened from — decides Canvas media vs chat attachment.
+  const mobilePickTargetRef = useRef<WorkspaceTab>("canvas");
   // Pinned mobile textarea — focused when a chat suggestion is picked.
   const mobileTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -98,6 +106,34 @@ export function AppShell() {
     const text = mobileInput;
     setMobileInput("");
     void sendMessage(text);
+  };
+
+  // The mobile header pickers follow the active tab: Canvas media on the Canvas
+  // tab, chat attachments on the Chat tab. The pinned composer has its own chat
+  // pickers; this keeps the header consistent with whatever the user is viewing.
+  const isChatTab = activeTab === "chat";
+  const chatImageCount = pendingAttachments.filter((a) => a.kind === "image").length;
+  const chatDocumentCount = pendingAttachments.filter((a) => a.kind === "document").length;
+  const headerImageCount = isChatTab ? chatImageCount : images.length;
+  const headerDocumentCount = isChatTab ? chatDocumentCount : attachments.length;
+  const headerImageDisabled = isChatTab
+    ? attachmentsPreparing ||
+      chatImageCount >= MAX_MESSAGE_IMAGES ||
+      pendingAttachments.length >= MAX_MESSAGE_ATTACHMENTS
+    : images.length >= MAX_IMAGES;
+  const headerDocumentDisabled = isChatTab
+    ? attachmentsPreparing || pendingAttachments.length >= MAX_MESSAGE_ATTACHMENTS
+    : attachments.length >= MAX_ATTACHMENTS;
+  const chatDocumentAccept = ALLOWED_MESSAGE_DOCUMENT_EXTENSIONS.join(",");
+  const canvasDocumentAccept = ".pdf,.doc,.docx,.csv,.txt,.xls,.xlsx,.ppt,.pptx";
+
+  const openMobileImagePicker = () => {
+    mobilePickTargetRef.current = activeTab;
+    mobileImageInputRef.current?.click();
+  };
+  const openMobileDocumentPicker = () => {
+    mobilePickTargetRef.current = activeTab;
+    mobileAttachInputRef.current?.click();
   };
 
   return (
@@ -150,18 +186,22 @@ export function AppShell() {
             multiple
             className="hidden"
             onChange={(e) => {
-              void handleFiles(e.target.files);
+              const files = e.target.files;
+              if (mobilePickTargetRef.current === "chat") void handleMessageFiles(files);
+              else void handleFiles(files);
               if (mobileImageInputRef.current) mobileImageInputRef.current.value = "";
             }}
           />
           <input
             ref={mobileAttachInputRef}
             type="file"
-            accept=".pdf,.doc,.docx,.csv,.txt,.xls,.xlsx,.ppt,.pptx"
+            accept={isChatTab ? chatDocumentAccept : canvasDocumentAccept}
             multiple
             className="hidden"
             onChange={(e) => {
-              void handleAttachFiles(e.target.files);
+              const files = e.target.files;
+              if (mobilePickTargetRef.current === "chat") void handleMessageFiles(files);
+              else void handleAttachFiles(files);
               if (mobileAttachInputRef.current) mobileAttachInputRef.current.value = "";
             }}
           />
@@ -169,34 +209,44 @@ export function AppShell() {
           <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
-              onClick={() => mobileImageInputRef.current?.click()}
-              disabled={images.length >= MAX_IMAGES}
-              title={images.length >= MAX_IMAGES ? "Image limit reached" : "Upload images"}
-              aria-label="Upload images"
+              onClick={openMobileImagePicker}
+              disabled={headerImageDisabled}
+              title={
+                headerImageDisabled
+                  ? "Image limit reached"
+                  : isChatTab
+                    ? "Add image to chat"
+                    : "Upload images"
+              }
+              aria-label={isChatTab ? "Add image to chat" : "Upload images"}
               className="relative size-7 inline-flex items-center justify-center rounded-md border border-border bg-subtle/40 hover:bg-subtle text-ink transition-colors disabled:opacity-40"
             >
               <ImagePlus className="size-3.5" />
-              {images.length > 0 && (
+              {headerImageCount > 0 && (
                 <span className="absolute -top-1 -right-1 size-3.5 rounded-full bg-accent-cyan text-surface text-[9px] font-mono font-bold flex items-center justify-center">
-                  {images.length}
+                  {headerImageCount}
                 </span>
               )}
             </button>
 
             <button
               type="button"
-              onClick={() => mobileAttachInputRef.current?.click()}
-              disabled={attachments.length >= MAX_ATTACHMENTS}
+              onClick={openMobileDocumentPicker}
+              disabled={headerDocumentDisabled}
               title={
-                attachments.length >= MAX_ATTACHMENTS ? "Attachment limit reached" : "Attach file"
+                headerDocumentDisabled
+                  ? "Attachment limit reached"
+                  : isChatTab
+                    ? "Attach file to chat"
+                    : "Attach file"
               }
-              aria-label="Attach file"
+              aria-label={isChatTab ? "Attach file to chat" : "Attach file"}
               className="relative size-7 inline-flex items-center justify-center rounded-md border border-border bg-subtle/40 hover:bg-subtle text-ink transition-colors disabled:opacity-40"
             >
               <Paperclip className="size-3.5" />
-              {attachments.length > 0 && (
+              {headerDocumentCount > 0 && (
                 <span className="absolute -top-1 -right-1 size-3.5 rounded-full bg-accent-cyan text-surface text-[9px] font-mono font-bold flex items-center justify-center">
-                  {attachments.length}
+                  {headerDocumentCount}
                 </span>
               )}
             </button>
